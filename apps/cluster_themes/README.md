@@ -20,10 +20,17 @@ More themes are on the way.
 | --- | --- |
 | <img src="../../docs/images/cluster-gt3-shift.png" width="420" alt="GT3 at the shift point"> | <img src="../../docs/images/cluster-gt3-map.png" width="420" alt="GT3 with room for the map"> |
 
+## Off and drive modes
+
+- **Off (BMW's own cluster):** pick it as the theme and the app draws nothing, so BMW's cluster comes back.
+- **Change with SPORT / COMFORT / ECO PRO** (on by default): the cluster follows the drive mode buttons. Pick a theme for each mode. Out of the box, Sport shows GT3, and Comfort and Eco Pro show BMW's own cluster. Until the car reports a mode, the plain theme setting is used.
+- **Works with HUD Widgets:** the cluster theme and the HUD can't show at the same time (cluster-render shares one screen slot between them). With the defaults, Sport gets the cluster theme and Comfort gets the HUD, so they take turns.
+
 ## Settings
 
-- **Theme**
-- **Leave room for the map:** cuts a window out of the dash so the map can show through, and moves the gear and temperatures to the sides.
+- **Theme**, and one per drive mode
+- **Leave room for the map:** cuts a window out of the dash so the map can show through, moves the gear and temperatures to the sides, and slims the rev bar.
+- **Calibration grid:** a theme that draws lines every 50 px with x/y labels, for checking where things sit on the real screen.
 - **Units:** mph, °F, psi or km/h, °C, bar
 - **Clock:** 12-hour or 24-hour
 - **Redline**
@@ -40,8 +47,9 @@ More themes are on the way.
 
 ## Status
 
-Version 0.1.0, in its first car test. Still to be checked on a car:
+Version 0.2.0. First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Still to be checked on a car:
 
+- **Whether the whole dash draws.** If it doesn't, the first row of the app's page says how many parts are drawn and why the rest aren't.
 - **Whether BMW's warning lights still show over the dash.** The GT3 theme is solid black and covers whatever is under it. Test it parked: start the car with a seat belt off and look for the warning.
-- **Where the map window really sits** on the cluster. The cut-out's position is a guess.
+- The drive mode switching, and the map cut-out's new position.
 - How the colours and edges look on the real screen.

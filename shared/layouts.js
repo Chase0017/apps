@@ -22,6 +22,8 @@ const TYPES = {
     badge: ['text', 'font', 'tone'],
     fill: [],
     box: [],
+    grid: [],
+    gridlabels: ['font'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 

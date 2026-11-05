@@ -32,7 +32,7 @@ The Store builds each app on the car from this repo. No BMW code is in it.
 
 ## Status
 
-Both apps run on a Mac test bench that uses the car's own build and Node version. Neither has been confirmed on a car yet. Each app's page lists what's still to be checked on the car.
+Both apps ran in a first car test on a 2020 X3 M40i, and this version fixes what it found. Each app has an Off option and can switch with the SPORT / COMFORT / ECO PRO buttons, so the cluster theme and the HUD take turns. Each app's page lists what's still to be checked on the car.
 
 ## Credits
 

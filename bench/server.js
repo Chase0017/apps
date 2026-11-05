@@ -238,6 +238,7 @@ const renderServer = net.createServer((sock) => {
 
 let child = null;
 let signals = { t: 'signals', mode: 'demo', values: {} };
+let drive = { t: 'drive', value: null };   // the drive mode buttons (FES actualValueModeDrivingExperience), null = car hasn't said
 let restartTimer = null;
 let stopping = false;
 
@@ -267,6 +268,7 @@ function startApp() {
     if (APP_NODE) opts.execPath = APP_NODE;
     child = fork(path.join(__dirname, 'run-app.js'), [STAGE, DATA_DIR], opts);
     const c = child;
+    if (drive.value !== null) c.send(drive);
     const pipe = (stream, level) => {
         let rest = '';
         stream.on('data', (d) => {
@@ -348,6 +350,13 @@ const web = http.createServer(async (req, res) => {
         const b = await body(req);
         signals = { t: 'signals', mode: b.mode === 'manual' ? 'manual' : 'demo', values: b.values || {} };
         if (child) child.send(signals);
+        res.writeHead(204); return res.end();
+    }
+    if (req.method === 'POST' && url === '/drive') {
+        const b = await body(req);
+        drive = { t: 'drive', value: b.value === null || b.value === undefined ? null : b.value };
+        if (child) child.send(drive);
+        log('info', 'bench: drive mode ' + JSON.stringify(drive.value));
         res.writeHead(204); return res.end();
     }
     if (req.method === 'POST' && url === '/restart') {

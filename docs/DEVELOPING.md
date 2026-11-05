@@ -28,7 +28,7 @@ node bench/server.js                   # HUD Widgets, then open http://localhost
 node bench/server.js cluster_themes    # Cluster Themes
 ```
 
-It builds the app with the kit and runs the build in the kit's stub head unit on Node 8.16.2 (the car's version), against a fake cluster-render. The page shows the HUD or the cluster with the app's real pixels and shaders, the center-screen status and settings, and signal sliders. Details in `bench/README.md`.
+The page has buttons for the drive mode (COMFORT, SPORT, SPORT+, ECO PRO), fed in as the car's FES signal. It builds the app with the kit and runs the build in the kit's stub head unit on Node 8.16.2 (the car's version), against a fake cluster-render. The page shows the HUD or the cluster with the app's real pixels and shaders, the center-screen status and settings, and signal sliders. Details in `bench/README.md`.
 
 ## Layouts
 
@@ -36,6 +36,9 @@ Each app's layouts are `apps/<id>/hud/layouts/<name>.json` (`schemaVersion: 2`).
 
 - **HUD (800x480):** `text`, `scale`, `stripe`, `shiftbar`, `arc`, `revbar`, `lights`, `badge`. Colours are theme roles (`fg`, `dim`, `arc`), so a layout works in every theme.
 - **Cluster (1920x720):** the same types, plus `fill` (a solid colour with a see-through `hole` cut while a setting is on) and `box` (a framed readout with a header strip). A cluster layout names its own `"theme"`.
+- **Calibration:** `grid` (lines every `step` px, brighter every `major` steps) and `gridlabels` (x/y labels every `step` px). Each app ships a `grid.json` layout.
+- **Off:** the layout name `off` draws nothing and releases the screen. With `byMode` on, the `inComfort` / `inSport` / `inEco` settings pick the layout from the car's drive mode (FES `statusFESVehicleDynamicSwitchHMI`).
+- **Effect shaders:** cluster-render's `v_uv` has (0,0) at the top-left. The bench draws the same way.
 - **Any widget:** `toggle: "setting"` shows it only while that setting is on, and `"!setting"` only while it's off. `themes: [...]` limits it to certain themes.
 
 To try an edited layout on the car without reinstalling:

@@ -5,7 +5,7 @@
  * as they are (a data folder becomes a JSON-only pack). hud.js sends the uniforms.
  */
 const SHIFTBAR = `// Segmented shift bar for a cluster-render "effect" layer (GLSL ES 1.00).
-// v_uv is 0..1 across the layer. Uniforms come from hud.js:
+// v_uv is 0..1 across the layer, (0,0) at the top-left as on the car. Uniforms come from hud.js:
 //   u_value   0..1, how much of the bar is lit (rpm / bar max)
 //   u_size    layer size in px (w, h), for round corners and gaps in pixels
 //   u_segs    segment count
@@ -35,7 +35,7 @@ void main() {
     float idx = floor(px / slot);
     float inSeg = px - idx * slot;                  // px into this slot
     float segW = slot - gapPx;
-    float py = (1.0 - v_uv.y) * u_size.y;           // px from the top
+    float py = v_uv.y * u_size.y;           // px from the top
 
     // rounded-rect coverage for this segment, radius 2px, 1px soft edge
     vec2 hs = vec2(segW, u_size.y) * 0.5;
@@ -86,7 +86,7 @@ float arcDist(vec2 p, float r, float a0, float s) {
 }
 
 void main() {
-    vec2 p = (v_uv - 0.5) * u_size;     // px from centre, +y up
+    vec2 p = vec2(v_uv.x - 0.5, 0.5 - v_uv.y) * u_size;   // px from centre, +y up (v_uv is top-left)
     float r = min(u_size.x, u_size.y) * 0.5 - u_width * 0.5 - 1.0;
     float hw = u_width * 0.5;
     float dTrack = arcDist(p, r, START, SWEEP) - hw;
@@ -137,7 +137,7 @@ vec4 over(vec4 top, vec4 under) {           // straight-alpha "top over under"
 
 void main() {
     float px = v_uv.x * u_size.x;
-    float py = (1.0 - v_uv.y) * u_size.y;   // px from the top
+    float py = v_uv.y * u_size.y;   // px from the top
     float bw = u_size.x - u_slant;            // bar length along the bottom edge
     float perRpm = bw / u_max;
     vec4 c = vec4(0.0);
@@ -225,7 +225,7 @@ void main() {
     float gapPx = 6.0;
     float slot = (u_size.x + gapPx) / u_n;
     float px = v_uv.x * u_size.x;
-    float py = (1.0 - v_uv.y) * u_size.y;
+    float py = v_uv.y * u_size.y;
     float idx = floor(px / slot);
     float inSeg = px - idx * slot;
     float segW = slot - gapPx;
@@ -258,7 +258,7 @@ uniform vec4 u_hole;
 uniform float u_holeR;
 
 void main() {
-    vec2 p = vec2(v_uv.x * u_size.x, (1.0 - v_uv.y) * u_size.y);
+    vec2 p = vec2(v_uv.x * u_size.x, v_uv.y * u_size.y);
     float a = u_color.a;
     if (u_hole.z > 0.0) {
         vec2 hs = u_hole.zw * 0.5;
@@ -284,7 +284,7 @@ uniform float u_border;
 uniform float u_radius;
 
 void main() {
-    vec2 p = vec2(v_uv.x * u_size.x, (1.0 - v_uv.y) * u_size.y);
+    vec2 p = vec2(v_uv.x * u_size.x, v_uv.y * u_size.y);
     vec2 hs = u_size * 0.5;
     vec2 q = abs(p - hs) - (hs - vec2(u_radius));
     float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_radius;   // < 0 inside
@@ -297,4 +297,25 @@ void main() {
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX };
+const GRID = `// Calibration grid for a cluster-render "effect" layer (GLSL ES 1.00): a line every u_step px, a brighter
+// one every u_major steps, a frame round the edge. v_uv (0,0) is the top-left.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform float u_step;
+uniform float u_major;
+uniform vec4 u_minor;
+uniform vec4 u_majorC;
+
+void main() {
+    vec2 p = v_uv * u_size;
+    vec2 m = mod(p, u_step);
+    vec2 big = mod(p, u_step * u_major);
+    bool edge = p.x < 2.0 || p.y < 2.0 || p.x > u_size.x - 2.0 || p.y > u_size.y - 2.0;
+    if (edge || big.x < 2.0 || big.y < 2.0) gl_FragColor = u_majorC;
+    else if (m.x < 1.0 || m.y < 1.0) gl_FragColor = u_minor;
+    else gl_FragColor = vec4(0.0);
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID };

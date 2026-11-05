@@ -80,7 +80,9 @@ function press(key, value) {
 // manual signals as raw SOME/IP values (a copy of kit/runtime/car.js SCALE; FES boost from hud.js)
 const SCALE = { rpm: [0.25, 0], speed: [0.015625, 0], accel: [0.002, -65], temp: [1, -48], torque: [0.5, -1023.5], boost: [0.01, 0] };
 const raw = (k, v) => Math.round((v - SCALE[k][1]) / SCALE[k][0]);
-let mode = 'demo', manual = {};
+let mode = 'demo', manual = {}, drive = null;
+// the drive mode buttons, sent once a second as the car does on change (wire numbers: 1 Sport, 4 Comfort, 7 Eco Pro)
+setInterval(() => { if (drive !== null) hu.feed('de.bmw.infotainment.drivingexcitement.FES', 'statusFESVehicleDynamicSwitchHMI', { actualValueModeDrivingExperience: drive }); }, 1000);
 setInterval(() => {
     if (mode !== 'manual') return;
     const v = manual, num = (k, d) => (typeof v[k] === 'number' && isFinite(v[k]) ? v[k] : d);
@@ -100,7 +102,7 @@ setInterval(() => {
     if (!hud) return;
     const d = hud.car.data(), out = {};
     ['rpm', 'speed', 'oil', 'coolant', 'gear', 'gLong', 'gLat', 'torque'].forEach((n) => { out[n] = d[n] === undefined ? null : d[n]; });
-    out.boost = hud.boost;
+    out.boost = hud._boost();
     send({ t: 'values', mode, values: out });
 }, 250);
 
@@ -113,6 +115,7 @@ process.on('message', (m) => {
         const want = mode === 'manual' ? 'off' : 'on';
         if (settings.get('demo') !== want) press('demo', want);
     } else if (m.t === 'set') press(m.key, m.value);
+    else if (m.t === 'drive') drive = m.value;
 });
 process.on('disconnect', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));

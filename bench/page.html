@@ -75,6 +75,7 @@
     <section>
       <h2>Vehicle signals</h2>
       <div class="seg"><button id="mDemo" class="on">Demo drive</button><button id="mManual">Manual</button></div>
+      <div class="seg" id="drive" title="The drive mode buttons: FES statusFESVehicleDynamicSwitchHMI"><button data-v="" class="on">Mode not sent</button><button data-v="4">COMFORT</button><button data-v="1">SPORT</button><button data-v="2">SPORT+</button><button data-v="7">ECO PRO</button></div>
       <div id="sliders"></div>
       <div class="note" id="sigNote">Demo drive is the kit's simulator (sim.js). It has no boost signal, so boost reads "--" here, as on a car that does not fill that field.</div>
     </section>
@@ -103,7 +104,7 @@
   /* ---------- WebGL for effect layers: the app's real fragment shader ---------- */
   const glCanvas = document.createElement('canvas');
   const gl = glCanvas.getContext('webgl', { premultipliedAlpha: false, preserveDrawingBuffer: true, alpha: true });
-  const VS = 'attribute vec2 a_pos; varying vec2 v_uv; void main(){ v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }';
+  const VS = 'attribute vec2 a_pos; varying vec2 v_uv; void main(){ v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);  /* top-left, as cluster-render */ gl_Position = vec4(a_pos, 0.0, 1.0); }';
   const programs = new Map();   // fs source -> {prog, err}
   const shaderErrors = new Set();
   const quad = gl.createBuffer();
@@ -160,7 +161,7 @@
     canvas.width = VW; canvas.height = VH;
     document.getElementById('target').textContent = 'target: ' + v + ' ' + VW + ' x ' + VH;
     document.getElementById('backdropName').textContent = v === 'panel' ? 'stock cluster backdrop' : 'road backdrop';
-    if (v === 'panel') document.getElementById('stageNote').textContent = 'The whole instrument cluster. The backdrop stands in for BMW\'s own gauges and the map window under our layers; the map window\'s place on the real cluster is a guess. Anything the app draws opaque covers them, as it would on the car.';
+    if (v === 'panel') document.getElementById('stageNote').textContent = 'The whole instrument cluster. The backdrop stands in for BMW\'s own gauges and the map window under our layers; the map window is where it sat on Max\'s X3. Anything the app draws opaque covers them, as it would on the car.';
     dirty = true;
   }
   function drawRoad() {
@@ -170,13 +171,13 @@
     ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 4; ctx.setLineDash([30, 30]);
     ctx.beginPath(); ctx.moveTo(400, 222); ctx.lineTo(400, 480); ctx.stroke(); ctx.setLineDash([]);
   }
-  // a rough stand-in for BMW's own cluster: two angular gauges and the map window (416,180 1088x480, a guess)
+  // a rough stand-in for BMW's own cluster: two angular gauges and the map window (416,120 1088x480, from Max's photo Nov 4)
   function drawStockCluster() {
     ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, VW, VH);
-    ctx.fillStyle = '#1d3b5c'; ctx.fillRect(416, 180, 1088, 480);
+    ctx.fillStyle = '#1d3b5c'; ctx.fillRect(416, 120, 1088, 480);
     ctx.strokeStyle = '#2c5a8a'; ctx.lineWidth = 3;
-    for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(416 + i * 136, 180); ctx.lineTo(416 + i * 136, 660); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '28px sans-serif'; ctx.fillText('map window (place unverified)', 760, 430);
+    for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(416 + i * 136, 120); ctx.lineTo(416 + i * 136, 600); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '28px sans-serif'; ctx.fillText('map window', 860, 370);
     [[210, 1], [1710, -1]].forEach(([cx, side]) => {
       ctx.strokeStyle = '#c9ced6'; ctx.lineWidth = 6; ctx.beginPath();
       ctx.moveTo(cx - 120 * side, 60); ctx.lineTo(cx + 60 * side, 60); ctx.lineTo(cx + 150 * side, 360); ctx.lineTo(cx + 60 * side, 660); ctx.lineTo(cx - 120 * side, 660); ctx.stroke();
@@ -304,6 +305,10 @@
     if (!fromServer) pushSignals();
   }
   document.getElementById('mDemo').onclick = () => setMode('demo');
+  document.querySelectorAll('#drive button').forEach((b) => b.onclick = () => {
+    document.querySelectorAll('#drive button').forEach((x) => x.classList.toggle('on', x === b));
+    fetch('/drive', { method: 'POST', body: JSON.stringify({ value: b.dataset.v === '' ? null : Number(b.dataset.v) }) });
+  });
   document.getElementById('mManual').onclick = () => setMode('manual');
   function renderSettings(m) {
     const box = document.getElementById('settings');
