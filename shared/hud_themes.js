@@ -45,6 +45,18 @@ const THEMES = {
         bg: [0, 0, 0, 255], panel: [8, 9, 11, 255], line: [205, 208, 214, 255], head: [226, 228, 232, 255],
         ink: [12, 12, 14, 255], accent: [255, 196, 0, 255], well: [20, 22, 26, 255],
     },
+    // M cluster look (layout m.json): navy, white numbers with a chrome fade, M red needles and setup bars.
+    // Extra roles: redTrack, chrome (bottom of a chrome fade), grey / grey2 (the dim gear number's fade), faint.
+    mdash: {
+        name: 'M',
+        fg: [238, 241, 246, 255], dim: [132, 140, 152, 255], track: [104, 110, 120, 255], arc: [226, 36, 44, 255],
+        glow: 0, stripe: false,
+        bar: { low: [226, 36, 44], mid: [226, 36, 44], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [226, 36, 44], to: [226, 36, 44] },
+        bg: [5, 7, 11, 255], panel: [12, 15, 21, 255], line: [196, 202, 212, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [226, 36, 44, 255], well: [16, 19, 25, 255], redTrack: [90, 16, 20, 255],
+        chrome: [182, 188, 198, 255], grey: [160, 166, 176, 255], grey2: [104, 110, 122, 255], faint: [96, 104, 118, 255],
+    },
 };
 // every theme: the shift-point red, used by "hot" (the gear and SHIFT at the shift point, the rev bar past it)
 Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });

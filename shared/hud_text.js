@@ -103,7 +103,7 @@ function drawText(boxW, boxH, text, opts) {
     return tint(mask(boxW, boxH, text, opts), boxW, boxH, opts);
 }
 
-/** Colour a coverage mask (plus optional glow) into straight RGBA. opts: color, glow, font. */
+/** Colour a coverage mask (plus optional glow) into straight RGBA. opts: color, color2 (bottom, for a gradient), glow, font. */
 function tint(m, boxW, boxH, opts) {
     const color = opts.color || [255, 255, 255, 255];
     let halo = null;
@@ -114,12 +114,18 @@ function tint(m, boxW, boxH, opts) {
     }
     const out = Buffer.alloc(boxW * boxH * 4, 0);
     const ca = color[3] / 255;
+    const c2 = opts.color2;          // optional: the colour at the bottom of the box (a top-to-bottom gradient)
+    let rowC = color, row = -1;
     for (let i = 0; i < m.length; i++) {
         let a = m[i] / 255;
         if (halo) a = a + (1 - a) * (halo[i] / 255) * glow; // glyph over its own halo
         if (a <= 0) continue;
+        if (c2) {
+            const y = Math.floor(i / boxW);
+            if (y !== row) { row = y; const f = boxH > 1 ? y / (boxH - 1) : 0; rowC = [0, 1, 2].map((j) => Math.round(color[j] + (c2[j] - color[j]) * f)); }
+        }
         const o = i * 4;
-        out[o] = color[0]; out[o + 1] = color[1]; out[o + 2] = color[2];
+        out[o] = rowC[0]; out[o + 1] = rowC[1]; out[o + 2] = rowC[2];
         out[o + 3] = Math.round(a * ca * 255);
     }
     return out;

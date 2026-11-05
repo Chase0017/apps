@@ -14,6 +14,16 @@ Redraws the whole instrument cluster with your own themes. Open **Cluster Themes
 - **Right:** boost, your shift point, and the clock.
 - **At the shift point,** the lights, the rev bar, the rpm and the gear all go red.
 
+**M:** the look of a current M car's cluster.
+
+- **Middle:** two glass rev blades either side of the gear and speed, with a red needle line, orange and red marks before your redline, and the gear in chrome.
+- **Left:** a G-meter and a fuel gauge on a slate card.
+- **Right:** what the engine, chassis, steering and gearbox are set to (they follow the drive mode buttons), and an oil temperature gauge.
+- **Bottom:** range, the clock, and the outside temperature.
+- "Leave room for the map" works in GT3 only for now.
+
+<img src="../../docs/images/cluster-m.png" width="840" alt="M theme">
+
 More themes are on the way.
 
 | At the shift point | With room for the map |
@@ -47,7 +57,7 @@ More themes are on the way.
 
 ## Status
 
-Version 0.2.0. First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Still to be checked on a car:
+Version 0.3.0 (adds the M theme). First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Still to be checked on a car:
 
 - **Whether the whole dash draws.** If it doesn't, the first row of the app's page says how many parts are drawn and why the rest aren't.
 - **Whether BMW's warning lights still show over the dash.** The GT3 theme is solid black and covers whatever is under it. Test it parked: start the car with a seat belt off and look for the warning.

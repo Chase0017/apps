@@ -26,6 +26,7 @@ APPS = os.path.join(HERE, '..', 'apps')
 
 UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 DIGITS = '0123456789'
+LOWER = 'abcdefghijklmnopqrstuvwxyz'
 HUD_FONTS = [
     # name, file, px size, characters
     ('hero', 'BarlowSemiCondensed-SemiBold.ttf', 140, DIGITS + 'PRND-'),
@@ -43,31 +44,42 @@ CLUSTER_FONTS = [
     ('unit', 'BarlowCondensed-SemiBold.ttf', 34, UPPER + DIGITS + '/°%>·.: -'),
     ('head', 'BarlowCondensed-SemiBold.ttf', 24, UPPER + DIGITS + '/°%>·.: -'),
     ('scale', 'BarlowCondensed-SemiBold.ttf', 30, DIGITS),
+    # M: the wide squared numbers (Michroma, SIL OFL) and Barlow for the small print
+    ('m_num', 'Michroma-Regular.ttf', 40, DIGITS, 2),
+    ('m_stage', 'Michroma-Regular.ttf', 136, 'PRND-', 4),
+    ('m_gear', 'Michroma-Regular.ttf', 90, DIGITS, 3),
+    ('m_speed', 'Michroma-Regular.ttf', 100, DIGITS + '-', 3),
+    ('m_gl', 'Michroma-Regular.ttf', 26, DIGITS + '/.-', 1),
+    ('m_val', 'Barlow-Medium.ttf', 54, DIGITS + ':+-.'),
+    ('m_unit', 'Barlow-Medium.ttf', 30, LOWER + UPPER + '°/-.'),
+    ('m_label', 'BarlowSemiCondensed-SemiBold.ttf', 33, UPPER + ' '),
+    ('m_tiny', 'Barlow-Medium.ttf', 23, LOWER + DIGITS + './ -'),
 ]
 FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2
 ATLAS_W = 1024
 
 
-def bake(out, name, file, size, chars):
+def bake(out, name, file, size, chars, stroke=0):
+    """stroke: px of extra weight round every glyph (Michroma has one weight; the M numbers are heavier)."""
     font = ImageFont.truetype(os.path.join(SRC, file), size)
     ink = [c for c in chars if c != ' ']
-    boxes = {c: font.getbbox(c, anchor='ls') for c in ink}
+    boxes = {c: font.getbbox(c, anchor='ls', stroke_width=stroke) for c in ink}
     top = min(b[1] for b in boxes.values())
     bottom = max(b[3] for b in boxes.values())
     height = bottom - top + 2 * PAD
-    tab = max(font.getlength(d) for d in DIGITS if d in chars) if any(d in chars for d in DIGITS) else 0
+    tab = (max(font.getlength(d) for d in DIGITS if d in chars) + 2 * stroke) if any(d in chars for d in DIGITS) else 0
 
     cells = []
     for c in chars:
-        adv = font.getlength(c)
+        adv = font.getlength(c) + (2 * stroke if c != ' ' else 0)
         if c == ' ':
             cells.append((c, None, 0, round(adv if adv else size * 0.25)))
             continue
         l, _, r, _ = boxes[c]
         w = r - l + 2 * PAD
         img = Image.new('L', (w, height), 0)
-        ImageDraw.Draw(img).text((PAD - l, PAD - top), c, font=font, fill=255, anchor='ls')
+        ImageDraw.Draw(img).text((PAD - l, PAD - top), c, font=font, fill=255, anchor='ls', stroke_width=stroke, stroke_fill=255)
         shift = (tab - adv) / 2 if c in DIGITS else 0
         cells.append((c, img, round(l - PAD + shift), round(tab if c in DIGITS else adv)))
 

@@ -13,6 +13,7 @@
     "hud_themes.js",
     "layouts.js",
     "shaders.js",
+    "icons.js",
     "shift_score.js",
     "sun.js",
     "cluster_render_client.js"
@@ -46,6 +47,12 @@
       "_broadcasts": [
         "sendTasuResponse"
       ]
+    },
+    "de.bmw.infotainment.KombiIF": {
+      "statusRangeTankStatus": "rs"
+    },
+    "de.bmw.infrastructure.EnvironmentalInformation": {
+      "ExteriorTemperature": "s"
     }
   },
   "screens": [
@@ -332,7 +339,7 @@
       "lon": -80.8431
     },
     "utcOffsetMinutes": null,
-    "_comment": "socketPath: cluster-render's documented default. location: where the Auto theme works out sunrise and sunset (Charlotte, NC). utcOffsetMinutes: leave null to use the head unit's own time zone; set it (e.g. -300 for EST) only if the HUD clock shows the wrong hour on the car.",
+    "_comment": "socketPath: cluster-render's documented default. location: where the Auto theme works out sunrise and sunset (Charlotte, NC). utcOffsetMinutes: leave null to use the head unit's own time zone; set it (e.g. -300 for EST) only if the HUD clock shows the wrong hour on the car. tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65).",
     "dme": {
       "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT).",
       "ecu": 18,
@@ -400,6 +407,7 @@
           "note": "OBD service 01 PID 0x33 (same as F433)"
         }
       ]
-    }
+    },
+    "tankLitres": 65
   }
 }

@@ -24,6 +24,10 @@ const TYPES = {
     box: [],
     grid: [],
     gridlabels: ['font'],
+    segbar: ['signal', 'max'],
+    mdash: [],
+    mtach: ['side', 'y0', 'y8', 'ym', 'xm', 'kTop', 'kBot', 'wBot', 'wTop'],
+    icon: ['icon'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 

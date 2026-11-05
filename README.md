@@ -8,9 +8,11 @@ Apps for BMW iDrive 7 head units (MGU), installed through the community MGU Stor
 
 ### Cluster Themes
 
-Redraws the whole instrument cluster with your own themes, picked on the center screen. The first theme is a GT3 race dash: shift lights, a rev bar, boost, oil and water temperatures, and a grade on every upshift. [More](apps/cluster_themes/README.md)
+Redraws the whole instrument cluster with your own themes, picked on the center screen. Two themes so far: a GT3 race dash (shift lights, a rev bar, boost, temperatures, and a grade on every upshift) and an M-style cluster (curved rev bars, a G-meter, and the drive setup). [More](apps/cluster_themes/README.md)
 
 <img src="docs/images/cluster-gt3-shift.png" width="640" alt="GT3 theme at the shift point">
+
+<img src="docs/images/cluster-m.png" width="640" alt="M theme">
 
 ### HUD Widgets
 
@@ -38,7 +40,7 @@ Both apps ran in a first car test on a 2020 X3 M40i, and this version fixes what
 
 - [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps): the MGU App Kit (MIT) these apps are built on, and the Redline app the shift scoring comes from.
 - [robertnisipeanu/idrive-apps](https://github.com/robertnisipeanu/idrive-apps): cluster-render, which draws on the HUD and the cluster.
-- Barlow typeface (SIL Open Font License).
+- Barlow and Michroma typefaces (SIL Open Font License).
 
 ## Licence
 

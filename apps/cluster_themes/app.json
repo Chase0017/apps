@@ -1,8 +1,8 @@
 {
   "id": "cluster_themes",
   "title": "Cluster Themes",
-  "description": "Redraws the instrument cluster: GT3 race dash with shift lights, boost, temps and shift scoring",
-  "version": "0.2.0",
+  "description": "Redraws the instrument cluster: GT3 race dash or M-style cluster, with shift lights, boost, temps and shift scoring",
+  "version": "0.3.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -13,6 +13,7 @@
     "hud_themes.js",
     "layouts.js",
     "shaders.js",
+    "icons.js",
     "shift_score.js",
     "sun.js",
     "cluster_render_client.js"
@@ -46,6 +47,12 @@
       "_broadcasts": [
         "sendTasuResponse"
       ]
+    },
+    "de.bmw.infotainment.KombiIF": {
+      "statusRangeTankStatus": "rs"
+    },
+    "de.bmw.infrastructure.EnvironmentalInformation": {
+      "ExteriorTemperature": "s"
     }
   },
   "screens": [
@@ -79,6 +86,10 @@
           "GT3"
         ],
         [
+          "m",
+          "M"
+        ],
+        [
           "grid",
           "Calibration grid"
         ]
@@ -103,6 +114,10 @@
         [
           "gt3",
           "GT3"
+        ],
+        [
+          "m",
+          "M"
         ]
       ]
     },
@@ -119,6 +134,10 @@
         [
           "gt3",
           "GT3"
+        ],
+        [
+          "m",
+          "M"
         ]
       ]
     },
@@ -135,6 +154,10 @@
         [
           "gt3",
           "GT3"
+        ],
+        [
+          "m",
+          "M"
         ]
       ]
     },
@@ -248,7 +271,7 @@
       "lon": -80.8431
     },
     "utcOffsetMinutes": null,
-    "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. location and utcOffsetMinutes: as in HUD Widgets (the clock box).",
+    "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. location and utcOffsetMinutes: as in HUD Widgets (the clock box). tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65).",
     "dme": {
       "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT).",
       "ecu": 18,
@@ -316,6 +339,7 @@
           "note": "OBD service 01 PID 0x33 (same as F433)"
         }
       ]
-    }
+    },
+    "tankLitres": 65
   }
 }

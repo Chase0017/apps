@@ -55,8 +55,9 @@ void main() {
 `;
 
 const ARC = `// Thin open arc gauge for a cluster-render "effect" layer (GLSL ES 1.00).
-// 270 degree sweep with the gap at the bottom, round ends, filled clockwise
-// from the lower left. Uniforms from hud.js:
+// u_start / u_sweep (radians, clockwise from 12 o'clock; a negative sweep runs anticlockwise), round
+// ends, filled from the start. hud.js default: 270 degrees from the lower left, the gap at the bottom.
+// Uniforms from hud.js:
 //   u_value  0..1 of the sweep
 //   u_size   layer size in px (w, h)
 //   u_color  lit arc (rgb 0..1)
@@ -70,10 +71,10 @@ uniform vec2 u_size;
 uniform vec3 u_color;
 uniform vec4 u_track;
 uniform float u_width;
+uniform float u_start;
+uniform float u_sweep;
 
 const float PI = 3.14159265359;
-const float SWEEP = 1.5 * PI;          // 270 degrees
-const float START = 1.25 * PI;         // lower left, measured clockwise from 12 o'clock
 
 // distance from point p (centred, px) to the arc from angle a0 sweeping s, radius r
 float arcDist(vec2 p, float r, float a0, float s) {
@@ -87,11 +88,13 @@ float arcDist(vec2 p, float r, float a0, float s) {
 
 void main() {
     vec2 p = vec2(v_uv.x - 0.5, 0.5 - v_uv.y) * u_size;   // px from centre, +y up (v_uv is top-left)
+    float start = u_start, sweep = u_sweep;
+    if (sweep < 0.0) { p.x = -p.x; start = -start; sweep = -sweep; }   // anticlockwise = mirrored clockwise
     float r = min(u_size.x, u_size.y) * 0.5 - u_width * 0.5 - 1.0;
     float hw = u_width * 0.5;
-    float dTrack = arcDist(p, r, START, SWEEP) - hw;
-    float lit = clamp(u_value, 0.0, 1.0) * SWEEP;
-    float dLit = lit > 0.001 ? arcDist(p, r, START, lit) - hw : 1e5;
+    float dTrack = arcDist(p, r, start, sweep) - hw;
+    float lit = clamp(u_value, 0.0, 1.0) * sweep;
+    float dLit = lit > 0.001 ? arcDist(p, r, start, lit) - hw : 1e5;
     float cLit = clamp(0.5 - dLit, 0.0, 1.0);
     float cTrack = clamp(0.5 - dTrack, 0.0, 1.0);
     if (cLit > 0.0) gl_FragColor = vec4(u_color, cLit);
@@ -318,4 +321,234 @@ void main() {
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID };
+const SEGBAR = `// Segmented level bar for a cluster-render "effect" layer (GLSL ES 1.00): u_segs segments, the first
+// u_lit of them lit (brightening left to right), each slanted u_slant px. v_uv (0,0) is the top-left.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform float u_segs;
+uniform float u_lit;
+uniform vec4 u_on;
+uniform vec4 u_offC;
+uniform float u_slant;
+
+void main() {
+    vec2 p = v_uv * u_size;
+    float x = p.x - u_slant * (1.0 - v_uv.y);
+    float gap = 8.0;
+    float slot = (u_size.x - u_slant + gap) / u_segs;
+    float i = floor(x / slot);
+    float fx = x - i * slot;
+    float a = clamp(fx + 0.5, 0.0, 1.0) * clamp(slot - gap - fx + 0.5, 0.0, 1.0);
+    if (i < 0.0 || i >= u_segs || a <= 0.0) { gl_FragColor = vec4(0.0); return; }
+    vec4 col = i < u_lit ? vec4(u_on.rgb * mix(0.72, 1.0, fx / (slot - gap)), u_on.a) : u_offC;
+    gl_FragColor = vec4(col.rgb, col.a * a);
+}
+`;
+
+const MDASH = `// The M theme's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00), so nothing static is
+// uploaded: navy with a soft glow, the slate card on the left, the frame on the right, the centre line with
+// its end caps, the G-meter (rings, crosshair, dot), the two side gauges (arc, ticks, colour zones, red
+// needle) and the tricolour mark. Positions in target px from the layout (hud.js). v_uv (0,0) is the top-left.
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec4 u_card;      // left card x, y, w, h
+uniform vec4 u_panel;     // right frame x, y, w, h
+uniform vec4 u_line;      // centre line x0, y, x1, cap length
+uniform vec3 u_gm;        // G-meter centre x, y, outer ring radius
+uniform vec2 u_g;         // the dot, g (x right, y up)
+uniform float u_maxG;     // g at the outer ring
+uniform vec4 u_gaugeL;    // left gauge centre x, y, radius, value 0..1
+uniform vec4 u_gaugeR;    // right gauge
+uniform vec3 u_mark;      // tricolour mark x, y, scale (0 = none)
+uniform vec3 u_red;
+
+const float PI = 3.14159265;
+
+float cov(float d) { return clamp(0.5 - d, 0.0, 1.0); }
+vec4 over(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    if (a <= 0.0) return vec4(0.0);
+    return vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
+float segD(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+
+float sdRoundBox(vec2 p, vec4 r, float rad) {
+    vec2 c = r.xy + r.zw * 0.5;
+    vec2 q = abs(p - c) - r.zw * 0.5 + rad;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rad;
+}
+float angOf(vec2 d) { float a = atan(d.x, -d.y); return a < 0.0 ? a + 2.0 * PI : a; }
+
+// a side gauge: arc from a0 (value 0) to a1 (value 1), clockwise angles from 12 o'clock
+vec4 gauge(vec2 p, vec4 g, float a0, float a1, float zones, vec4 c) {
+    vec2 d = p - g.xy;
+    float r = length(d);
+    if (r > g.z + 8.0 || r < g.z - 60.0) return c;
+    float a = angOf(d);
+    float t = (a - a0) / (a1 - a0);
+    if (t >= -0.01 && t <= 1.01) {
+        c = over(vec4(1.0, 1.0, 1.0, (r < g.z - 1.0 && r > g.z - 18.0) ? 0.06 : 0.0), c);   // glass band
+        vec3 col = vec3(0.86, 0.88, 0.92);
+        float s = cov(abs(r - g.z) - 1.1);
+        if (zones > 0.5 && t > 0.86) { col = u_red; s = cov(abs(r - g.z + 1.5) - 2.6); }
+        if (zones > 0.5 && t < 0.13) { col = vec3(0.16, 0.42, 0.95); s = cov(abs(r - g.z + 1.5) - 2.6); }
+        c = over(vec4(col, s), c);
+        float k = floor(t * 8.0 + 0.5) / 8.0;
+        float along = abs(a - mix(a0, a1, k)) * r;
+        float len = (k < 0.01 || k > 0.99 || abs(k - 0.5) < 0.01) ? 15.0 : 8.0;
+        if (k >= 0.0 && k <= 1.0 && r < g.z - 2.0 && r > g.z - 2.0 - len) c = over(vec4(0.82, 0.84, 0.88, 0.85 * cov(along - 0.9)), c);
+    }
+    float an = mix(a0, a1, clamp(g.w, 0.0, 1.0));
+    vec2 dir = vec2(sin(an), -cos(an));
+    float nd = segD(p, g.xy + dir * (g.z - 3.0), g.xy + dir * (g.z - 50.0));
+    c = over(vec4(u_red, cov(nd - 2.4)), c);
+    c = over(vec4(1.0, 0.6, 0.6, 0.7 * cov(nd - 0.6)), c);
+    return c;
+}
+
+void main() {
+    vec2 p = v_uv * u_size;
+    // navy, a soft glow behind the middle, darker under the hood at the top
+    vec2 q = (p - vec2(u_size.x * 0.5, u_size.y * 0.42)) / vec2(u_size.x * 0.5, u_size.y * 0.85);
+    float glow = exp(-dot(q, q) * 1.5);
+    vec3 base = mix(vec3(0.014, 0.027, 0.05), vec3(0.055, 0.105, 0.155), glow);
+    base *= mix(0.55, 1.0, smoothstep(0.0, 0.22, v_uv.y)) * mix(0.75, 1.0, smoothstep(1.0, 0.82, v_uv.y));
+    vec4 c = vec4(base, 1.0);
+
+    // left card: slate blue, lighter on the left, fading out under the rev bar
+    float dc = sdRoundBox(p, u_card, 48.0);
+    if (dc < 1.5) {
+        float fx = clamp((p.x - u_card.x) / u_card.z, 0.0, 1.0);
+        float fy = clamp((p.y - u_card.y) / u_card.w, 0.0, 1.0);
+        vec3 cc = mix(vec3(0.21, 0.31, 0.43), vec3(0.08, 0.14, 0.21), smoothstep(0.0, 0.9, fx)) * mix(1.05, 0.8, fy);
+        float a = cov(dc) * (1.0 - smoothstep(0.6, 1.0, fx));
+        c = over(vec4(cc, a), c);
+        c = over(vec4(0.65, 0.78, 0.92, 0.22 * cov(abs(dc + 1.0) - 0.7) * (1.0 - fx)), c);
+    }
+    // right frame, its left side fading under the rev bar
+    float dp = sdRoundBox(p, u_panel, 44.0);
+    float fade = smoothstep(u_panel.x + 40.0, u_panel.x + 200.0, p.x);
+    c = over(vec4(1.0, 1.0, 1.0, 0.03 * cov(dp) * fade), c);
+    c = over(vec4(0.72, 0.78, 0.86, 0.24 * cov(abs(dp) - 0.8) * fade), c);
+
+    // centre line, bright caps at both ends
+    if (abs(p.y - u_line.y) < 6.0) {
+        c = over(vec4(0.6, 0.65, 0.72, 0.75 * cov(segD(p, u_line.xy, u_line.zy) - 0.7)), c);
+        float l = segD(p, u_line.xy + vec2(6.0, 0.0), u_line.xy + vec2(u_line.w, 0.0)) - 1.6 - 0.8 * clamp((p.x - u_line.x) / u_line.w, 0.0, 1.0);
+        float r = segD(p, u_line.zy - vec2(u_line.w, 0.0), u_line.zy - vec2(6.0, 0.0)) - 1.6 - 0.8 * clamp((u_line.z - p.x) / u_line.w, 0.0, 1.0);
+        c = over(vec4(0.95, 0.96, 0.98, cov(min(l, r))), c);
+    }
+
+    // G-meter
+    vec2 gd = p - u_gm.xy;
+    float gr = length(gd);
+    if (gr < u_gm.z + 30.0) {
+        float R = u_gm.z, rI = R * 0.8 / u_maxG;
+        c = over(vec4(0.78, 0.84, 0.9, 0.5 * cov(abs(gr - R) - 0.7)), c);
+        float seg = mod(angOf(gd) + 0.13, 2.0 * PI / 8.0) < (2.0 * PI / 8.0 - 0.26) ? 1.0 : 0.0;
+        c = over(vec4(0.42, 0.48, 0.55, 0.65 * seg * cov(abs(gr - rI) - 3.5)), c);
+        float cross = (abs(gd.y) < R + 24.0 ? cov(abs(gd.x) - 0.6) : 0.0) + (abs(gd.x) < R + 24.0 ? cov(abs(gd.y) - 0.6) : 0.0);
+        c = over(vec4(0.78, 0.84, 0.9, 0.45 * clamp(cross, 0.0, 1.0)), c);
+        vec2 dot = u_gm.xy + vec2(u_g.x, -u_g.y) / u_maxG * R;
+        float dd = length(p - dot);
+        c = over(vec4(u_red, 0.35 * exp(-dd * dd / 300.0)), c);
+        c = over(vec4(u_red, cov(dd - 9.0)), c);
+    }
+
+    c = gauge(p, u_gaugeL, radians(196.0), radians(300.0), 0.0, c);
+    c = gauge(p, u_gaugeR, radians(164.0), radians(60.0), 1.0, c);
+
+    // tricolour mark: three slanted bars
+    if (u_mark.z > 0.0) {
+        vec2 m = (p - u_mark.xy) / u_mark.z;
+        if (m.y > -1.0 && m.y < 21.0 && m.x > -2.0 && m.x < 60.0) {
+            float lx = m.x - 7.0 * (1.0 - m.y / 20.0);
+            float i = floor(lx / 16.0);
+            float fx = lx - i * 16.0;
+            float inside = cov((max(abs(fx - 6.5) - 6.5, abs(m.y - 10.0) - 10.0)) * u_mark.z);
+            vec3 mc = i < 0.5 ? vec3(0.31, 0.71, 1.0) : (i < 1.5 ? vec3(0.17, 0.29, 0.78) : vec3(0.9, 0.13, 0.17));
+            if (i >= 0.0 && i <= 2.0) c = over(vec4(mc, inside), c);
+        }
+    }
+    gl_FragColor = c;
+}
+`;
+const MTACH = `// The M theme's rev bar (GLSL ES 1.00): a glass blade with a bright silver outer edge that bends at u_geoA.z,
+// tick notches pointing out every 1000 rpm (a long one at the bend), the part below the rpm lit light grey,
+// a red needle line at the rpm with a red glow above it, and orange then red dashes from the shift zone.
+// Drawn as the left bar; u_side 1 mirrors it into the right one. v_uv (0,0) is the top-left.
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform float u_side;
+uniform vec4 u_geoA;      // y at 0 rpm, y at max, y of the bend, outer-edge x at the bend (layer px, left frame)
+uniform vec3 u_geoB;      // slope above the bend, slope below it, bend roundness px
+uniform vec3 u_wid;       // blade width at 0 rpm, at max, extra at the bend
+uniform float u_ticks;    // max / 1000
+uniform float u_value;    // 0..1
+uniform float u_orange;   // 0..1, orange dashes from here
+uniform float u_redFrom;  // 0..1, red dashes from here (the redline)
+uniform float u_shiftNow;
+uniform vec3 u_red;
+
+float cov(float d) { return clamp(0.5 - d, 0.0, 1.0); }
+vec4 over(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    if (a <= 0.0) return vec4(0.0);
+    return vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
+float segD(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+
+void main() {
+    vec2 p = v_uv * u_size;
+    if (u_side > 0.0) p.x = u_size.x - p.x;
+    float y0 = u_geoA.x, y8 = u_geoA.y, ym = u_geoA.z, xm = u_geoA.w;
+    float dy = p.y - ym;
+    float k = dy < 0.0 ? u_geoB.x : u_geoB.y;
+    float sq = sqrt(dy * dy + u_geoB.z * u_geoB.z);
+    float xo = xm + k * (sq - u_geoB.z);
+    float slope = k * dy / sq;
+    float d = (p.x - xo) / sqrt(1.0 + slope * slope);      // + = into the blade, towards the middle
+    float t = (y0 - p.y) / (y0 - y8);
+    float w = mix(u_wid.x, u_wid.y, clamp(t, 0.0, 1.0)) + u_wid.z * exp(-dy * dy / 22000.0);
+    vec4 c = vec4(0.0);
+    if (t >= 0.0 && t <= 1.0) {
+        float inBand = clamp(d + 0.5, 0.0, 1.0) * clamp(w - d + 0.5, 0.0, 1.0);
+        float across = clamp(d / w, 0.0, 1.0);
+        float yn = y0 - u_value * (y0 - y8);
+        vec4 g = vec4(0.62, 0.67, 0.74, mix(0.2, 0.05, across));          // empty glass
+        if (p.y > yn) g = u_shiftNow > 0.5 ? vec4(u_red * 0.8, 0.55) : vec4(mix(vec3(0.8, 0.82, 0.86), vec3(0.55, 0.58, 0.63), across), mix(0.42, 0.24, across));
+        else g = over(vec4(u_red, 0.5 * exp(-(yn - p.y) / 42.0) * (1.0 - 0.4 * across)), g);
+        float nl = cov(abs(p.y - yn) - 2.8);
+        g = over(vec4(mix(u_red, vec3(1.0, 0.55, 0.55), cov(abs(p.y - yn) - 0.8)), nl), g);
+        c = vec4(g.rgb, g.a * inBand);
+        c = over(vec4(0.93, 0.95, 0.98, cov(abs(d) - 1.6)), c);               // outer edge
+        c = over(vec4(1.0, 1.0, 1.0, 0.3 * cov(abs(d - 4.0) - 0.6)), c);       // its bevel
+        c = over(vec4(0.66, 0.7, 0.76, 0.75 * cov(abs(d - w) - 0.8)), c);      // inner edge
+        if (t >= u_orange && d > 6.0 && d < 11.0 && mod(p.y, 15.0) < 9.0) {
+            c = over(vec4(t >= u_redFrom ? u_red : vec3(1.0, 0.6, 0.1), 0.95), c);
+        }
+    }
+    float kk = floor(t * u_ticks + 0.5);
+    float yk = y0 - kk / u_ticks * (y0 - y8);
+    if (kk >= 0.0 && kk <= u_ticks && d < 0.0) {
+        float bend = abs(yk - ym) < 10.0 ? 1.0 : 0.0;
+        float len = mix(11.0, 22.0, bend);
+        float ty = abs(p.y - yk) - mix(1.1, 1.8, bend) * (bend > 0.5 ? (1.0 + d / len) : 1.0);
+        if (d > -len) c = over(vec4(0.93, 0.95, 0.98, cov(ty)), c);
+    }
+    gl_FragColor = c;
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH };
