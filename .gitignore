@@ -1,0 +1,6 @@
+# build output and the BMW oap-sdk (not redistributable: the Store makes it on the car)
+dist/
+oap-sdk/
+*.log
+bench/.data/
+__pycache__/

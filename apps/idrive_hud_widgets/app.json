@@ -1,0 +1,228 @@
+{
+  "id": "idrive_hud_widgets",
+  "title": "HUD Widgets",
+  "description": "Speed, gear, shift bar, boost, oil and coolant on the windshield HUD, in Classic, M or Night themes",
+  "version": "0.3.0",
+  "vendor": "custom",
+  "loggingId": "OAH1",
+  "iconGlyph": "HUD",
+  "signals": {
+    "de.bmw.infotainment.vehicle.CDS": {
+      "statusEngineSpeed2": "rs",
+      "statusEngineTemperature": "rs"
+    },
+    "de.bmw.infotainment.vehicle.CDS2": {
+      "statusLongitudinalAccelerationMassCenter": "rs",
+      "statusLateralAccelerationMassCenter": "rs"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
+    },
+    "de.bmw.infotainment.drivingexcitement.FES": {
+      "statusSwitchDriveDynamicSport2": "rs",
+      "statusActualValueTorque2": "rs"
+    },
+    "de.bmw.infrastructure.VehicleInformation": {
+      "statusGearboxDrive": "s",
+      "DataPowerTrain2": "s"
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "menu",
+      "title": "HUD Widgets",
+      "settings": true,
+      "items": [
+        [
+          "text",
+          "STATUS",
+          "Starting the HUD"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "hudLayout",
+      "label": "Layout",
+      "type": "choice",
+      "default": "daily",
+      "options": [
+        [
+          "daily",
+          "Daily"
+        ],
+        [
+          "sport",
+          "Sport"
+        ],
+        [
+          "redline",
+          "Redline"
+        ]
+      ]
+    },
+    {
+      "key": "hudTheme",
+      "label": "Theme",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (Night after sunset)"
+        ],
+        [
+          "classic",
+          "Classic"
+        ],
+        [
+          "m",
+          "M"
+        ],
+        [
+          "night",
+          "Night"
+        ]
+      ]
+    },
+    {
+      "key": "dayTheme",
+      "label": "Daytime theme for Auto",
+      "type": "choice",
+      "default": "classic",
+      "options": [
+        [
+          "classic",
+          "Classic"
+        ],
+        [
+          "m",
+          "M"
+        ]
+      ]
+    },
+    {
+      "key": "units",
+      "label": "Units",
+      "type": "choice",
+      "default": "us",
+      "options": [
+        [
+          "us",
+          "mph, °F, psi"
+        ],
+        [
+          "metric",
+          "km/h, °C, bar"
+        ]
+      ]
+    },
+    {
+      "key": "clock",
+      "label": "Clock",
+      "type": "choice",
+      "default": "12h",
+      "options": [
+        [
+          "12h",
+          "12-hour"
+        ],
+        [
+          "24h",
+          "24-hour"
+        ]
+      ]
+    },
+    {
+      "key": "redline",
+      "label": "Redline (shift light)",
+      "type": "number",
+      "unit": "rpm",
+      "default": 7000,
+      "steps": [
+        5500,
+        6000,
+        6500,
+        7000,
+        7500
+      ]
+    },
+    {
+      "key": "shiftBefore",
+      "label": "Shift point before redline",
+      "type": "number",
+      "unit": "rpm",
+      "default": 300,
+      "steps": [
+        0,
+        100,
+        200,
+        300,
+        500,
+        800,
+        1000
+      ]
+    },
+    {
+      "key": "coldGuard",
+      "label": "Cold-engine rev guard (Redline)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "showClock",
+      "label": "Show clock",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "showOil",
+      "label": "Show oil temperature",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "showCoolant",
+      "label": "Show coolant temperature",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "showBoost",
+      "label": "Show boost (Sport layout)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "demo",
+      "label": "Demo data",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (until the car sends data)"
+        ],
+        [
+          "on",
+          "On"
+        ],
+        [
+          "off",
+          "Off"
+        ]
+      ]
+    }
+  ],
+  "config": {
+    "socketPath": "/dev/shm/cluster-render/render.sock",
+    "location": {
+      "lat": 35.2271,
+      "lon": -80.8431
+    },
+    "utcOffsetMinutes": null,
+    "_comment": "socketPath: cluster-render's documented default. location: where the Auto theme works out sunrise and sunset (Charlotte, NC). utcOffsetMinutes: leave null to use the head unit's own time zone; set it (e.g. -300 for EST) only if the HUD clock shows the wrong hour on the car."
+  }
+}

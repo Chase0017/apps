@@ -1,0 +1,120 @@
+{
+ "schemaVersion": 2,
+ "name": "Daily",
+ "_about": "Calm everyday layout: speed is the hero. To change it, copy this file into the app data folder layouts/ (scripts/deploy.sh); the app reloads it by itself. Widget types and tokens: see the header of hud.js.",
+ "widgets": [
+  {
+   "id": "speed",
+   "type": "text",
+   "text": "{{speed}}",
+   "font": "hero",
+   "x": 290,
+   "y": 160,
+   "w": 220,
+   "h": 104,
+   "class": "overlay",
+   "z": 10,
+   "align": "center",
+   "glow": true
+  },
+  {
+   "id": "speed_unit",
+   "type": "text",
+   "text": "{{u:speed}}",
+   "font": "label",
+   "x": 290,
+   "y": 276,
+   "w": 220,
+   "h": 20,
+   "class": "overlay",
+   "z": 10,
+   "align": "center",
+   "color": "dim",
+   "spacing": 2
+  },
+  {
+   "id": "m_stripe",
+   "type": "stripe",
+   "x": 367,
+   "y": 304,
+   "w": 66,
+   "h": 4,
+   "themes": [
+    "m"
+   ],
+   "class": "content",
+   "z": 5
+  },
+  {
+   "id": "gear",
+   "type": "text",
+   "text": "{{gear}}",
+   "font": "big",
+   "x": 140,
+   "y": 192,
+   "w": 120,
+   "h": 39,
+   "class": "overlay",
+   "z": 10,
+   "align": "center",
+   "glow": true
+  },
+  {
+   "id": "clock",
+   "type": "text",
+   "text": "{{time}}",
+   "font": "mid",
+   "x": 540,
+   "y": 180,
+   "w": 92,
+   "h": 30,
+   "class": "overlay",
+   "z": 10,
+   "align": "right",
+   "toggle": "showClock"
+  },
+  {
+   "id": "ampm",
+   "type": "text",
+   "text": "{{ampm}}",
+   "font": "label",
+   "x": 638,
+   "y": 192,
+   "w": 40,
+   "h": 20,
+   "class": "overlay",
+   "z": 10,
+   "color": "dim",
+   "spacing": 1,
+   "toggle": "showClock"
+  },
+  {
+   "id": "oil_label",
+   "type": "text",
+   "text": "OIL",
+   "font": "small",
+   "x": 560,
+   "y": 240,
+   "w": 40,
+   "h": 17,
+   "class": "content",
+   "z": 10,
+   "color": "dim",
+   "spacing": 1.5,
+   "toggle": "showOil"
+  },
+  {
+   "id": "oil",
+   "type": "text",
+   "text": "{{oil}}°",
+   "font": "mid",
+   "x": 600,
+   "y": 225,
+   "w": 90,
+   "h": 30,
+   "class": "overlay",
+   "z": 10,
+   "toggle": "showOil"
+  }
+ ]
+}
