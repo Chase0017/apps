@@ -27,6 +27,7 @@ const TYPES = {
     segbar: ['signal', 'max'],
     mdash: [],
     sdash: ['geo', 'k', 'band', 'ticks', 'fuelSeg', 'oilSeg', 'strip', 'topEnd'],
+    ddash: ['tach', 'gauges', 'dials', 'bars'],
     mtach: ['side', 'y0', 'y8', 'ym', 'xm', 'kTop', 'kBot', 'wBot', 'wTop'],
     icon: ['icon'],
 };
@@ -77,7 +78,7 @@ class Layouts {
             if (w.x + w.w > this.size[0] || w.y + w.h > this.size[1]) bad(at + ' runs off the ' + this.size[0] + 'x' + this.size[1] + ' display');
             if (w.class && CLASSES.indexOf(w.class) < 0) bad(at + ' has unknown class "' + w.class + '"');
             if (w.exclusive) bad(at + ' sets exclusive, which would hide everything under it (the CarPlay / Android Auto map too)');
-            if (w.toggle !== undefined && !/^!?[a-zA-Z0-9_]+$/.test(String(w.toggle))) bad(at + ' has a bad toggle "' + w.toggle + '"');
+            if (w.toggle !== undefined && !/^!?[a-zA-Z0-9_]+(=[a-zA-Z0-9_]+)?$/.test(String(w.toggle))) bad(at + ' has a bad toggle "' + w.toggle + '"');
             if (w.hole !== undefined && !(Array.isArray(w.hole) && w.hole.length === 4 && w.hole.every((n) => typeof n === 'number'))) bad(at + ' "hole" must be [x, y, w, h]');
             TYPES[w.type].forEach((k) => { if (w[k] === undefined) bad(at + ' (' + w.type + ') needs "' + k + '"'); });
         });

@@ -26,12 +26,26 @@ Redraws the whole instrument cluster with your own themes. Open **Cluster Themes
 
 **Sport:** the look of BMW's newer Live Cockpit Sport view.
 
-- **Left:** speed as a blue angled bracket, with the digital speed and a fuel bar inside it.
-- **Right:** revs as a red bracket, with the gear, the drive mode and an oil temperature bar inside it.
+- **Left:** speed as a blue neon bracket on BMW's 0 to 200 mph scale (0 to 320 km/h), with the digital speed and a fuel bar inside it.
+- **Right:** revs as a red neon bracket, with the gear, the drive mode and an oil temperature bar inside it.
 - **Middle:** a lane view whose dashes move with your speed. With "Leave room for the map" on, BMW's map shows there instead, framed by the brackets.
 - **Bottom:** boost and coolant in the blue and red strip, plus the clock, range and outside temperature.
 
 <img src="../../docs/images/cluster-sport.png" width="840" alt="Sport theme">
+
+**Dials:** a big round tach in the middle with gauges either side.
+
+- **Middle:** a round tach with a grey band, a red zone from your redline, and an orange needle that turns red at the shift point. The speed, gear and drive mode sit inside it.
+- **Sides:** boost and oil on the left, power and torque (as % of the engine's peak) on the right.
+- **Gauge style:** pick round dials, bars, or big digital numbers for the four side gauges.
+- **Top:** the clock, outside temperature and range. **Bottom:** coolant and fuel bars (the fuel bar turns orange when low).
+- "Leave room for the map" doesn't apply to this theme.
+
+<img src="../../docs/images/cluster-dials.png" width="840" alt="Dials theme, round gauges">
+
+| Bars | Digital, at the shift point |
+| --- | --- |
+| <img src="../../docs/images/cluster-dials-bars.png" width="420" alt="Dials theme, bar gauges"> | <img src="../../docs/images/cluster-dials-digital.png" width="420" alt="Dials theme, digital gauges at the shift point"> |
 
 More themes are on the way.
 
@@ -49,6 +63,7 @@ More themes are on the way.
 
 - **Theme**, and one per drive mode
 - **Leave room for the map:** cuts a window out of the dash so the map can show through, moves the gear and temperatures to the sides, and slims the rev bar.
+- **Gauge style (Dials theme):** round dials, bars or digital
 - **Calibration grid:** a theme that draws lines every 50 px with x/y labels, for checking where things sit on the real screen.
 - **Units:** mph, °F, psi or km/h, °C, bar
 - **Clock:** 12-hour or 24-hour
@@ -66,9 +81,10 @@ More themes are on the way.
 
 ## Status
 
-Version 0.4.0 (adds the Sport theme). First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Still to be checked on a car:
+Version 0.5.0 (adds the Dials theme and restyles Sport closer to BMW's). First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Still to be checked on a car:
 
 - **Whether the whole dash draws.** If it doesn't, the first row of the app's page says how many parts are drawn and why the rest aren't.
 - **Whether BMW's warning lights still show over the dash.** The GT3 theme is solid black and covers whatever is under it. Test it parked: start the car with a seat belt off and look for the warning.
 - The drive mode switching, and the map cut-out's new position.
+- Whether Power % and Torque % in the Dials theme read sensibly. They come from the car's crankshaft torque signal and count from 500 Nm and 285 kW, an M40i's peak.
 - How the colours and edges look on the real screen.

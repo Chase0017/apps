@@ -37,11 +37,12 @@ Each app's layouts are `apps/<id>/hud/layouts/<name>.json` (`schemaVersion: 2`).
 - **HUD (800x480):** `text`, `scale`, `stripe`, `shiftbar`, `arc`, `revbar`, `lights`, `badge`. Colours are theme roles (`fg`, `dim`, `arc`), so a layout works in every theme.
 - **Cluster (1920x720):** the same types, plus `fill` (a solid colour with a see-through `hole` cut while a setting is on) and `box` (a framed readout with a header strip). A cluster layout names its own `"theme"`.
 - **Sport theme:** `sdash` draws the whole theme (brackets, fills, lane view or map cut-out, fuel and oil bars, bottom strip) in one shader.
+- **Dials theme:** `ddash` draws the backdrop, the round tach with its needle, the four side gauges and the bottom bars in one shader. The side gauges follow the `gaugeStyle` setting (round, bar, digital), and the text for each style is switched with `toggle: "gaugeStyle=round"`. Power % and Torque % count from `config.engine` (peak Nm and kW).
 - **M theme pieces:** `mdash` (the whole backdrop, G-meter and side gauges in one shader, nothing uploaded), `mtach` (the glass rev blade), `segbar` (slanted level segments), `icon` (line icons drawn in `shared/icons.js`), and text `color2` (a chrome fade).
 - **Calibration:** `grid` (lines every `step` px, brighter every `major` steps) and `gridlabels` (x/y labels every `step` px). Each app ships a `grid.json` layout.
 - **Off:** the layout name `off` draws nothing and releases the screen. With `byMode` on, the `inComfort` / `inSport` / `inEco` settings pick the layout from the car's drive mode (FES `statusFESVehicleDynamicSwitchHMI`).
 - **Effect shaders:** cluster-render's `v_uv` has (0,0) at the top-left. The bench draws the same way.
-- **Any widget:** `toggle: "setting"` shows it only while that setting is on, and `"!setting"` only while it's off. `themes: [...]` limits it to certain themes.
+- **Any widget:** `toggle: "setting"` shows it only while that setting is on, and `"!setting"` only while it's off. `"setting=value"` shows it only while a choice setting has that value. `themes: [...]` limits it to certain themes.
 
 To try an edited layout on the car without reinstalling:
 

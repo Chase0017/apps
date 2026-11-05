@@ -62,6 +62,16 @@ CLUSTER_FONTS = [
     ('s_unit', 'Barlow-Medium.ttf', 26, LOWER + UPPER + '°/-.'),
     ('s_label', 'BarlowSemiCondensed-SemiBold.ttf', 30, UPPER + DIGITS + ' .'),
     ('s_gl', 'Barlow-Medium.ttf', 28, DIGITS + '/', 1),
+    # Dials: a round tach with side gauges, heavy Barlow numbers
+    ('d_num', 'Barlow-Medium.ttf', 62, DIGITS, 3),
+    ('d_speed', 'Barlow-Medium.ttf', 112, DIGITS + '-', 3),
+    ('d_gear', 'Barlow-Medium.ttf', 76, DIGITS + 'PRNDSM-', 3),
+    ('d_big', 'Barlow-Medium.ttf', 82, DIGITS + '.-', 3),
+    ('d_val', 'Barlow-Medium.ttf', 52, DIGITS + ':+-.', 2),
+    ('d_small', 'Barlow-Medium.ttf', 40, DIGITS + ':+-.', 1),
+    ('d_label', 'Barlow-Medium.ttf', 38, LOWER + UPPER + ' ', 1),
+    ('d_unit', 'Barlow-Medium.ttf', 25, LOWER + UPPER + DIGITS + '°/%-. ', 1),
+    ('d_mode', 'BarlowSemiCondensed-SemiBold.ttf', 28, UPPER + ' ', 1),
 ]
 FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2

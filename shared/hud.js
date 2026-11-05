@@ -43,15 +43,20 @@
  *             its own, mirrored), "kTop" / "kBot" (x per y px above / below the bend), "round", "wBot" / "wTop" / "wBend"
  *   sdash     effect layer; the whole Sport theme (shaders.js sdash): "geo" [yTop, yBend, yBottom, xBend] and
  *             "k" [above, below, round] for the left bracket's outer edge (the right one is mirrored), "band",
- *             "ticks" [speed, rpm], "speedMax" [mph, km/h], "rpmMax", "fuelSeg" / "oilSeg" [fullX, fullY,
+ *             "ticks" [speed, rpm], "rpmMax" (speed follows SPEED_SCALE), "fuelSeg" / "oilSeg" [fullX, fullY,
  *             emptyX, emptyY], "strip" [cx, y, half width, h], "topEnd" x; the map window is cut while
  *             "holeWhen" is on ("hole" [x, y, w, h]), else a lane view runs with the speed
+ *   ddash     effect layer; the whole Dials theme (shaders.js ddash): "tach" [cx, cy, radius, band], "max" rpm,
+ *             four side gauges "gauges" [{ signal, min, max }] drawn per the "styleFrom" choice setting
+ *             (round | bar | digital): "dials" [[cx, cy, r] x4] (round dials, digital tiles), "bars"
+ *             [[x0, y, x1, h] x4]; "low" [coolant, fuel] thin bars [x0, y, x1, h]; "head" [line y, x margin]
  *   segbar    effect layer; "max" segments, the first round(signal) lit (e.g. "setupLevel:engine"), "slant" px
  *   icon      image layer; a line icon from icons.js ("icon": gauge, shock, wheel, cog, stack, therm, oilcan, fuel)
  *   arc also takes "start" and "sweep" in degrees (clockwise from 12 o'clock; negative = anticlockwise)
  *   grid      calibration: effect layer of lines every "step" px (brighter every "major" steps)
  *   gridlabels  calibration: image layer, "x/y" at every "step" px (only the labels are uploaded)
- * Any widget: "toggle": "<bool setting>" hides it when that setting is off, "!<setting>" when it is on;
+ * Any widget: "toggle": "<bool setting>" hides it when that setting is off, "!<setting>" when it is on,
+ * "<choice setting>=<value>" shows it only while that choice is picked (also with "!");
  * "themes": [...] shows it only in those themes. Text "color2": a second role, the colour at the bottom
  * of the box (a top-to-bottom gradient, the chrome look). Text: "hotWhen": "now" turns it the shift red
  * at the shift point; "coldWhen": "cold" turns it blue while the cold guard lowers the shift point.
@@ -67,7 +72,7 @@
  *
  * Text tokens: {{speed}} {{u:speed}} {{oil}} {{coolant}} {{boost}} {{u:boost}} {{rpm}}
  * {{gear}} (P / R / N, D3, or just 3 when the selector position is unknown), {{gearnum}} (3, or P / R / N)
- * {{spd:<i>}} (speed scale label i: 20 mph or 30 km/h steps) {{range}} {{u:distLc}} (mi, km) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{boostHi}} {{boostMid}}
+ * {{spd:<i>}} (speed scale label i of SPEED_SCALE: 0..200 mph, 0..320 km/h) {{range}} {{u:distLc}} (mi, km) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{torquePct}} {{powerPct}} (% of config.engine's peak) {{boostHi}} {{boostMid}}
  * (gauge labels for 1.4 / 0.7 bar in the display unit) {{stage}} (P R N D) {{gearInD}} (gear number while in D) {{mode}} (COMFORT, SPORT, SPORT PLUS, ECO PRO)
  * {{temp:<deg C>}} (that temperature in the display unit, °F rounded to 10, for gauge labels) {{setup:engine|chassis|steering|gearbox}} (what that part is set to in the drive mode now)
  * {{time}} {{ampm}} {{u:temp}} (°F / °C) {{gLat}} {{gLong}} (g, 2 decimals) {{signal:<car.data() key>}} (raw, 1 decimal).
@@ -102,7 +107,15 @@ const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for 
 const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 const MODE_NAME = { comfort: 'Comfort', sport: 'Sport', eco: 'Eco Pro' };
-const FRESH_MS = 3000;           // a boost reading older than this is not used
+const FRESH_MS = 3000;
+// BMW's speed scale: even steps to 120 mph (180 km/h), then wider ones to 200 mph (320 km/h)
+const SPEED_SCALE = { us: [0, 20, 40, 60, 80, 100, 120, 160, 200], metric: [0, 30, 60, 90, 120, 150, 180, 250, 320] };
+/** speed (display unit) -> 0..1 along a scale of evenly spaced labels */
+function scaleFrac(v, marks) {
+    if (!(v > 0)) return 0;
+    for (let i = 1; i < marks.length; i++) if (v <= marks[i]) return (i - 1 + (v - marks[i - 1]) / (marks[i] - marks[i - 1])) / (marks.length - 1);
+    return 1;
+}           // a boost reading older than this is not used
 
 /**
  * The drive mode from FES statusFESVehicleDynamicSwitchHMI.actualValueModeDrivingExperience: names or wire
@@ -434,6 +447,13 @@ class HudApp {
             if (name === 'range') return isNum(this.rangeKm) ? this.rangeKm : demo ? 368 : null;
             return isNum(this.ambient) ? this.ambient : demo ? 24 : null;
         }
+        if (name === 'torquePct' || name === 'powerPct') {
+            // share of the engine's peak (app.json config.engine: crank Nm and kW; an M40i makes 500 Nm, 285 kW)
+            const e = this.config.engine || {}, d = this.car.data();
+            if (!isNum(d.torque)) return null;
+            if (name === 'torquePct') return Math.max(0, d.torque) / (e.torqueNm || 500) * 100;
+            return isNum(d.rpm) ? Math.max(0, d.torque) * d.rpm / 9549 / (e.powerKw || 285) * 100 : null;
+        }
         if (name.indexOf('setupLevel:') === 0) { const s = this._setup(); return s ? SETUP_LEVEL[s[name.slice(11)]] || 0 : 0; }
         const d = this.car.data();
         return Object.prototype.hasOwnProperty.call(d, name) ? d[name] : null;
@@ -467,6 +487,7 @@ class HudApp {
             }
             case 'u:torque': return us ? 'lb-ft' : 'Nm';
             case 'torque': { const v = this._raw('torque'); return fix(isNum(v) ? (us ? v * 0.737562 : v) : v, 0); }
+            case 'torquePct': case 'powerPct': { const v = this._raw(tok); return isNum(v) ? String(Math.min(100, Math.round(v))) : '--'; }
             case 'boostHi': return us ? '20' : '1.4';
             case 'boostMid': return us ? '10' : '0.7';
             case 'ampmLc': return this._token('ampm').toLowerCase();
@@ -513,7 +534,7 @@ class HudApp {
                 return ((h % 12) || 12) + ':' + pad2(m);
             }
             default:
-                if (tok.indexOf('spd:') === 0) { const i = Number(tok.slice(4)); return String(i * (us ? 20 : 30)); }   // speed scale labels
+                if (tok.indexOf('spd:') === 0) { const v = SPEED_SCALE[us ? 'us' : 'metric'][Number(tok.slice(4))]; return v === undefined ? '' : String(v); }   // speed scale labels
                 if (tok.indexOf('temp:') === 0) { const c = Number(tok.slice(5)); return isNum(c) ? String(us ? Math.round((c * 9 / 5 + 32) / 10) * 10 : Math.round(c)) : '--'; }   // gauge labels: °F to the 10
                 if (tok.indexOf('setup:') === 0) { const s = this._setup(); return s ? s[tok.slice(6)] || '' : '--'; }
                 if (tok.indexOf('signal:') === 0) { const v = this._raw(tok.slice(7)); return isNum(v) ? (Math.round(v * 10) / 10).toString() : '--'; }
@@ -571,7 +592,8 @@ class HudApp {
     /** "key" is on while that bool setting is on; "!key" while it is off. */
     _toggleOn(t) {
         const not = t.charAt(0) === '!';
-        const on = this.setting(not ? t.slice(1) : t) !== false;
+        const k = not ? t.slice(1) : t, eq = k.indexOf('=');
+        const on = eq > 0 ? String(this.setting(k.slice(0, eq))) === k.slice(eq + 1) : this.setting(k) !== false;
         return not ? !on : on;
     }
 
@@ -589,7 +611,22 @@ class HudApp {
         const t = this.theme;
         if (w.type === 'gridlabels') this._paintGridLabels(x);
         else if (w.type === 'icon') this.client.pixels(ref, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
-        else if (w.type === 'sdash') {
+        else if (w.type === 'ddash') {
+            const G = w.gauges, n = (i) => (Array.isArray(w.dials[i]) ? w.dials[i] : [0, 0, 0]);
+            const b = (i) => (Array.isArray(w.bars[i]) ? w.bars[i] : [0, -99, 0, 1]);
+            const style = { round: 0, bar: 1, digital: 2 }[this.setting(w.styleFrom || 'gaugeStyle')] || 0;
+            const max = w.max || 8000;
+            this.client.uniform(ref, 'u_size', [w.w, w.h]);
+            this.client.uniform(ref, 'u_tach', w.tach);
+            this.client.uniform(ref, 'u_redFrom', [this.setting('redline') / max]);
+            this.client.uniform(ref, 'u_ticks', [max / 1000]);
+            this.client.uniform(ref, 'u_style', [style]);
+            [0, 1, 2, 3].forEach((i) => { this.client.uniform(ref, 'u_d' + i, n(i)); this.client.uniform(ref, 'u_b' + i, b(i)); });
+            this.client.uniform(ref, 'u_low0', (w.low && w.low[0]) || [0, -99, 0, 1]);
+            this.client.uniform(ref, 'u_low1', (w.low && w.low[1]) || [0, -99, 0, 1]);
+            this.client.uniform(ref, 'u_head', w.head || [-99, 0]);
+            x.gauges = G;
+        } else if (w.type === 'sdash') {
             const hole = w.hole && w.holeWhen && this.setting(w.holeWhen) === true ? w.hole : [0, 0, 0, 0];
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_geo', w.geo);
@@ -775,10 +812,9 @@ class HudApp {
         } else if (w.type === 'sdash') {
             const us = this.setting('units') === 'us';
             const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
-            const smax = (w.speedMax || [160, 260])[us ? 0 : 1];
             const q = (v) => Math.round(Math.min(1, Math.max(0, v)) * 500) / 500;
             const vals = [
-                q(isNum(sp) ? (us ? sp * 0.621371 : sp) / smax : 0),
+                q(isNum(sp) ? scaleFrac(us ? sp * 0.621371 : sp, SPEED_SCALE[us ? 'us' : 'metric']) : 0),
                 q(isNum(rpm) ? rpm / (w.rpmMax || 8000) : 0),
                 q(isNum(fuel) ? fuel : 0),
                 q(isNum(oil) ? (oil - 50) / 100 : 0),
@@ -795,6 +831,20 @@ class HudApp {
             this.client.uniform(x.ref, 'u_fuel', [vals[2]]);
             this.client.uniform(x.ref, 'u_oil', [vals[3]]);
             this.client.uniform(x.ref, 'u_dash', [dash]);
+        } else if (w.type === 'ddash') {
+            const rpm = this._raw('rpm'), sp = this._shift();
+            const q = (v, n) => Math.round(Math.min(1, Math.max(0, v)) * n) / n;
+            const vals = x.gauges.map((G) => { const v = this._raw(G.signal); return isNum(v) ? q((v - G.min) / (G.max - G.min), 200) : 0; });
+            const fuel = this._raw('fuel'), cool = this._raw('coolant');
+            const lows = [isNum(cool) ? q((cool - 50) / 80, 200) : 0, isNum(fuel) ? q(fuel, 200) : 0];
+            const r = isNum(rpm) ? q(rpm / (w.max || 8000), 1000) : 0;
+            const key = r + '|' + sp.now + '|' + vals.join('|') + '|' + lows.join('|');
+            if (!force && key === x.last) return;
+            x.last = key;
+            this.client.uniform(x.ref, 'u_rpm', [r]);
+            this.client.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
+            this.client.uniform(x.ref, 'u_vals', vals);
+            this.client.uniform(x.ref, 'u_lowVals', lows);
         } else if (w.type === 'mdash') {
             const lat = this._raw('gLat'), lon = this._raw('gLong');
             const g = [isNum(lat) ? Math.round(lat * 100) / 100 : 0, isNum(lon) ? -Math.round(lon * 100) / 100 : 0];
