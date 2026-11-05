@@ -1,52 +1,47 @@
 # Cluster Themes
 
-Redraws the whole iDrive 7 instrument cluster (1920x720) with your own themes, picked on the center screen: open **Cluster Themes** from the apps menu and choose the theme there. It draws through `cluster-render` from [robertnisipeanu/idrive-apps](https://github.com/robertnisipeanu/idrive-apps) on its `panel` target, which sits over BMW's own gauges, using the repo's shared drawing engine (`shared/`, the same one HUD Widgets uses).
+Redraws the whole instrument cluster with your own themes. Open **Cluster Themes** from the apps menu on the center screen and pick the theme there.
 
-**Status: first car test.** Version 0.1.0 has one theme, GT3, built to answer two questions only the car can answer (below). More themes come after that.
+![GT3 race dash](../../docs/images/cluster-gt3.gif)
 
 ## Themes
 
-- **GT3:** a race dash.
-  - **Top:** 18 round shift lights (green, yellow, red, then 3 blue) that fill over the last 2000 rpm before the shift point, and a segmented rev bar with a 0 to 7 scale under it.
-  - **Left:** speed, rpm, and the last shift (rpm and grade, coloured by the grade).
-  - **Middle:** the gear, with water and oil temperatures.
-  - **Right:** boost (yellow header), the shift point, and the clock.
-  - **At the shift point:** every light, the bar, the rpm, the shift point and the gear go red.
+**GT3:** a race dash.
 
-The shift point, cold-engine guard and shift grades are the same as HUD Widgets' Redline layout (`shared/shift_score.js`): shift point = redline minus "Shift point before redline", lowered while the oil is under 80°C.
+- **Top:** 18 round shift lights (green, yellow, red, then blue) that fill over the last 2000 rpm before your shift point, and a segmented rev bar.
+- **Left:** speed, rpm, and your last shift with its grade.
+- **Middle:** the gear, with water and oil temperatures.
+- **Right:** boost, your shift point, and the clock.
+- **At the shift point,** the lights, the rev bar, the rpm and the gear all go red.
+
+More themes are on the way.
+
+| At the shift point | With room for the map |
+| --- | --- |
+| <img src="../../docs/images/cluster-gt3-shift.png" width="420" alt="GT3 at the shift point"> | <img src="../../docs/images/cluster-gt3-map.png" width="420" alt="GT3 with room for the map"> |
 
 ## Settings
 
-Theme, leave room for the map, units, 12- or 24-hour clock, redline, shift point before redline, cold-engine rev guard, show boost, and demo data. Saved in the app's `data/settings.json`.
+- **Theme**
+- **Leave room for the map:** cuts a window out of the dash so the map can show through, and moves the gear and temperatures to the sides.
+- **Units:** mph, °F, psi or km/h, °C, bar
+- **Clock:** 12-hour or 24-hour
+- **Redline**
+- **Shift point before redline:** how far below the redline the shift lights peak (300 rpm by default)
+- **Cold-engine rev guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up
+- **Show boost**
+- **Demo data:** fake data for trying it out parked
 
-**Leave room for the map:** cuts a see-through window out of the black so the map window under it can show, and moves the gear into the left column and the temperatures into the right one. Where the map window sits on the real cluster is a guess (`hole` in `hud/layouts/gt3.json`: 416,180, 1088x480).
+**Shift grades:** every upshift is graded on its peak rpm. EARLY means more than 250 rpm under the shift point, LATE more than 200 over it, COLD REV the same while the cold guard is on, LIMITER within 60 rpm of the redline, and anything in between is SPOT ON.
 
-## What the first car test answers
+## Requirements
 
-1. **Do BMW's warning lights still show?** The GT3 theme is solid black, so it covers everything under it. If the cluster draws the warning lights (engine, tyre pressure, seat belt, and so on) on top of our layer, fine. If they disappear under it, every theme has to leave their places clear. That's a safety question, so check it before driving with the app: start the car with a seat belt off and look for the warning.
-2. **Does the map show through the window?** Turn on "Leave room for the map" with CarPlay or Android Auto showing a map on the cluster. If the map shows in the cut-out, the Map themes can be built around it. If it shows in a different place, push a copy of `gt3.json` with a corrected `hole` (see below).
+[cluster-render](https://github.com/robertnisipeanu/idrive-apps), installed from the `robertnisipeanu/idrive-apps` Store source.
 
-Also unverified: whether cluster-render blends effect layers as straight or premultiplied alpha (watch the edges of the round lights and the boxes), and the exact place of everything on the real glass.
+## Status
 
-## Layout files
+Version 0.1.0, in its first car test. Still to be checked on a car:
 
-`hud/layouts/<name>.json` (`schemaVersion: 2`, with a `"theme"` of its own). Widget types and tokens are in the header of `shared/hud.js`. The cluster adds:
-
-- `fill`: a solid colour, with an optional see-through `hole` cut while a setting (`holeWhen`) is on;
-- `box`: a framed readout box with a header strip;
-- `lights` with `round` and a blue `tail`;
-- `toggle: "!setting"` shows a widget only while that setting is off.
-
-To try an edited layout on the car without reinstalling, from the repo root:
-
-```sh
-APP=cluster_themes ./scripts/deploy.sh root@<car-ip-or-hostname> gt3.json
-```
-
-## Test on the Mac
-
-```sh
-node bench/server.js cluster_themes     # then open http://localhost:8078
-```
-
-The page shows the cluster at 1920x720. Tick "stock cluster backdrop" to see what's under the layers (a rough stand-in for BMW's gauges and the map window).
+- **Whether BMW's warning lights still show over the dash.** The GT3 theme is solid black and covers whatever is under it. Test it parked: start the car with a seat belt off and look for the warning.
+- **Where the map window really sits** on the cluster. The cut-out's position is a guess.
+- How the colours and edges look on the real screen.

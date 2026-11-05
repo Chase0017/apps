@@ -1,49 +1,45 @@
 # bimmer-lab apps
 
-Apps for modded iDrive 7 head units, installed through the MGU Store. Every app lives in its own folder under `apps/`, and the Store builds them on the car.
+Apps for BMW iDrive 7 head units (MGU), installed through the community MGU Store.
 
-## Install
-
-On the car, open the Store and go to **Settings → Add source**, enter **`bimmer-lab/apps`**, then install the apps you want. The Store runs `kit/tools/build.py` on the unit (the `apps` entry in `mgu-repo.json`) with no network, using an oap-sdk it makes from a BMW app already on the car. No BMW code is in this repo.
+![GT3 race dash on the instrument cluster](docs/images/cluster-gt3.gif)
 
 ## Apps
 
-| App | What it does |
-| --- | --- |
-| [HUD Widgets](apps/idrive_hud_widgets/README.md) | Custom widgets on the windshield HUD: Daily, Sport and Redline (rev bar, shift lights, shift scoring) layouts, Classic, M and Night themes, set up from the center screen. Needs `cluster-render`. |
-| [Cluster Themes](apps/cluster_themes/README.md) | Redraws the whole instrument cluster with your own themes, picked on the center screen. First theme: GT3 race dash (shift lights, rev bar, boost, temps, shift scoring). Needs `cluster-render`. In its first car test. |
+### Cluster Themes
 
-## Built on
+Redraws the whole instrument cluster with your own themes, picked on the center screen. The first theme is a GT3 race dash: shift lights, a rev bar, boost, oil and water temperatures, and a grade on every upshift. [More](apps/cluster_themes/README.md)
 
-- [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps)' MGU App Kit (MIT, copied into `kit/`, licence in `kit/LICENSE`). It provides the build, the center-screen pages, saved settings and live car data over SOME/IP. One change from upstream: `kit/tools/build.py` also copies the files an app lists in app.json `"shared"` from `shared/` (marked "bimmer-lab addition").
-- `cluster-render` from [robertnisipeanu/idrive-apps](https://github.com/robertnisipeanu/idrive-apps), for apps that draw on the HUD or cluster.
+<img src="docs/images/cluster-gt3-shift.png" width="640" alt="GT3 theme at the shift point">
 
-Each app's `NOTICE` lists its own credits and licences.
+### HUD Widgets
 
-## Repo layout
+Your own widgets on the windshield HUD. There are three layouts: Daily, Sport, and Redline (a rev bar with shift lights and shift scoring). Each comes in Classic, M and Night themes, plus Auto, which switches to Night at sunset. [More](apps/idrive_hud_widgets/README.md)
 
-```
-apps/<id>/        one folder per app: app.json, main.js (entry), the app's .js files, NOTICE, README
-                  subfolders are packed into <folder>.pack by the build
-shared/           code more than one app uses (the cluster-render drawing engine); an app lists
-                  the files it needs in app.json "shared" and the build copies them in
-kit/              cauliflowermossgrape's kit: runtime/ ships inside each app, tools/ builds it
-bench/            Mac test bench for the HUD and the cluster (fake cluster-render + the kit's stub head unit)
-tools/            Mac-only helpers (bake_fonts.py re-bakes each app's fonts, needs Pillow)
-scripts/          deploy.sh pushes layouts to the car over SSH
-mgu-repo.json     tells the Store how to build the apps
-```
+<img src="docs/images/hud-redline.gif" width="480" alt="Redline layout on the HUD">
 
-## Adding an app
+| Daily | Sport | Redline |
+| --- | --- | --- |
+| <img src="docs/images/hud-daily.png" width="260" alt="Daily layout"> | <img src="docs/images/hud-sport.png" width="260" alt="Sport layout"> | <img src="docs/images/hud-redline-night.png" width="260" alt="Redline layout, Night theme"> |
 
-1. Make `apps/<id>/` with an `app.json` (id, title, version, signals, screens, settings) and a `main.js` that calls `mgu.run`. An app that draws through cluster-render lists the engine files in `"shared"` and sets `config.target` (`hud` or `panel`), like the two apps here.
-2. Build it by hand to check: `python3 kit/tools/build.py <id>`. It needs an `oap-sdk/` folder; the bench creates a stub one, which is gitignored and never shipped. The output goes to `dist/`.
-3. The Store picks it up from `apps/*` on the next refresh.
+## Install
 
-## Test on the Mac
+1. Install **cluster-render** first. Both apps draw through it. It comes from the `robertnisipeanu/idrive-apps` Store source.
+2. In the Store, go to **Settings → Add source**, enter **`bimmer-lab/apps`**, then install the apps you want.
+3. Open the app from the apps menu on the center screen to pick a layout or theme.
 
-Run `node bench/server.js` (HUD Widgets) or `node bench/server.js cluster_themes`, then open http://localhost:8078. It builds the app with the kit and runs the build in the kit's stub head unit on Node 8.16.2 (the car's version), against a fake cluster-render. The page shows the HUD or the cluster with the app's real pixels and shaders, the center-screen status and settings, and signal sliders. See `bench/README.md`.
+The Store builds each app on the car from this repo. No BMW code is in it.
+
+## Status
+
+Both apps run on a Mac test bench that uses the car's own build and Node version. Neither has been confirmed on a car yet. Each app's page lists what's still to be checked on the car.
+
+## Credits
+
+- [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps): the MGU App Kit (MIT) these apps are built on, and the Redline app the shift scoring comes from.
+- [robertnisipeanu/idrive-apps](https://github.com/robertnisipeanu/idrive-apps): cluster-render, which draws on the HUD and the cluster.
+- Barlow typeface (SIL Open Font License).
 
 ## Licence
 
-MIT, see `LICENSE`. The kit in `kit/` is MIT (`kit/LICENSE`), and third-party pieces inside an app are listed in its `NOTICE`.
+MIT. Third-party parts are listed in each app's `NOTICE`. To work on the apps, see [docs/DEVELOPING.md](docs/DEVELOPING.md).
