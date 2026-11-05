@@ -2,7 +2,7 @@
 
 Custom widgets on the iDrive 7 HUD (windshield head-up display): speed, gear, a shift bar, boost, oil and coolant temperatures, and a clock. It ships three layouts (Daily, Sport, and Redline, a G20-style rev bar with shift lights and shift scoring) and three themes (Classic, M and Night), plus Auto, which switches to Night at sunset. You set it up on the center screen: open **HUD Widgets** from the apps menu and pick the layout, theme, units and widgets there.
 
-It draws on the HUD through `cluster-render` from [robertnisipeanu/idrive-apps](https://github.com/robertnisipeanu/idrive-apps), the service that owns the HUD/cluster GPU compositor on modded iDrive 7/8 units. The client is `cluster_render_client.js` (MPL-2.0, unmodified). Live car data, the build and the center-screen page come from the repo's `kit/` (see the [top README](../../README.md)).
+It draws on the HUD through the repo's shared drawing engine (`shared/`, also used by Cluster Themes) and `cluster-render` from [robertnisipeanu/idrive-apps](https://github.com/robertnisipeanu/idrive-apps), the service that owns the HUD/cluster GPU compositor on modded iDrive 7/8 units. The client is `shared/cluster_render_client.js` (MPL-2.0, unmodified). Live car data, the build and the center-screen page come from the repo's `kit/` (see the [top README](../../README.md)).
 
 ## Prerequisite
 
@@ -35,7 +35,7 @@ The built-in layouts are `hud/layouts/<name>.json` (`schemaVersion: 2`).
 - **Colours** are theme roles (`fg`, `dim`, `arc`).
 - **`toggle`** ties a widget to a show/hide setting, and **`themes`** limits it to certain themes.
 
-The tokens and the full reference are in the header of `hud.js`, and `layouts.js` rejects a bad file with a clear message (which also shows in the status row).
+The tokens and the full reference are in the header of `shared/hud.js`, and `shared/layouts.js` rejects a bad file with a clear message (which also shows in the status row).
 
 To try an edited layout on the car without reinstalling, run this from the repo root:
 
@@ -48,25 +48,31 @@ This copies it into the app's `data/layouts/` on the car. A file there overrides
 ## Files
 
 ```
-app.json                 signals, the center-screen page, settings, config
-main.js                  entry: starts the HUD and feeds its status to the page
-hud.js                   the HUD (widgets, tokens, layout reference in the header)
+app.json                 signals, the center-screen page, settings, config (target "hud"),
+                         and "shared": the engine files the build copies in from ../../shared/
+main.js                  entry: starts the engine and feeds its status to the page
+hud/                     packed into hud.pack by the build: fonts/ (baked Barlow), layouts/
+NOTICE                   credits and licences
+```
+
+The engine, in the repo's `shared/` folder (shared with Cluster Themes):
+
+```
+hud.js                   the engine (widgets, tokens, layout reference in the header)
 hud_text.js              text drawing from the baked fonts
 hud_themes.js            the themes
 layouts.js               loads, validates and watches layouts
-shaders.js               GLSL for the shift bar, boost arc, rev bar and shift lights
+shaders.js               GLSL for the shift bar, boost arc, rev bar, shift lights, fills and boxes
 shift_score.js           Redline's shift point, cold guard and scoring
 sun.js                   sunrise and sunset for the Auto theme
 cluster_render_client.js cluster-render client (MPL-2.0)
-hud/                     packed into hud.pack by the build: fonts/ (baked Barlow), layouts/
-NOTICE                   credits and licences
 ```
 
 ## Look
 
 - **Fonts:** Barlow (SIL OFL 1.1, licence in `NOTICE`), pre-baked into alpha atlases on the Mac by `tools/bake_fonts.py` at the repo root. The car never rasterizes fonts. Re-bake after changing sizes or characters.
-- **Themes:** `hud_themes.js`. Black is see-through on the HUD, so a theme only adds light.
-- **Gauges:** GLSL shaders in `shaders.js`, drawn on the car's GPU, with values sent as uniforms at up to 20 Hz.
+- **Themes:** `shared/hud_themes.js`. Black is see-through on the HUD, so a theme only adds light.
+- **Gauges:** GLSL shaders in `shared/shaders.js`, drawn on the car's GPU, with values sent as uniforms at up to 20 Hz.
 - **Auto theme:** sunrise and sunset come from the date and `app.json` `config.location` (`sun.js`). No car signal is needed.
 
 ## Verified vs. assumed

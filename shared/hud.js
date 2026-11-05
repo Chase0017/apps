@@ -1,9 +1,16 @@
 'use strict';
 /**
- * The HUD itself: connects to cluster-render (robertnisipeanu/idrive-apps,
- * native/cluster-render), builds one HUD layer per widget of the active layout
- * in the active theme, and keeps live widgets updated from the kit's car.js.
- * Started by main.js with the kit's ctx (settings, signals, log, spec, dataDir).
+ * The drawing engine, shared by every bimmer-lab app that draws through cluster-render
+ * (robertnisipeanu/idrive-apps, native/cluster-render): it connects, builds one layer per widget
+ * of the active layout in the active theme, and keeps live widgets updated from the kit's car.js.
+ * Started by an app's main.js with the kit's ctx (settings, signals, log, spec, dataDir).
+ * It lives in the repo's shared/ folder; app.json "shared" ships it with each app.
+ *
+ * Which display: app.json config.target, "hud" (800x480, the windshield HUD; the default) or
+ * "panel" (1920x720, the whole instrument cluster, drawn over BMW's own gauges).
+ * config.statusName names it on the status row ("HUD", "Cluster").
+ * The layout comes from the "hudLayout" setting. The colour theme is the layout's own "theme"
+ * when it has one (the cluster themes), else the "hudTheme" setting (auto = Night after sunset).
  *
  * Widget types (hud/layouts/*.json, or <data>/layouts/ overrides, see layouts.js):
  *   text      image layer; template tokens below, a font from hud/fonts, colour role
@@ -16,14 +23,22 @@
  *             redline's thousand the scale runs to (1000: a 7000 redline gives 0..8)
  *   lights    effect layer; shaders.js lights, shift lights over the last 2000 rpm before the shift point
  *   badge     image layer; a rounded tag with text: "tone" verdict (the last shift's grade colour) or cold
- * Any widget: "toggle": "<bool setting>" hides it when that setting is off;
+ *   fill      effect layer; a solid colour (role "color", default "bg") over the whole widget, with an
+ *             optional see-through "hole": [x, y, w, h] in target px, cut only while the bool setting
+ *             "holeWhen" is on (the cluster's map window). Opaque fill hides BMW's gauges under it.
+ *   box       effect layer; a framed box: "fill" and "line" roles, "border" px, "radius" px, and a
+ *             header strip "head" px tall in role "headColor" (its label is a text widget on top)
+ * Any widget: "toggle": "<bool setting>" hides it when that setting is off, "!<setting>" when it is on;
  * "themes": [...] shows it only in those themes. Text: "hotWhen": "now" turns it the shift red
  * at the shift point; "coldWhen": "cold" turns it blue while the cold guard lowers the shift point.
  * scale: "over" as revbar; "redFrom": true draws the numbers from the redline on in red.
+ * lights: "count" (12), "tail" (0): the last "tail" lights are blue (the GT3 look); "round": true for dots;
+ * "off" the alpha of an unlit light (0.14).
+ * Text "colorBy": "verdict" colours it by the last shift's grade.
  *
  * Text tokens: {{speed}} {{u:speed}} {{oil}} {{coolant}} {{boost}} {{u:boost}} {{rpm}}
  * {{gear}} (P / R / N, D3, or just 3 when the selector position is unknown), {{gearnum}} (3, or P / R / N)
- * {{time}} {{ampm}} {{signal:<car.data() key>}} (raw, 1 decimal).
+ * {{time}} {{ampm}} {{u:temp}} (°F / °C) {{gLat}} {{gLong}} (g, 2 decimals) {{signal:<car.data() key>}} (raw, 1 decimal).
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
  * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
@@ -51,6 +66,7 @@ const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header com
 const TICK_MS = 50;              // 20 Hz: shift bar and gauges
 const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
 const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
+const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
 
 function rgb(c) { return [c[0] / 255, c[1] / 255, c[2] / 255]; }
 function rgba(c) { return [c[0] / 255, c[1] / 255, c[2] / 255, (c[3] === undefined ? 255 : c[3]) / 255]; }
@@ -65,7 +81,11 @@ class HudApp {
         // HUD_CLUSTER_SOCKET: the Mac bench's fake cluster-render; never set on the car
         this.socketPath = process.env.HUD_CLUSTER_SOCKET || this.config.socketPath || DEFAULT_PATH;
         this.client = new ClusterRender(ctx.spec.id, this.socketPath);
-        this.layouts = new Layouts(ctx.dataDir, this.log);
+        this.target = TARGET_SIZES[this.config.target] ? this.config.target : 'hud';
+        this.size = TARGET_SIZES[this.target];
+        this.label = this.config.statusName || 'HUD';
+        this.layoutTheme = null;         // the active layout's own theme, if it has one
+        this.layouts = new Layouts(ctx.dataDir, this.log, this.size);
         this.widgets = new Map();        // widget.id -> { w, ref, last, lastPaint }
         this.boost = null;
         this.themeName = null;
@@ -150,15 +170,18 @@ class HudApp {
         if (!this.client.ready) {
             let there = false;
             try { there = fs.existsSync(this.socketPath); } catch (e) { /* treat as missing */ }
-            return there ? 'HUD: connecting to cluster-render' : 'HUD off: cluster-render is not installed or not running';
+            return there ? this.label + ': connecting to cluster-render' : this.label + ' off: cluster-render is not installed or not running';
         }
-        if (this.problem) return 'HUD: ' + this.problem;
-        const theme = THEMES[this.themeName] ? THEMES[this.themeName].name : this.themeName;
-        const auto = this.setting('hudTheme') === 'auto' ? ' (Auto)' : '';
+        if (this.problem) return this.label + ': ' + this.problem;
         const lay = this.ctx.settings.item('hudLayout');
         const o = lay && (lay.options || []).find((x) => x[0] === this.setting('hudLayout'));
+        const name = o ? o[1] : this.setting('hudLayout');
         const d = this.car.data();
-        return 'HUD on: ' + (o ? o[1] : this.setting('hudLayout')) + ' layout, ' + theme + ' theme' + auto + (d.demo ? ', demo data' : '');
+        const demo = d.demo ? ', demo data' : '';
+        if (this.layoutTheme) return this.label + ' on: ' + name + ' theme' + demo;
+        const theme = THEMES[this.themeName] ? THEMES[this.themeName].name : this.themeName;
+        const auto = this.setting('hudTheme') === 'auto' ? ' (Auto)' : '';
+        return this.label + ' on: ' + name + ' layout, ' + theme + ' theme' + auto + demo;
     }
 
     _status() {
@@ -171,6 +194,7 @@ class HudApp {
 /* ---------------- theme, units, values ---------------- */
 
     _themeName() {
+        if (this.layoutTheme) return this.layoutTheme;
         const t = this.setting('hudTheme');
         if (t !== 'auto') return t;
         return sun.isNight(Date.now(), this.location.lat, this.location.lon) ? 'night' : this.setting('dayTheme');
@@ -203,6 +227,8 @@ class HudApp {
             case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
             case 'boost': { const v = this._raw('boost'); return us ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
             case 'u:boost': return us ? 'PSI' : 'BAR';
+            case 'u:temp': return us ? '°F' : '°C';
+            case 'gLat': case 'gLong': { const v = this._raw(tok); return isNum(v) ? Math.abs(v).toFixed(2) : '--'; }
             case 'rpm': return fix(this._raw('rpm'), 0);
             case 'rpm10': { const v = this._raw('rpm'); return isNum(v) ? String(Math.round(v / 10) * 10) : '----'; }
             case 'shiftAt': return String(this._shift().rpm);
@@ -261,8 +287,6 @@ class HudApp {
         this.widgets.forEach((x) => this.client.drop(x.ref));
         this.widgets.clear();
         this.car.setRedline(this.setting('redline'));
-        this.themeName = this._themeName();
-        this.theme = THEMES[this.themeName] || THEMES.classic;
         const name = this.setting('hudLayout');
         let layout;
         try { layout = this.layouts.load(name); } catch (e) {
@@ -271,16 +295,26 @@ class HudApp {
             return;
         }
         this.problem = null;
-        this.log.info('layout "' + layout.name + '", theme ' + this.theme.name + ' (' + this.setting('hudTheme') + ')');
+        this.layoutTheme = layout.theme && THEMES[layout.theme] ? layout.theme : null;
+        this.themeName = this._themeName();
+        this.theme = THEMES[this.themeName] || THEMES.classic;
+        this.log.info('layout "' + layout.name + '", theme ' + this.theme.name + (this.layoutTheme ? '' : ' (' + this.setting('hudTheme') + ')'));
         layout.widgets.forEach((w) => {
-            if (w.toggle && this.setting(w.toggle) === false) return;
+            if (w.toggle && !this._toggleOn(w.toggle)) return;
             if (w.themes && w.themes.indexOf(this.themeName) < 0) return;
             this._guard('widget ' + w.id, () => this._create(w));
         });
     }
 
+    /** "key" is on while that bool setting is on; "!key" while it is off. */
+    _toggleOn(t) {
+        const not = t.charAt(0) === '!';
+        const on = this.setting(not ? t.slice(1) : t) !== false;
+        return not ? !on : on;
+    }
+
     _create(w) {
-        const base = { target: 'hud', klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
+        const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
         let ref;
         if (w.type === 'text' || w.type === 'scale' || w.type === 'stripe' || w.type === 'badge') {
             ref = this.client.image(Object.assign({ iw: w.w, ih: w.h }, base));
@@ -326,10 +360,27 @@ class HudApp {
         } else if (w.type === 'lights') {
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_n', [w.count || 12]);
+            this.client.uniform(ref, 'u_tail', [w.tail || 0]);
+            this.client.uniform(ref, 'u_round', [w.round ? 1 : 0]);
             this.client.uniform(ref, 'u_green', rgb(LIGHTS.green));
             this.client.uniform(ref, 'u_yellow', rgb(LIGHTS.yellow));
             this.client.uniform(ref, 'u_red', rgb(LIGHTS.red));
-            this.client.uniform(ref, 'u_off', [0.14]);
+            this.client.uniform(ref, 'u_blue', rgb(LIGHTS.blue));
+            this.client.uniform(ref, 'u_off', [w.off === undefined ? 0.14 : w.off]);
+        } else if (w.type === 'fill') {
+            const h = w.hole && w.holeWhen && this.setting(w.holeWhen) === true ? w.hole : null;
+            this.client.uniform(ref, 'u_size', [w.w, w.h]);
+            this.client.uniform(ref, 'u_color', rgba(color(t, w.color || 'bg')));
+            this.client.uniform(ref, 'u_hole', h ? [h[0] - w.x, h[1] - w.y, h[2], h[3]] : [0, 0, 0, 0]);
+            this.client.uniform(ref, 'u_holeR', [w.holeRadius || 0]);
+        } else if (w.type === 'box') {
+            this.client.uniform(ref, 'u_size', [w.w, w.h]);
+            this.client.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
+            this.client.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
+            this.client.uniform(ref, 'u_head', rgba(color(t, w.headColor || 'head')));
+            this.client.uniform(ref, 'u_headH', [w.head || 0]);
+            this.client.uniform(ref, 'u_border', [w.border === undefined ? 2 : w.border]);
+            this.client.uniform(ref, 'u_radius', [w.radius || 0]);
         }
         this._update(x, Date.now(), true);
     }
@@ -350,6 +401,7 @@ class HudApp {
             if (!force && now - x.lastPaint < (w.rate || TEXT_MS)) return;
             const s = this._resolve(w.text);
             let role = w.color || 'fg';
+            if (w.colorBy === 'verdict' && this.score.last) role = VERDICT[this.score.last.verdict] || role;
             if (w.hotWhen || w.coldWhen) {
                 const sp = this._shift();
                 if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;

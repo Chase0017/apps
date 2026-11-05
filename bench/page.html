@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HUD Bench</title>
+<title>Display Bench</title>
 <style>
   :root {
     --bg: #0d0f12; --panel: #161a20; --line: #262c35; --text: #d8dde4; --dim: #8a94a3;
@@ -20,7 +20,7 @@
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   .stage { background: #000; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
   .stage .bar { display: flex; gap: 14px; align-items: center; color: var(--dim); margin-bottom: 8px; flex-wrap: wrap; }
-  canvas#hud { width: 100%; aspect-ratio: 800 / 480; display: block; background: #000; border-radius: 4px; }
+  canvas#hud { width: 100%; height: auto; display: block; background: #000; border-radius: 4px; }
   .note { color: var(--dim); font-size: 12px; margin-top: 8px; }
   aside { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
@@ -40,7 +40,7 @@
   #log .warn { color: var(--warn); } #log .error { color: var(--err); }
   body.only header, body.only aside, body.only #log, body.only .bar, body.only .note { display: none; }
   body.only main { display: block; padding: 0; } body.only .stage { padding: 0; border: 0; border-radius: 0; }
-  body.only canvas#hud { width: 800px; height: 480px; border-radius: 0; }
+  body.only canvas#hud { width: auto; border-radius: 0; }
   label.chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
   .srow { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 6px 0; }
   .srow select { max-width: 170px; }
@@ -49,28 +49,28 @@
 </head>
 <body>
 <header>
-  <h1>HUD Bench</h1>
+  <h1 id="title">Bench</h1>
   <span id="appState" class="pill">app: ?</span>
   <span id="conn" class="pill">page: connecting</span>
-  <span class="pill">target: hud 800 x 480</span>
+  <span class="pill" id="target">target: ?</span>
   <button id="restart">Restart app</button>
 </header>
 <main>
   <div class="stage">
     <div class="bar">
       <label class="chk"><input type="checkbox" id="outlines" checked> layer outlines</label>
-      <label class="chk"><input type="checkbox" id="road"> road backdrop</label>
+      <label class="chk"><input type="checkbox" id="road"> <span id="backdropName">backdrop</span></label>
       <span id="fps"></span>
     </div>
     <canvas id="hud" width="800" height="480"></canvas>
-    <div class="note">Pixels are the app's own: image layers are its raw RGBA pushes, gauges run its real GLSL shader in WebGL. Brightness, color and blur on the real windshield will differ; only the car shows that.</div>
+    <div class="note" id="stageNote">Pixels are the app's own: image layers are its raw RGBA pushes, gauges run its real GLSL shader in WebGL. Brightness, color and blur on the real display will differ; only the car shows that.</div>
   </div>
   <aside>
     <section>
       <h2>Center screen</h2>
       <div id="status" class="status">status: waiting for the app</div>
       <div id="settings"></div>
-      <div class="note">The app's page on the car's center screen: the status row, then the settings. A change here is pressed on the kit's stand-in HMI, the same way the car's drop-downs and checkboxes send it, and saved in bench/.data/settings.json. A layout file saved into bench/.data/layouts/ overrides the built-in one of that name, and the app reloads it by itself.</div>
+      <div class="note">The app's page on the car's center screen: the status row, then the settings. A change here is pressed on the kit's stand-in HMI, the same way the car's drop-downs and checkboxes send it, and saved in bench/.data/&lt;app id&gt;/settings.json. A layout file saved into bench/.data/&lt;app id&gt;/layouts/ overrides the built-in one of that name, and the app reloads it by itself.</div>
     </section>
     <section>
       <h2>Vehicle signals</h2>
@@ -153,6 +153,16 @@
   }
 
   /* ---------- compositing ---------- */
+  // view: the target the app draws on (its app.json config.target), from the server's hello
+  let view = 'hud', VW = 800, VH = 480;
+  function setView(v, targets) {
+    view = v; VW = targets[v][0]; VH = targets[v][1];
+    canvas.width = VW; canvas.height = VH;
+    document.getElementById('target').textContent = 'target: ' + v + ' ' + VW + ' x ' + VH;
+    document.getElementById('backdropName').textContent = v === 'panel' ? 'stock cluster backdrop' : 'road backdrop';
+    if (v === 'panel') document.getElementById('stageNote').textContent = 'The whole instrument cluster. The backdrop stands in for BMW\'s own gauges and the map window under our layers; the map window\'s place on the real cluster is a guess. Anything the app draws opaque covers them, as it would on the car.';
+    dirty = true;
+  }
   function drawRoad() {
     const g = ctx.createLinearGradient(0, 0, 0, 480);
     g.addColorStop(0, '#2a3340'); g.addColorStop(0.45, '#56606b'); g.addColorStop(0.46, '#2b2d30'); g.addColorStop(1, '#151618');
@@ -160,19 +170,37 @@
     ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 4; ctx.setLineDash([30, 30]);
     ctx.beginPath(); ctx.moveTo(400, 222); ctx.lineTo(400, 480); ctx.stroke(); ctx.setLineDash([]);
   }
+  // a rough stand-in for BMW's own cluster: two angular gauges and the map window (416,180 1088x480, a guess)
+  function drawStockCluster() {
+    ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, VW, VH);
+    ctx.fillStyle = '#1d3b5c'; ctx.fillRect(416, 180, 1088, 480);
+    ctx.strokeStyle = '#2c5a8a'; ctx.lineWidth = 3;
+    for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(416 + i * 136, 180); ctx.lineTo(416 + i * 136, 660); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '28px sans-serif'; ctx.fillText('map window (place unverified)', 760, 430);
+    [[210, 1], [1710, -1]].forEach(([cx, side]) => {
+      ctx.strokeStyle = '#c9ced6'; ctx.lineWidth = 6; ctx.beginPath();
+      ctx.moveTo(cx - 120 * side, 60); ctx.lineTo(cx + 60 * side, 60); ctx.lineTo(cx + 150 * side, 360); ctx.lineTo(cx + 60 * side, 660); ctx.lineTo(cx - 120 * side, 660); ctx.stroke();
+      ctx.strokeStyle = '#e8372c'; ctx.lineWidth = 18; ctx.beginPath(); ctx.moveTo(cx + 100 * side, 200); ctx.lineTo(cx + 140 * side, 340); ctx.stroke();
+    });
+    ctx.fillStyle = '#f2c94c'; ctx.beginPath(); ctx.arc(70, 640, 14, 0, 7); ctx.fill();
+    ctx.fillStyle = '#e8372c'; ctx.beginPath(); ctx.arc(1850, 640, 14, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '20px sans-serif'; ctx.fillText('warning lights', 20, 700); ctx.fillText('warning lights', 1770, 700);
+  }
 
   // ?clean=1: no outlines, for screenshots
-  // ?only=1: just the 800x480 HUD at 1:1, nothing else
+  // ?only=1: just the target at 1:1 (800x480 HUD, 1920x720 cluster), nothing else
+  // ?backdrop=1: start with the backdrop on
   if (/[?&](clean|only)=1/.test(location.search)) document.getElementById('outlines').checked = false;
   if (/[?&]only=1/.test(location.search)) document.body.classList.add('only');
+  if (/[?&]backdrop=1/.test(location.search)) document.getElementById('road').checked = true;
   let frames = 0, lastFpsT = performance.now();
   function frame(t) {
     const animated = scene.some((l) => l.kind === 'effect' && l.time);
     if (dirty || animated) {
       dirty = false;
-      ctx.clearRect(0, 0, 800, 480);
-      if (document.getElementById('road').checked) drawRoad();
-      const hud = scene.filter((l) => l.target === 'hud' && l.visible)
+      ctx.clearRect(0, 0, VW, VH);
+      if (document.getElementById('road').checked) (view === 'panel' ? drawStockCluster : drawRoad)();
+      const hud = scene.filter((l) => l.target === view && l.visible)
         .sort((a, b) => (CLASS_ORDER[a.class] - CLASS_ORDER[b.class]) || (a.z - b.z));
       let start = 0;
       hud.forEach((l, i) => { if (l.exclusive) start = i; });
@@ -219,6 +247,7 @@
   es.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.t === 'log') addLog(m);
+    else if (m.t === 'hello') { setView(m.view || 'hud', m.targets); document.getElementById('title').textContent = 'Bench: ' + m.app; }
     else if (m.t === 'scene') {
       scene = m.layers;
       const keys = new Set(scene.map((l) => l.key));

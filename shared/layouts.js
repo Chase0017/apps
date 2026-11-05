@@ -1,6 +1,6 @@
 'use strict';
 /**
- * HUD layouts ({ schemaVersion: 2, name, widgets[] }). The built-in ones are
+ * Layouts ({ schemaVersion: 2, name, theme?, widgets[] }), for the HUD or the cluster. The built-in ones are
  * hud/layouts/<name>.json (packed into hud.pack by the build). A file of the same
  * name in the app's data folder, <data>/layouts/<name>.json, overrides it: that is
  * where scripts/deploy.sh pushes an edited layout, and the folder is watched, so
@@ -20,11 +20,15 @@ const TYPES = {
     revbar: ['barH'],
     lights: [],
     badge: ['text', 'font', 'tone'],
+    fill: [],
+    box: [],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 
 class Layouts {
-    constructor(dataDir, log) {
+    /** size: the target's [w, h] (800x480 HUD, 1920x720 cluster); widgets must fit on it. */
+    constructor(dataDir, log, size) {
+        this.size = size || [800, 480];
         this.dir = path.join(dataDir, 'layouts');
         this.log = log;
         this.changeListeners = [];
@@ -63,9 +67,11 @@ class Layouts {
             ids[w.id] = true;
             if (!TYPES[w.type]) bad(at + ' has unknown type "' + w.type + '"');
             ['x', 'y', 'w', 'h'].forEach((k) => { if (typeof w[k] !== 'number' || w[k] < 0) bad(at + ' needs a number ' + k); });
-            if (w.x + w.w > 800 || w.y + w.h > 480) bad(at + ' runs off the 800x480 HUD');
+            if (w.x + w.w > this.size[0] || w.y + w.h > this.size[1]) bad(at + ' runs off the ' + this.size[0] + 'x' + this.size[1] + ' display');
             if (w.class && CLASSES.indexOf(w.class) < 0) bad(at + ' has unknown class "' + w.class + '"');
-            if (w.exclusive) bad(at + ' sets exclusive, which would hide the CarPlay / Android Auto HUD map');
+            if (w.exclusive) bad(at + ' sets exclusive, which would hide everything under it (the CarPlay / Android Auto map too)');
+            if (w.toggle !== undefined && !/^!?[a-zA-Z0-9_]+$/.test(String(w.toggle))) bad(at + ' has a bad toggle "' + w.toggle + '"');
+            if (w.hole !== undefined && !(Array.isArray(w.hole) && w.hole.length === 4 && w.hole.every((n) => typeof n === 'number'))) bad(at + ' "hole" must be [x, y, w, h]');
             TYPES[w.type].forEach((k) => { if (w[k] === undefined) bad(at + ' (' + w.type + ') needs "' + k + '"'); });
         });
     }

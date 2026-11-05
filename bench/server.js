@@ -1,8 +1,11 @@
 'use strict';
 /**
- * HUD bench: a stand-in for cluster-render on the Mac.
+ * Bench: a stand-in for cluster-render on the Mac, for the apps that draw through it.
  *
- *   node bench/server.js            then open http://localhost:8078
+ *   node bench/server.js [app_id]   then open http://localhost:8078
+ *
+ * app_id: idrive_hud_widgets (the default, the 800x480 HUD) or cluster_themes (the 1920x720 cluster).
+ * The page draws the target the app's app.json config.target names.
  *
  * - Listens on a Unix socket speaking cluster-render protocol v1 (the framing
  *   and ops the vendored client sends: u32 LE length, u8 type 'J'/'F'/'M').
@@ -10,10 +13,10 @@
  *   then runs the built dist/ in the kit's stubbed head unit (bench/run-app.js), pointed at
  *   that socket. The center-screen settings go through the stub's RHMI components.
  * - Streams every layer, pixel push and uniform to a browser page that draws
- *   the 800x480 HUD target. Effect layers run the app's real GLSL shader in
+ *   app's target. Effect layers run the app's real GLSL shader in
  *   WebGL. Layers stack by class, then z, as cluster-render orders them.
- * - Rebuilds and restarts the app when a file under apps/ or kit/ changes. A layout
- *   saved into bench/.data/layouts/ (the data-folder override) is left to the app's own
+ * - Rebuilds and restarts the app when a file under its apps/<id>/, shared/ or kit/ changes. A layout
+ *   saved into bench/.data/<id>/layouts/ (the data-folder override) is left to the app's own
  *   fs.watch, so that path gets tested too.
  * - Flags protocol mistakes (bad sizes, unknown refs, ops before hello) in
  *   the log instead of silently drawing something.
@@ -32,15 +35,21 @@ const { fork, execFileSync } = require('child_process');
 const PORT = Number(process.env.BENCH_PORT) || 8078;
 const SOCK = path.join(os.tmpdir(), 'hud-bench-' + process.pid + '.sock');
 const ROOT = path.join(__dirname, '..');
-const APP_DIR = path.join(ROOT, 'apps', 'idrive_hud_widgets');
-const DATA_DIR = path.join(__dirname, '.data');   // the app's data/ on the bench (settings.json, layouts/)
-const STAGE = path.join(ROOT, 'dist', 'idrive_hud_widgets');
+const APP_ID = process.argv[2] || process.env.BENCH_APP || 'idrive_hud_widgets';
+const APP_DIR = path.join(ROOT, 'apps', APP_ID);
+if (!fs.existsSync(path.join(APP_DIR, 'app.json'))) { console.error('no app ' + APP_ID + ' under apps/'); process.exit(2); }
+const DATA_DIR = path.join(__dirname, '.data', APP_ID);   // the app's data/ on the bench (settings.json, layouts/)
+const STAGE = path.join(ROOT, 'dist', APP_ID);
 const TARGETS = { hud: [800, 480], map: [1088, 480], panel: [1920, 720] };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 const MAX_MSG = 5529664;
 // The car runs Node 8.16.2, so run the app on that by default when it's in the drive cache.
 const NODE8 = path.join(ROOT, '..', '..', '.cache', 'node8', 'node-v8.16.2-darwin-x64', 'bin', 'node');
 const APP_NODE = process.env.BENCH_NODE || (fs.existsSync(NODE8) ? NODE8 : null);
+/** The target the page draws: the app's config.target (read again on each restart). */
+function appView() {
+    try { const t = JSON.parse(fs.readFileSync(path.join(APP_DIR, 'app.json'), 'utf8')).config.target; return TARGETS[t] ? t : 'hud'; } catch (e) { return 'hud'; }
+}
 
 /* ---------- browser side: Server-Sent Events out, small POSTs in ---------- */
 
@@ -241,7 +250,7 @@ function build() {
         fs.writeFileSync(path.join(sdk, 'package.json'), JSON.stringify({ name: 'oap-sdk', version: '0.0.0-bench-stub', main: 'index.js' }) + '\n');
     }
     try {
-        const out = execFileSync('python3', [path.join(ROOT, 'kit', 'tools', 'build.py'), 'idrive_hud_widgets'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+        const out = execFileSync('python3', [path.join(ROOT, 'kit', 'tools', 'build.py'), APP_ID], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
         String(out).split('\n').filter(Boolean).forEach((ln) => log('info', 'build: ' + ln.trim()));
         return true;
     } catch (e) {
@@ -251,7 +260,8 @@ function build() {
 }
 
 function startApp() {
-    try { fs.mkdirSync(DATA_DIR); } catch (e) { /* there */ }
+    try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* there */ }
+    send({ t: 'hello', targets: TARGETS, view: appView(), app: APP_ID });
     if (!build()) { send({ t: 'app', state: 'stopped' }); return; }
     const opts = { cwd: DATA_DIR, stdio: ['ignore', 'pipe', 'pipe', 'ipc'], env: Object.assign({}, process.env, { HUD_CLUSTER_SOCKET: SOCK }) };
     if (APP_NODE) opts.execPath = APP_NODE;
@@ -295,7 +305,7 @@ function restartApp(why) {
     } else startApp();
 }
 
-[APP_DIR, path.join(ROOT, 'kit')].forEach((dir) => fs.watch(dir, { recursive: true }, (ev, file) => {
+[APP_DIR, path.join(ROOT, 'shared'), path.join(ROOT, 'kit')].forEach((dir) => fs.watch(dir, { recursive: true }, (ev, file) => {
     if (!file || /(^|\/)\./.test(file) || /__pycache__/.test(file)) return;
     clearTimeout(restartTimer);
     restartTimer = setTimeout(() => restartApp(path.basename(dir) + '/' + file + ' changed'), 300);
@@ -325,7 +335,7 @@ const web = http.createServer(async (req, res) => {
         res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
         clients.add(res);
         req.on('close', () => clients.delete(res));
-        send({ t: 'hello', targets: TARGETS }, res);
+        send({ t: 'hello', targets: TARGETS, view: appView(), app: APP_ID }, res);
         logLines.forEach((e) => send(e, res));
         send({ t: 'scene', layers: sceneMeta() }, res);
         layers.forEach((l) => sendPixels(l, res));

@@ -33,13 +33,25 @@ const THEMES = {
         bar: { low: [255, 179, 71], mid: [255, 179, 71], high: [255, 75, 62], midAt: 'shift' },
         rev: { from: [150, 95, 35], to: [255, 179, 71] },
     },
+    // Cluster theme (a layout's own "theme"). The cluster is an LCD, not glass: black is solid black there,
+    // and it covers BMW's gauges under it. Extra roles: bg (the screen), panel (box inside), line (box
+    // frame), head (box header strip), ink (text on a header), accent (a highlighted header).
+    gt3: {
+        name: 'GT3',
+        fg: [244, 244, 244, 255], dim: [150, 154, 160, 255], track: [255, 255, 255, 26], arc: [244, 244, 244, 255],
+        glow: 0, stripe: false,
+        bar: { low: [57, 222, 72], mid: [255, 196, 0], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [57, 222, 72], to: [57, 222, 72] },
+        bg: [0, 0, 0, 255], panel: [8, 9, 11, 255], line: [205, 208, 214, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [255, 196, 0, 255], well: [20, 22, 26, 255],
+    },
 };
 // every theme: the shift-point red, used by "hot" (the gear and SHIFT at the shift point, the rev bar past it)
 Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });
 
 // Redline layout (after cauliflowermossgrape's Redline app): rev bar segments ramp rev.from -> rev.to up to
 // the shift point; the shift lights run green -> yellow -> red in every theme; grade badges by verdict.
-const LIGHTS = { green: [47, 210, 122], yellow: [255, 194, 26], red: [255, 42, 42] };
+const LIGHTS = { green: [47, 210, 122], yellow: [255, 194, 26], red: [255, 42, 42], blue: [40, 110, 255] };
 const VERDICT = {
     'SPOT ON': [47, 210, 122, 255], EARLY: [255, 194, 26, 255], LATE: [255, 138, 26, 255],
     LIMITER: [255, 42, 42, 255], 'COLD REV': [61, 139, 255, 255], COLD: [61, 139, 255, 255],

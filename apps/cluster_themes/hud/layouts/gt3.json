@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "name": "GT3",
+  "theme": "gt3",
+  "_about": "GT3 race dash on the 1920x720 cluster. Black covers BMW's gauges; with 'Leave room for the map' on, 'hole' cuts the map window out of it. The hole's place is a guess until it is seen on the car: adjust it in a copy of this file pushed to <data>/layouts/gt3.json (scripts/deploy.sh). Widget reference: shared/hud.js header.",
+  "widgets": [
+    { "id": "bg", "type": "fill", "class": "ambient", "z": -10, "x": 0, "y": 0, "w": 1920, "h": 720, "color": "bg",
+      "hole": [416, 180, 1088, 480], "holeWhen": "mapWindow", "holeRadius": 14 },
+
+    { "id": "lights_well", "type": "box", "x": 300, "y": 14, "w": 1320, "h": 76, "fill": "well", "line": "well", "border": 0, "radius": 38 },
+    { "id": "lights", "type": "lights", "z": 1, "x": 336, "y": 26, "w": 1248, "h": 52, "count": 18, "tail": 3, "round": true, "off": 0.12 },
+    { "id": "shift_label", "type": "text", "z": 5, "x": 200, "y": 38, "w": 88, "h": 27, "text": "SHIFT", "font": "head", "color": "dim", "align": "right" },
+    { "id": "rpm_label", "type": "text", "z": 5, "x": 1632, "y": 38, "w": 160, "h": 27, "text": "RPM X1000", "font": "head", "color": "dim" },
+
+    { "id": "revs", "type": "shiftbar", "x": 300, "y": 104, "w": 1320, "h": 34, "segments": 60 },
+    { "id": "revs_scale", "type": "scale", "x": 300, "y": 146, "w": 1320, "h": 26, "font": "scale", "color": "dim", "redFrom": true },
+
+    { "id": "speed_box", "type": "box", "x": 24, "y": 190, "w": 400, "h": 230, "head": 36, "radius": 4 },
+    { "id": "speed_head", "type": "text", "z": 5, "x": 40, "y": 195, "w": 370, "h": 27, "text": "SPEED {{u:speed}}", "font": "head", "color": "ink" },
+    { "id": "speed", "type": "text", "z": 5, "x": 40, "y": 268, "w": 270, "h": 111, "text": "{{speed}}", "font": "big", "align": "right" },
+    { "id": "speed_unit", "type": "text", "z": 5, "x": 320, "y": 330, "w": 96, "h": 37, "text": "{{u:speed}}", "font": "unit", "color": "dim" },
+
+    { "id": "rpm_box", "type": "box", "x": 24, "y": 436, "w": 400, "h": 120, "head": 36, "radius": 4 },
+    { "id": "rpm_head", "type": "text", "z": 5, "x": 40, "y": 441, "w": 370, "h": 27, "text": "RPM", "font": "head", "color": "ink" },
+    { "id": "rpm", "type": "text", "z": 5, "x": 44, "y": 479, "w": 360, "h": 70, "text": "{{rpm10}}", "font": "value", "hotWhen": "now" },
+
+    { "id": "last_box", "type": "box", "toggle": "!mapWindow", "x": 24, "y": 572, "w": 400, "h": 130, "head": 36, "radius": 4 },
+    { "id": "last_head", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 40, "y": 577, "w": 370, "h": 27, "text": "LAST SHIFT  {{lastGears}}", "font": "head", "color": "ink" },
+    { "id": "last_rpm", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 44, "y": 620, "w": 200, "h": 70, "text": "{{lastShift}}", "font": "value", "colorBy": "verdict" },
+    { "id": "last_verdict", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 230, "y": 637, "w": 176, "h": 37, "text": "{{verdict}}", "font": "unit", "align": "right", "colorBy": "verdict" },
+
+    { "id": "mgear_box", "type": "box", "toggle": "mapWindow", "x": 24, "y": 572, "w": 400, "h": 130, "head": 36, "radius": 4 },
+    { "id": "mgear_head", "type": "text", "toggle": "mapWindow", "z": 5, "x": 40, "y": 577, "w": 370, "h": 27, "text": "GEAR", "font": "head", "color": "ink" },
+    { "id": "mgear", "type": "text", "toggle": "mapWindow", "z": 5, "x": 44, "y": 620, "w": 360, "h": 70, "text": "{{gearnum}}", "font": "value", "align": "center", "hotWhen": "now" },
+
+    { "id": "boost_box", "type": "box", "toggle": "showBoost", "x": 1496, "y": 190, "w": 400, "h": 230, "head": 36, "radius": 4, "headColor": "accent" },
+    { "id": "boost_head", "type": "text", "toggle": "showBoost", "z": 5, "x": 1512, "y": 195, "w": 370, "h": 27, "text": "BOOST {{u:boost}}", "font": "head", "color": "ink" },
+    { "id": "boost", "type": "text", "toggle": "showBoost", "z": 5, "x": 1512, "y": 268, "w": 270, "h": 111, "text": "{{boost}}", "font": "big", "align": "right" },
+    { "id": "boost_unit", "type": "text", "toggle": "showBoost", "z": 5, "x": 1792, "y": 330, "w": 96, "h": 37, "text": "{{u:boost}}", "font": "unit", "color": "dim" },
+
+    { "id": "shift_box", "type": "box", "x": 1496, "y": 436, "w": 400, "h": 120, "head": 36, "radius": 4 },
+    { "id": "shift_head", "type": "text", "z": 5, "x": 1512, "y": 441, "w": 370, "h": 27, "text": "SHIFT AT", "font": "head", "color": "ink" },
+    { "id": "shift_at", "type": "text", "z": 5, "x": 1516, "y": 479, "w": 360, "h": 70, "text": "{{shiftAt}}", "font": "value", "coldWhen": "cold", "hotWhen": "now" },
+
+    { "id": "time_box", "type": "box", "toggle": "!mapWindow", "x": 1496, "y": 572, "w": 400, "h": 130, "head": 36, "radius": 4 },
+    { "id": "time_head", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 1512, "y": 577, "w": 370, "h": 27, "text": "TIME", "font": "head", "color": "ink" },
+    { "id": "time", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 1516, "y": 620, "w": 260, "h": 70, "text": "{{time}}", "font": "value" },
+    { "id": "time_ampm", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 1780, "y": 637, "w": 100, "h": 37, "text": "{{ampm}}", "font": "unit", "color": "dim" },
+
+    { "id": "temps_box", "type": "box", "toggle": "mapWindow", "x": 1496, "y": 572, "w": 400, "h": 130, "head": 36, "radius": 4 },
+    { "id": "temps_head", "type": "text", "toggle": "mapWindow", "z": 5, "x": 1512, "y": 577, "w": 370, "h": 27, "text": "OIL {{u:temp}}            WATER {{u:temp}}", "font": "head", "color": "ink" },
+    { "id": "temps_oil", "type": "text", "toggle": "mapWindow", "z": 5, "x": 1516, "y": 620, "w": 170, "h": 70, "text": "{{oil}}", "font": "value" },
+    { "id": "temps_water", "type": "text", "toggle": "mapWindow", "z": 5, "x": 1706, "y": 620, "w": 170, "h": 70, "text": "{{coolant}}", "font": "value" },
+
+    { "id": "gear_box", "type": "box", "toggle": "!mapWindow", "x": 640, "y": 250, "w": 640, "h": 452, "head": 36, "radius": 4 },
+    { "id": "gear_head", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 656, "y": 255, "w": 610, "h": 27, "text": "GEAR", "font": "head", "color": "ink" },
+    { "id": "gear", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 760, "y": 330, "w": 400, "h": 244, "text": "{{gearnum}}", "font": "gear", "align": "center", "hotWhen": "now" },
+    { "id": "water_label", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 662, "y": 652, "w": 90, "h": 27, "text": "WATER", "font": "head", "color": "dim" },
+    { "id": "water", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 752, "y": 641, "w": 140, "h": 45, "text": "{{coolant}}°", "font": "small" },
+    { "id": "oil_label", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 1066, "y": 652, "w": 60, "h": 27, "text": "OIL", "font": "head", "color": "dim", "align": "right" },
+    { "id": "oil", "type": "text", "toggle": "!mapWindow", "z": 5, "x": 1130, "y": 641, "w": 134, "h": 45, "text": "{{oil}}°", "font": "small", "align": "right" }
+  ]
+}

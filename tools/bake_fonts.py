@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Bake the HUD's bitmap font atlases from the Barlow TTFs in tools/fonts-src/.
 
-    UV_CACHE_DIR=... uv run --no-project --with pillow python tools/bake_fonts.py
+    UV_CACHE_DIR=... uv run --no-project --with pillow python tools/bake_fonts.py [app_id ...]
 
 Runs on the Mac only (needs Pillow). The car never rasterizes fonts: it blits
-these pre-drawn glyphs (hud_text.js). Output per font, in
-apps/idrive_hud_widgets/hud/fonts/<name>.json: the metrics plus the atlas as
+these pre-drawn glyphs (shared/hud_text.js). Each app has its own set (FONTS below); output per
+font, in apps/<app_id>/hud/fonts/<name>.json: the metrics plus the atlas as
 one alpha byte per pixel (coverage), base64 in "alpha". JSON because the kit's
 build packs the app's data folders into hud.pack, which holds JSON only, and
 because then the car needs no PNG decoder. Barlow is SIL OFL 1.1; the licence
-ships as apps/idrive_hud_widgets/NOTICE.
+ships in each app's NOTICE.
 
 Metrics: every glyph cell is the same height, from the highest ink to the lowest
 ink across the font's glyph set, so a widget's y is the top of its tallest
@@ -22,11 +22,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'fonts-src')
-OUT = os.path.join(HERE, '..', 'apps', 'idrive_hud_widgets', 'hud', 'fonts')
+APPS = os.path.join(HERE, '..', 'apps')
 
 UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 DIGITS = '0123456789'
-FONTS = [
+HUD_FONTS = [
     # name, file, px size, characters
     ('hero', 'BarlowSemiCondensed-SemiBold.ttf', 140, DIGITS + 'PRND-'),
     ('big', 'BarlowSemiCondensed-Medium.ttf', 42, DIGITS + ':.-° PRND'),
@@ -34,11 +34,22 @@ FONTS = [
     ('label', 'Barlow-Medium.ttf', 15, UPPER + DIGITS + '/.:-°%>· '),
     ('small', 'Barlow-Medium.ttf', 13, UPPER + DIGITS + '/.:-°%>· '),
 ]
+# Cluster Themes, 1920x720 LCD. GT3: the race-dash look, Barlow Condensed.
+CLUSTER_FONTS = [
+    ('gear', 'BarlowCondensed-Bold.ttf', 330, DIGITS + 'PRND-'),
+    ('big', 'BarlowCondensed-Bold.ttf', 150, DIGITS + '.-'),
+    ('value', 'BarlowCondensed-Bold.ttf', 92, DIGITS + '.:- PRND'),
+    ('small', 'BarlowCondensed-Bold.ttf', 50, DIGITS + '.:-° '),
+    ('unit', 'BarlowCondensed-SemiBold.ttf', 34, UPPER + DIGITS + '/°%>·.: -'),
+    ('head', 'BarlowCondensed-SemiBold.ttf', 24, UPPER + DIGITS + '/°%>·.: -'),
+    ('scale', 'BarlowCondensed-SemiBold.ttf', 30, DIGITS),
+]
+FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2
 ATLAS_W = 1024
 
 
-def bake(name, file, size, chars):
+def bake(out, name, file, size, chars):
     font = ImageFont.truetype(os.path.join(SRC, file), size)
     ink = [c for c in chars if c != ' ']
     boxes = {c: font.getbbox(c, anchor='ls') for c in ink}
@@ -82,12 +93,16 @@ def bake(name, file, size, chars):
         glyphs[c] = {'x': gx, 'y': gy, 'w': img.width, 'h': img.height, 'ox': ox, 'advance': adv}
     meta = {'source': file, 'size': size, 'cellHeight': height, 'baseline': PAD - top, 'glyphs': glyphs,
             'width': ATLAS_W, 'height': atlas_h, 'alpha': base64.b64encode(atlas.tobytes()).decode('ascii')}
-    with open(os.path.join(OUT, name + '.json'), 'w') as f:
+    with open(os.path.join(out, name + '.json'), 'w') as f:
         json.dump(meta, f, separators=(',', ':'), ensure_ascii=False)
     print('%-6s %3dpx  cell height %3d  atlas %dx%d  %d glyphs' % (name, size, height, ATLAS_W, atlas_h, len(glyphs)))
 
 
 if __name__ == '__main__':
-    os.makedirs(OUT, exist_ok=True)
-    for spec in FONTS:
-        bake(*spec)
+    import sys
+    for app in sys.argv[1:] or sorted(FONTS):
+        out = os.path.join(APPS, app, 'hud', 'fonts')
+        os.makedirs(out, exist_ok=True)
+        print(app)
+        for spec in FONTS[app]:
+            bake(out, *spec)

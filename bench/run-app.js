@@ -1,12 +1,12 @@
 'use strict';
 /**
- * Bench launcher: runs the BUILT app (dist/idrive_hud_widgets, made by kit/tools/build.py, the
+ * Bench launcher: runs the BUILT app (dist/<id>, made by kit/tools/build.py, the
  * same build the Store runs on the car) inside the kit's stubbed head unit (kit/tools/hu-stub.js,
  * live mode). No BMW SDK, no SOME/IP:
  *
  *  - The center-screen page is hu-stub's fake RHMI. A setting from the bench panel is sent the way
  *    the car's HMI sends it: an 'action' on the SET_<KEY> component (the drop-down's row, or a
- *    checkbox press), so the kit's own wireSettings() handles it and saves bench/.data/settings.json.
+ *    checkbox press), so the kit's own wireSettings() handles it and saves bench/.data/<id>/settings.json.
  *  - The status row (ctx.ui.text('STATUS', ...)) is reported to the page.
  *  - Manual signals go in as RAW SOME/IP values through hu.feed, the scaling car.js undoes on the
  *    car; the FES boost field too. Demo mode is the kit's sim.js (the "demo" setting).
@@ -19,14 +19,15 @@ const path = require('path');
 const Module = require('module');
 
 const stage = process.argv[2], dataDir = process.argv[3];
-if (!stage || !dataDir) { console.error('usage: run-app.js <dist/idrive_hud_widgets> <data dir>'); process.exit(2); }
+if (!stage || !dataDir) { console.error('usage: run-app.js <dist/<id>> <data dir>'); process.exit(2); }
 
 const send = (m) => { if (process.connected) process.send(m); };
 const fmt = (a) => a.map((x) => (x && x.stack) ? x.stack : (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ');
+const tag = '[' + path.basename(stage) + '] ';
 const log = {
-    info: (...a) => console.log('[idrive_hud_widgets] ' + fmt(a)),
-    warn: (...a) => console.warn('[idrive_hud_widgets] WARN ' + fmt(a)),
-    error: (...a) => console.warn('[idrive_hud_widgets] ERROR ' + fmt(a)),
+    info: (...a) => console.log(tag + fmt(a)),
+    warn: (...a) => console.warn(tag + 'WARN ' + fmt(a)),
+    error: (...a) => console.warn(tag + 'ERROR ' + fmt(a)),
     debug: () => {},
 };
 // As on the car, an uncaught exception ends the app (kit/mgu.js): the bench shows the exit.

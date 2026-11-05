@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Push edited HUD layouts to the car over SSH, without reinstalling the app.
+# Push edited layouts to the car over SSH, without reinstalling the app.
 #
 #   ./scripts/deploy.sh root@<car-ip-or-hostname> [layout.json ...]
+#   APP=cluster_themes ./scripts/deploy.sh root@<car> gt3.json      (the cluster app; default: HUD Widgets)
 #
-# With no files it pushes the built-in layouts from apps/idrive_hud_widgets/hud/layouts/.
+# With no files it pushes the app's built-in layouts from apps/<app>/hud/layouts/.
 # They land in the app's data folder, <app>/data/layouts/, where a file overrides the
 # built-in layout of the same name (layouts.js). The running app watches that folder and
 # redraws the HUD by itself. Delete a file there to go back to the built-in layout.
@@ -14,7 +15,7 @@
 # cauliflowermossgrape/idrive7-apps' docs) and SSH access as root.
 set -euo pipefail
 
-APP_ID="idrive_hud_widgets"
+APP_ID="${APP:-idrive_hud_widgets}"
 OAP_ROOT="/var/opt/public/oap"
 
 usage() {

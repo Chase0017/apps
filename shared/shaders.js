@@ -204,16 +204,21 @@ void main() {
 const LIGHTS = `// Shift lights for a cluster-render "effect" layer (GLSL ES 1.00), after cauliflowermossgrape's Redline
 // app (MIT): u_n rounded lights in a row, green -> yellow -> red from left to right. u_lit of them are
 // on (they fill over the last 2000 rpm before the shift point); u_strobe 1 = at the shift point: all red.
-//   u_size px, u_n count, u_lit count (0..u_n), u_strobe 0/1, u_green/u_yellow/u_red rgb, u_off (alpha when off)
+// The last u_tail lights are blue instead (the GT3 dash look; 0 = none). u_round 1 = round lights.
+//   u_size px, u_n count, u_lit count (0..u_n), u_tail count, u_strobe 0/1, u_green/u_yellow/u_red/u_blue rgb,
+//   u_off (alpha when off)
 precision mediump float;
 varying vec2 v_uv;
 uniform vec2 u_size;
 uniform float u_n;
 uniform float u_lit;
+uniform float u_tail;
+uniform float u_round;
 uniform float u_strobe;
 uniform vec3 u_green;
 uniform vec3 u_yellow;
 uniform vec3 u_red;
+uniform vec3 u_blue;
 uniform float u_off;
 
 void main() {
@@ -227,16 +232,69 @@ void main() {
     if (inSeg > segW || idx >= u_n) { gl_FragColor = vec4(0.0); return; }
     vec2 hs = vec2(segW, u_size.y) * 0.5;
     vec2 p = vec2(inSeg, py) - hs;
-    float r = min(4.0, hs.y);
+    float r = u_round > 0.5 ? min(hs.x, hs.y) : min(4.0, hs.y);
+    if (u_round > 0.5) hs = vec2(r);
+    p = vec2(inSeg, py) - vec2(segW, u_size.y) * 0.5;
     vec2 q = abs(p) - (hs - vec2(r));
     float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
     float cover = clamp(0.5 - d, 0.0, 1.0);
-    float f = idx / max(1.0, u_n - 1.0);
-    vec3 col = f < 0.42 ? u_green : (f < 0.75 ? u_yellow : u_red);
+    float nMain = max(1.0, u_n - u_tail);
+    float f = idx / max(1.0, nMain - 1.0);
+    vec3 col = idx >= nMain ? u_blue : (f < 0.42 ? u_green : (f < 0.75 ? u_yellow : u_red));
     bool on = idx < u_lit;
     if (u_strobe > 0.5) { col = u_red; on = true; }
     gl_FragColor = vec4(col, cover * (on ? 1.0 : u_off));
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS };
+const FILL = `// Solid fill for a cluster-render "effect" layer (GLSL ES 1.00): u_color everywhere, except a
+// see-through rounded hole u_hole (x, y, w, h px from the layer's top left; w = 0: no hole), radius u_holeR.
+// On the cluster, an opaque fill hides BMW's own gauges under it; the hole lets the map window show.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec4 u_color;
+uniform vec4 u_hole;
+uniform float u_holeR;
+
+void main() {
+    vec2 p = vec2(v_uv.x * u_size.x, (1.0 - v_uv.y) * u_size.y);
+    float a = u_color.a;
+    if (u_hole.z > 0.0) {
+        vec2 hs = u_hole.zw * 0.5;
+        vec2 q = abs(p - (u_hole.xy + hs)) - (hs - vec2(u_holeR));
+        float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_holeR;
+        a *= clamp(d + 0.5, 0.0, 1.0);
+    }
+    gl_FragColor = vec4(u_color.rgb, a);
+}
+`;
+
+const BOX = `// Framed box for a cluster-render "effect" layer (GLSL ES 1.00), the race-dash readout box: a rounded
+// frame u_border px wide in u_line, filled u_fill, with a header strip u_headH px tall in u_head across the
+// top (0 = none). Colours rgba, straight alpha. u_size, u_border, u_headH, u_radius in px.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec4 u_fill;
+uniform vec4 u_line;
+uniform vec4 u_head;
+uniform float u_headH;
+uniform float u_border;
+uniform float u_radius;
+
+void main() {
+    vec2 p = vec2(v_uv.x * u_size.x, (1.0 - v_uv.y) * u_size.y);
+    vec2 hs = u_size * 0.5;
+    vec2 q = abs(p - hs) - (hs - vec2(u_radius));
+    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_radius;   // < 0 inside
+    float outer = clamp(0.5 - d, 0.0, 1.0);
+    if (outer <= 0.0) { gl_FragColor = vec4(0.0); return; }
+    vec4 c = p.y < u_headH ? u_head : u_fill;
+    float edge = clamp(d + u_border + 0.5, 0.0, 1.0);                       // 1 within the frame
+    vec4 col = mix(c, u_line, edge);
+    gl_FragColor = vec4(col.rgb, col.a * outer);
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX };
