@@ -46,6 +46,7 @@ const THEMES = {
         ink: [12, 12, 14, 255], accent: [255, 196, 0, 255], well: [20, 22, 26, 255],
     },
     // Sport (layout sport.json): BMW's Live Cockpit Sport view, blue speed and red revs round the map.
+    // Extra roles: sblue / spink (the speed and rpm scale numbers), sred (the rpm caption).
     sportdash: {
         name: 'Sport',
         fg: [244, 247, 252, 255], dim: [150, 170, 205, 255], track: [70, 80, 100, 255], arc: [60, 215, 255, 255],
@@ -54,6 +55,7 @@ const THEMES = {
         rev: { from: [224, 26, 56], to: [224, 26, 56] },
         bg: [4, 5, 9, 255], panel: [10, 14, 24, 255], line: [60, 215, 255, 255], head: [226, 228, 232, 255],
         ink: [12, 12, 14, 255], accent: [60, 215, 255, 255], well: [16, 19, 25, 255], faint: [96, 110, 135, 255],
+        sblue: [120, 170, 245, 255], spink: [236, 140, 140, 255], sred: [235, 60, 70, 255],
     },
     // Dials (layout dials.json): a round tach with side gauges, charcoal, white numbers, orange needles.
     dials: {

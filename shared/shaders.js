@@ -481,7 +481,7 @@ void main() {
 `;
 const MTACH = `// The M theme's rev bar (GLSL ES 1.00): a glass blade with a bright silver outer edge that bends at u_geoA.z,
 // tick notches pointing out every 1000 rpm (a long one at the bend), the part below the rpm lit light grey,
-// a red needle line at the rpm with a red glow above it, and orange then red dashes from the shift zone.
+// a red needle line at the rpm with a red glow above it, orange dashes before the redline and a solid red line past it.
 // Drawn as the left bar; u_side 1 mirrors it into the right one. v_uv (0,0) is the top-left.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -535,8 +535,11 @@ void main() {
         c = over(vec4(0.93, 0.95, 0.98, cov(abs(d) - 1.6)), c);               // outer edge
         c = over(vec4(1.0, 1.0, 1.0, 0.3 * cov(abs(d - 4.0) - 0.6)), c);       // its bevel
         c = over(vec4(0.66, 0.7, 0.76, 0.75 * cov(abs(d - w) - 0.8)), c);      // inner edge
-        if (t >= u_orange && d > 6.0 && d < 11.0 && mod(p.y, 15.0) < 9.0) {
-            c = over(vec4(t >= u_redFrom ? u_red : vec3(1.0, 0.6, 0.1), 0.95), c);
+        // BMW's marks: a solid red line from the redline, a few orange dashes in the run-up to it
+        bool redM = t >= u_redFrom && d > 6.0 && d < 11.0;
+        bool orM = t >= u_orange && t < u_redFrom - 0.01 && d > 6.0 && d < 11.0 && mod(p.y, 20.0) < 7.0;
+        if (redM || orM) {
+            c = over(vec4(redM ? u_red : vec3(1.0, 0.6, 0.1), 0.95), c);
         }
     }
     float kk = floor(t * u_ticks + 0.5);
@@ -550,10 +553,11 @@ void main() {
     gl_FragColor = c;
 }
 `;
-const SDASH = `// The Sport theme in one cluster-render "effect" layer (GLSL ES 1.00): a blue speed bracket on the left and a
-// red rev bracket on the right (angled, filled from the bottom), framing either the map window (u_hole, cut
-// see-through) or a lane view with dashes that run with the speed; slanted fuel and oil bars inside the
-// brackets; a blue / red strip at the bottom. The right bracket is the left one mirrored. v_uv (0,0) is the top-left.
+const SDASH = `// The Sport theme in one cluster-render "effect" layer (GLSL ES 1.00), after BMW's Live Cockpit Sport view:
+// a blue speed bracket left and a red rev bracket right (the left one mirrored). Each is a thin bright outer
+// line, a band that fills from the bottom (white marker at the value), a dark gap and a thin inner line round a
+// dark panel that fades into the middle: BMW's map (u_hole, cut see-through) or a lane view running with the
+// speed. Two-tone fuel and oil bars inside the brackets, a blue / red strip at the bottom. v_uv (0,0) is the top-left.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -561,28 +565,34 @@ precision mediump float;
 #endif
 varying vec2 v_uv;
 uniform vec2 u_size;
-uniform vec4 u_geo;       // outer edge: y at the top, y at the bend, y at the bottom, x at the bend (left side)
+uniform vec4 u_geo;       // outer line: y at the top, y at the bend, y at the bottom, x at the bend (left side)
 uniform vec3 u_k;         // x per y px above the bend, below it, bend roundness px
-uniform float u_w;        // bracket band width
-uniform vec2 u_ticks;     // tick count left (speed), right (rpm)
-uniform float u_speed;    // 0..1
+uniform float u_w;        // band width
+uniform float u_inner;    // the inner line's distance from the outer line
+uniform vec2 u_scale;     // y of the scale's 0 and of its top mark
+uniform vec2 u_ticks;     // marks left (speed), right (rpm)
+uniform float u_speed;    // 0..1 along the scale
 uniform float u_rpm;      // 0..1
 uniform float u_redFrom;  // 0..1 (the redline)
+uniform float u_orange;   // 0..1, yellow marks from here to the redline
 uniform float u_fuel;     // 0..1
 uniform float u_oil;      // 0..1
 uniform vec4 u_fuelSeg;   // full end x, y, empty end x, y
 uniform vec4 u_oilSeg;
 uniform vec4 u_hole;      // map window x, y, w, h (w 0 = lanes instead)
 uniform float u_dash;     // lane dash phase 0..1
-uniform vec4 u_strip;     // bottom strip: centre x, top y, half width at the top, height
-uniform float u_topEnd;   // the top line runs from the bracket to this x (left; mirrored on the right)
+uniform vec4 u_strip;     // bottom strip: left end x, top y, height, slant px
+uniform float u_topEnd;   // the top lines run from the bracket to this x (left; mirrored on the right)
+uniform vec2 u_fade;      // the dark panel fades out between these x (left; mirrored)
 
-const vec3 BLUE = vec3(0.12, 0.36, 0.95);
-const vec3 CYAN = vec3(0.24, 0.85, 1.0);
-const vec3 BLUE_DK = vec3(0.05, 0.12, 0.38);
-const vec3 RED = vec3(0.86, 0.1, 0.22);
-const vec3 PINK = vec3(1.0, 0.36, 0.45);
-const vec3 RED_DK = vec3(0.33, 0.04, 0.09);
+const vec3 BLUE_LINE = vec3(0.36, 0.62, 1.0);
+const vec3 BLUE_BAND = vec3(0.13, 0.3, 0.78);
+const vec3 BLUE_LIT = vec3(0.62, 0.86, 1.0);
+const vec3 BLUE_IN = vec3(0.2, 0.45, 0.98);
+const vec3 RED_LINE = vec3(0.95, 0.12, 0.16);
+const vec3 RED_BAND = vec3(0.33, 0.06, 0.1);
+const vec3 RED_LIT = vec3(0.93, 0.1, 0.15);
+const vec3 RED_IN = vec3(0.86, 0.08, 0.13);
 
 float cov(float d) { return clamp(0.5 - d, 0.0, 1.0); }
 vec4 over(vec4 top, vec4 under) {
@@ -603,115 +613,123 @@ float outerSlope(float y) {
     float k = dy < 0.0 ? u_k.x : u_k.y;
     return k * dy / sqrt(dy * dy + u_k.z * u_k.z);
 }
+// px from the outer line, inwards (perpendicular)
+float dIn(vec2 q) { return (q.x - outerX(q.y)) / sqrt(1.0 + outerSlope(q.y) * outerSlope(q.y)); }
 
-// one bracket, in the left frame (q = the pixel, mirrored for the right one): a neon outer line with a glow,
-// a thin inner line, a dark channel between them that fills with the value (white marker on top), both lines
-// carried on along the top, the outer one along the bottom
-vec4 bracket(vec2 q, float val, float redFrom, float ticks, vec3 lit, vec3 edge, vec3 dark, vec4 c) {
-    float H = u_geo.z - u_geo.x;
-    float t = (u_geo.z - q.y) / H;
-    float d = (q.x - outerX(q.y)) / sqrt(1.0 + outerSlope(q.y) * outerSlope(q.y));
-    float yi = u_geo.x + u_w * 0.42;                       // where the inner line turns along the top
-    float xi = outerX(yi) + u_w * sqrt(1.0 + outerSlope(yi) * outerSlope(yi));
-    // the dark channel along the top, between the two top lines
-    if (q.y > u_geo.x && q.y < yi && q.x > outerX(q.y) && q.x < u_topEnd - u_w * 0.35)
-        c = over(vec4(dark * 0.55, 0.96 * cov(q.x - (u_topEnd - u_w * 0.35))), c);
-    if (t >= 0.0 && t <= 1.0) {
-        float inB = clamp(d + 0.5, 0.0, 1.0) * clamp(u_w - d + 0.5, 0.0, 1.0);
-        if (inB > 0.0) {
-            float across = clamp(d / u_w, 0.0, 1.0);
-            vec4 b = vec4(dark * 0.55, 0.96);
-            if (t <= val) {
-                vec3 col = mix(edge, lit, smoothstep(0.05, 0.9, across));
-                col *= mix(0.7, 1.05, smoothstep(0.0, 1.0, t / max(val, 0.001)));
-                if (t >= redFrom) col = mix(col, vec3(1.0, 0.2, 0.25), 0.6);
-                b = vec4(col, 1.0);
-            }
-            float yv = u_geo.z - val * H;
-            b = over(vec4(1.0, 1.0, 1.0, val > 0.002 ? cov(abs(q.y - yv) - 2.2) : 0.0), b);
-            c = over(vec4(b.rgb, b.a * inB), c);
-        }
-        if (d < 0.0) c = over(vec4(edge, 0.45 * exp(d / 7.0)), c);                  // glow outside
-        c = over(vec4(mix(edge, vec3(1.0), 0.25), cov(abs(d + 1.0) - 3.0)), c);     // neon outer line
-        c = over(vec4(edge, 0.9 * cov(abs(d - u_w) - 1.3) * step(yi, q.y)), c);      // inner line
+// one bracket in the left frame (q mirrored for the right one)
+vec4 bracket(vec2 q, float val, float redFrom, float orange, float ticks, vec3 line, vec3 band, vec3 lit, vec3 inner, vec4 c) {
+    float d = dIn(q);
+    float yTopI = u_geo.x + 8.0;                              // the inner line's top run
+    float t = (u_scale.x - q.y) / (u_scale.x - u_scale.y);    // 0 at the scale's 0
+    bool inY = q.y > u_geo.x + 5.0 && q.y < u_geo.z - 4.0;
+    // the band: lit up to the value, white marker on top
+    float inB = (inY ? 1.0 : 0.0) * cov(-(d - 5.0)) * cov(d - 5.0 - u_w);
+    if (inB > 0.0) {
+        vec3 col = band;
+        float a = 0.96;
+        if (t <= val) col = mix(lit, mix(lit, vec3(1.0), 0.25), clamp((d - 5.0) / u_w, 0.0, 1.0)) * mix(0.8, 1.0, clamp(t / max(val, 0.01), 0.0, 1.0));
+        c = over(vec4(col, a * inB), c);
+        float yv = u_scale.x - val * (u_scale.x - u_scale.y);
+        if (val > 0.002) c = over(vec4(1.0, 1.0, 1.0, inB * cov(abs(q.y - yv) - 2.0)), c);
+        // marks at every label, on the band's outer half
         float kk = floor(t * ticks + 0.5);
-        float yk = u_geo.z - kk / ticks * H;
-        if (d < -6.0 && d > -18.0) c = over(vec4(vec3(0.85, 0.9, 1.0), 0.75 * cov(abs(q.y - yk) - 1.0)), c);
+        float yk = u_scale.x - kk / ticks * (u_scale.x - u_scale.y);
+        if (kk >= 0.0 && kk <= ticks && d > 7.0 && d < 19.0) c = over(vec4(line, 0.9 * cov(abs(q.y - yk) - 1.2)), c);
+        // redline: yellow dashes, then a solid red line, on the outer edge of the band
+        if (redFrom < 1.5 && d > 8.0 && d < 13.0) {
+            if (t >= redFrom && t <= 1.02) c = over(vec4(1.0, 0.2, 0.2, 1.0), c);
+            else if (t >= orange && t < redFrom && mod(q.y, 16.0) < 7.0) c = over(vec4(1.0, 0.85, 0.1, 1.0), c);
+        }
     }
-    // top: both lines run on to u_topEnd; bottom: the outer line runs in to the middle
-    vec2 top = vec2(outerX(u_geo.x), u_geo.x);
-    float topD = segD(q, top, vec2(u_topEnd, u_geo.x));
-    c = over(vec4(edge, 0.4 * exp(-topD / 7.0) * step(q.y, u_geo.x)), c);
-    c = over(vec4(mix(edge, vec3(1.0), 0.25), cov(topD - 3.0)), c);
-    c = over(vec4(edge, 0.9 * cov(segD(q, vec2(xi, yi), vec2(u_topEnd - u_w * 0.35, yi)) - 1.3)), c);
-    vec2 bot = vec2(outerX(u_geo.z), u_geo.z);
-    c = over(vec4(mix(edge, vec3(1.0), 0.25), cov(segD(q, bot, bot + vec2(u_w, 0.0)) - 3.0)), c);
-    c = over(vec4(mix(edge, vec3(1.0), 0.45), 0.85 * cov(segD(q, bot + vec2(u_w, 0.0), vec2(u_size.x * 0.5, u_geo.z)) - 1.2)), c);
+    // the outer line, its top run and its bottom run
+    float o = inY || abs(q.y - u_geo.x) < 6.0 || abs(q.y - u_geo.z) < 6.0 ? cov(abs(d - 1.0) - 1.8) : 0.0;
+    vec2 tl = vec2(outerX(u_geo.x), u_geo.x), bl = vec2(outerX(u_geo.z), u_geo.z);
+    o = max(o, cov(segD(q, tl, vec2(u_topEnd, u_geo.x)) - 2.2));
+    o = max(o, cov(segD(q, bl, bl + vec2(u_inner + 40.0, 0.0)) - 2.2));
+    c = over(vec4(line, 0.35 * exp(-abs(d) / 5.0) * (inY ? 1.0 : 0.0) * step(d, 0.0)), c);
+    c = over(vec4(line, o), c);
+    // the inner line: down the bracket from its top run to the bottom
+    float il = (q.y > yTopI && q.y < u_geo.z - 6.0) ? cov(abs(d - u_inner) - 1.6) : 0.0;
+    float xi = outerX(yTopI) + u_inner * sqrt(1.0 + outerSlope(yTopI) * outerSlope(yTopI));
+    il = max(il, cov(segD(q, vec2(xi, yTopI), vec2(u_topEnd - 14.0, yTopI)) - 1.6));
+    c = over(vec4(inner, 0.95 * il), c);
     return c;
 }
 
-// a slanted bar gauge from the empty end b to the full end a
+// a two-tone slanted bar from the empty end b to the full end a, with a thin rail beside it
 vec4 bar(vec2 p, vec4 s, float val, float zones, vec4 c) {
     vec2 a = s.xy, b = s.zw;
-    float dist = segD(p, a, b);
-    if (dist > 12.0) return c;
-    float h = 1.0 - segH(p, a, b);               // 0 at the empty end, 1 at the full end
-    c = over(vec4(0.01, 0.03, 0.1, 0.6 * cov(dist - 9.0)), c);                     // dark well
-    c = over(vec4(0.86, 0.9, 0.98, 0.85 * cov(abs(dist - 8.0) - 1.0)), c);          // outline
-    vec3 col = vec3(0.97, 0.98, 1.0);
-    if (zones > 0.5 && h > 0.85) col = vec3(1.0, 0.3, 0.35);
-    if (zones > 0.5 && h < 0.12) col = vec3(0.4, 0.6, 1.0);
-    return over(vec4(col, step(h, val) * step(0.001, val) * cov(dist - 4.5)), c);
+    float h = 1.0 - segH(p, a, b);
+    vec2 dir = normalize(a - b), nrm = vec2(-dir.y, dir.x);
+    float side = dot(p - b, nrm);
+    float along = segD(p, a, b);
+    if (along > 26.0) return c;
+    float body = cov(abs(side) - 7.0) * cov(segD(p, a, b) - 7.5);
+    vec3 col = vec3(0.92, 0.94, 0.97);
+    if (zones > 0.5 && h > 0.88) col = vec3(1.0, 0.2, 0.22);
+    if (zones > 0.5 && h < 0.1) col = vec3(0.25, 0.5, 1.0);
+    c = over(vec4(0.36, 0.38, 0.44, 0.9 * body), c);
+    c = over(vec4(col, body * step(h, val) * step(0.001, val)), c);
+    c = over(vec4(0.5, 0.52, 0.58, 0.8 * cov(abs(side + 12.0) - 1.0) * cov(segD(p, a, b) - 13.0)), c);
+    return c;
 }
 
 void main() {
     vec2 p = v_uv * u_size;
     vec2 pm = vec2(u_size.x - p.x, p.y);
-    vec4 c = vec4(vec3(0.016, 0.02, 0.034) * mix(0.6, 1.0, smoothstep(0.0, 0.25, v_uv.y)), 1.0);
+    vec4 c = vec4(vec3(0.035, 0.038, 0.07) * mix(0.75, 1.0, smoothstep(0.0, 0.3, v_uv.y)), 1.0);
 
-    // the middle, between the brackets' inner edges
-    float inL = p.x - outerX(p.y) - u_w, inR = pm.x - outerX(p.y) - u_w;
-    float mid = (p.y > u_geo.x + u_w * 0.42 && p.y < u_geo.z) ? cov(-min(inL, inR)) : 0.0;
+    // the middle: inside both inner lines, below their top runs, above the bottom line
+    float inL = dIn(p) - u_inner, inR = dIn(pm) - u_inner;
+    float yTopI = u_geo.x + 8.0;
+    float mid = (p.y > yTopI && p.y < u_geo.z) ? cov(-min(inL, inR)) : 0.0;
+    bool hole = u_hole.z > 0.0 && p.x > u_hole.x && p.x < u_hole.x + u_hole.z && p.y > u_hole.y && p.y < u_hole.y + u_hole.w;
     if (mid > 0.0) {
-        float gy = clamp((p.y - u_geo.x) / (u_geo.z - u_geo.x), 0.0, 1.0);
-        float e = smoothstep(0.0, 420.0, min(inL, inR));
-        vec3 bg = mix(vec3(0.015, 0.04, 0.16), vec3(0.1, 0.3, 0.92), e * mix(0.75, 1.0, smoothstep(0.0, 0.5, gy)));
-        if (u_hole.z <= 0.0) {
+        float gy = clamp((p.y - yTopI) / (u_geo.z - yTopI), 0.0, 1.0);
+        vec4 m = vec4(mix(vec3(0.08, 0.17, 0.36), vec3(0.13, 0.27, 0.52), gy), 1.0);
+        if (hole) m = vec4(0.0);
+        else if (u_hole.z <= 0.0) {
             // lane view: vanishing point above the middle, solid road edges, dashed lane lines
-            vec2 v = vec2(u_size.x * 0.5, u_geo.x + 95.0);
+            vec2 v = vec2(u_size.x * 0.5, yTopI + 60.0);
             float persp = clamp((p.y - v.y) / (u_geo.z - v.y), 0.0, 1.0);
             float fade = smoothstep(0.02, 0.3, persp);
-            float wl = 0.8 + 3.2 * persp;
+            float wl = 0.8 + 3.0 * persp;
             float z = 900.0 / max(p.y - v.y, 1.0);
             float dash = step(fract(z - u_dash), 0.55);
             float lanes = 0.0;
-            lanes = max(lanes, cov(segD(p, v, vec2(v.x - 440.0, u_geo.z)) - wl));
-            lanes = max(lanes, cov(segD(p, v, vec2(v.x + 440.0, u_geo.z)) - wl));
-            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x - 158.0, u_geo.z)) - wl));
-            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x + 158.0, u_geo.z)) - wl));
-            bg = mix(bg, vec3(0.85, 0.92, 1.0), lanes * fade * 0.9);
-            bg += vec3(0.05, 0.1, 0.25) * exp(-pow((p.y - v.y) / 60.0, 2.0));   // horizon glow
+            lanes = max(lanes, cov(segD(p, v, vec2(v.x - 420.0, u_geo.z)) - wl));
+            lanes = max(lanes, cov(segD(p, v, vec2(v.x + 420.0, u_geo.z)) - wl));
+            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x - 150.0, u_geo.z)) - wl));
+            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x + 150.0, u_geo.z)) - wl));
+            m.rgb = mix(m.rgb, vec3(0.78, 0.86, 0.95), lanes * fade * 0.85);
         }
-        c = over(vec4(bg, mid), c);
+        // the dark panels inside the brackets, fading into the middle
+        float xs = min(p.x, pm.x);
+        float dark = 1.0 - smoothstep(u_fade.x, u_fade.y, xs);
+        m = over(vec4(0.02, 0.025, 0.06, 0.97 * dark), m);
+        c = hole ? m : over(vec4(m.rgb, m.a * mid), c);     // over the map window: only the panels' shade
     }
-    // the map window: see-through, so BMW's map shows (the brackets still draw over its edges)
-    if (u_hole.z > 0.0 && p.x > u_hole.x && p.x < u_hole.x + u_hole.z && p.y > u_hole.y && p.y < u_hole.y + u_hole.w) c = vec4(0.0);
 
-    c = bracket(p, u_speed, 2.0, u_ticks.x, BLUE, CYAN, BLUE_DK, c);
-    c = bracket(pm, u_rpm, u_redFrom, u_ticks.y, RED, PINK, RED_DK, c);
+    c = bracket(p, u_speed, 2.0, 2.0, u_ticks.x, BLUE_LINE, BLUE_BAND, BLUE_LIT, BLUE_IN, c);
+    c = bracket(pm, u_rpm, u_redFrom, u_orange, u_ticks.y, RED_LINE, RED_BAND, RED_LIT, RED_IN, c);
     c = bar(p, u_fuelSeg, u_fuel, 0.0, c);
     c = bar(p, u_oilSeg, u_oil, 1.0, c);
+    // the bottom line between the brackets
+    if (abs(p.y - u_geo.z) < 3.0 && abs(p.x - u_size.x * 0.5) < u_size.x * 0.5 - outerX(u_geo.z))
+        c = over(vec4(mix(BLUE_LINE, RED_LINE, step(u_size.x * 0.5, p.x)) * 0.8, cov(abs(p.y - u_geo.z) - 1.2)), c);
 
-    // bottom strip: a trapezoid, blue left of the middle, red right
+    // bottom strip: slanted ends, blue left of the middle, red right, thin dividers
     float sy = p.y - u_strip.y;
-    if (sy > -2.0 && sy < u_strip.w + 2.0) {
-        float hw = u_strip.z - sy * 0.6;
-        float dx = abs(p.x - u_strip.x);
-        float inside = cov(dx - hw) * cov(-sy) * cov(sy - u_strip.w);
-        vec3 sc = p.x < u_strip.x ? mix(BLUE_DK, BLUE, 0.6 + 0.4 * (dx / u_strip.z)) : mix(RED_DK, RED, 0.6 + 0.4 * (dx / u_strip.z));
-        c = over(vec4(sc, 0.92 * inside), c);
-        c = over(vec4(p.x < u_strip.x ? CYAN : PINK, inside * cov(abs(sy) - 1.2)), c);
-        c = over(vec4(1.0, 1.0, 1.0, 0.35 * inside * cov(abs(p.x - u_strip.x) - 1.0)), c);
+    if (sy > -2.0 && sy < u_strip.z + 2.0) {
+        float xl = u_strip.x + (u_strip.z - sy) / u_strip.z * u_strip.w;     // left end leans in at the top
+        float dx = abs(p.x - u_size.x * 0.5), xe = u_size.x * 0.5 - xl;
+        float inside = cov(dx - xe) * cov(-sy) * cov(sy - u_strip.z);
+        float f = dx / xe;
+        vec3 sc = p.x < u_size.x * 0.5 ? mix(vec3(0.06, 0.2, 0.62), vec3(0.15, 0.36, 0.92), f) : mix(vec3(0.4, 0.05, 0.1), vec3(0.85, 0.1, 0.16), f);
+        c = over(vec4(sc, 0.95 * inside), c);
+        float div = cov(abs(mod(p.x - (u_strip.z - sy) * 0.45, 150.0) - 75.0) - 73.8);
+        c = over(vec4(0.02, 0.03, 0.08, 0.5 * inside * div), c);
+        c = over(vec4(1.0, 1.0, 1.0, 0.25 * inside * cov(abs(sy) - 1.0)), c);
     }
     gl_FragColor = c;
 }

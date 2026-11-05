@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport or Dials, with shift lights, boost, temps and shift scoring",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -33,7 +33,8 @@
     "de.bmw.infotainment.drivingexcitement.FES": {
       "statusSwitchDriveDynamicSport2": "rs",
       "statusActualValueTorque2": "rs",
-      "statusFESVehicleDynamicSwitchHMI": "rs"
+      "statusFESVehicleDynamicSwitchHMI": "rs",
+      "statusVehicleDynamicEngine": "rs"
     },
     "de.bmw.infrastructure.VehicleInformation": {
       "statusGearboxDrive": "s",

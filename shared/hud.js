@@ -42,10 +42,11 @@
  *             "y0" (0 rpm), "y8" (max), "ym" (the bend), "xm" (outer edge x at the bend; the right bar gives
  *             its own, mirrored), "kTop" / "kBot" (x per y px above / below the bend), "round", "wBot" / "wTop" / "wBend"
  *   sdash     effect layer; the whole Sport theme (shaders.js sdash): "geo" [yTop, yBend, yBottom, xBend] and
- *             "k" [above, below, round] for the left bracket's outer edge (the right one is mirrored), "band",
+ *             "k" [above, below, round] for the left bracket's outer line (the right one is mirrored), "band"
+ *             width, "inner" (the inner line's distance from the outer one), "scale" [y of 0, y of the top mark],
  *             "ticks" [speed, rpm], "rpmMax" (speed follows SPEED_SCALE), "fuelSeg" / "oilSeg" [fullX, fullY,
- *             emptyX, emptyY], "strip" [cx, y, half width, h], "topEnd" x; the map window is cut while
- *             "holeWhen" is on ("hole" [x, y, w, h]), else a lane view runs with the speed
+ *             emptyX, emptyY], "strip" [left end x, y, h, slant], "topEnd" x, "fade" [x0, x1] (the dark panels
+ *             fade out); the map window is cut while "holeWhen" is on ("hole" [x, y, w, h]), else a lane view
  *   ddash     effect layer; the whole Dials theme (shaders.js ddash): "tach" [cx, cy, radius, band], "max" rpm,
  *             four side gauges "gauges" [{ signal, min, max }] drawn per the "styleFrom" choice setting
  *             (round | bar | digital): "dials" [[cx, cy, r] x4] (round dials, digital tiles), "bars"
@@ -63,7 +64,8 @@
  * scale: "over" as revbar; "redFrom": true draws the numbers from the redline on in red.
  * lights: "count" (12), "tail" (0): the last "tail" lights are blue (the GT3 look); "round": true for dots;
  * "off" the alpha of an unlit light (0.14).
- * Text "colorBy": "verdict" colours it by the last shift's grade.
+ * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
+ * "nearColor" (fg) while scale label i is the one nearest the value (BMW lights up the label by the needle).
  *
  * rpm is smoothed (a 120 ms filter, and the readout moves in 50 rpm steps only when it changes by 40 or
  * more), so idle wobble doesn't show, as on BMW's own tach. Shift scoring uses the raw rpm.
@@ -230,6 +232,13 @@ class HudApp {
                     if (typeof raw !== 'number' || raw === BOOST_SCALE.invalid) return;
                     this.boostFes = raw * BOOST_SCALE.factor + BOOST_SCALE.offset;
                     this.boostFesAt = Date.now();
+                },
+                // the HMI's sport display: power and torque in % of the car's maximum (car_vitals, MIT); 255 = none
+                statusVehicleDynamicEngine: (v) => {
+                    const p = v && v.displaySportEnginePower, t = v && v.displaySportEngineTorque;
+                    this.sportPower = isNum(p) && p >= 0 && p <= 150 ? p : null;
+                    this.sportTorque = isNum(t) && t >= 0 && t <= 150 ? t : null;
+                    this.sportAt = Date.now();
                 },
                 statusFESVehicleDynamicSwitchHMI: (v) => {
                     const m = driveModeOf(v && v.actualValueModeDrivingExperience);
@@ -448,7 +457,12 @@ class HudApp {
             return isNum(this.ambient) ? this.ambient : demo ? 24 : null;
         }
         if (name === 'torquePct' || name === 'powerPct') {
-            // share of the engine's peak (app.json config.engine: crank Nm and kW; an M40i makes 500 Nm, 285 kW)
+            // the car's own sport display % while it sends one, else from the crank torque and app.json
+            // config.engine's peaks (an M40i makes 500 Nm, 285 kW)
+            if (Date.now() - (this.sportAt || 0) < FRESH_MS) {
+                const v = name === 'powerPct' ? this.sportPower : this.sportTorque;
+                if (isNum(v)) return v;
+            }
             const e = this.config.engine || {}, d = this.car.data();
             if (!isNum(d.torque)) return null;
             if (name === 'torquePct') return Math.max(0, d.torque) / (e.torqueNm || 500) * 100;
@@ -457,6 +471,15 @@ class HudApp {
         if (name.indexOf('setupLevel:') === 0) { const s = this._setup(); return s ? SETUP_LEVEL[s[name.slice(11)]] || 0 : 0; }
         const d = this.car.data();
         return Object.prototype.hasOwnProperty.call(d, name) ? d[name] : null;
+    }
+
+    /** The scale label nearest the value now: 'speed' (SPEED_SCALE index) or 'rpm' (thousands); null without data. */
+    _nearMark(kind) {
+        if (kind === 'rpm') { const r = this._raw('rpm'); return isNum(r) ? Math.round(r / 1000) : null; }
+        const v = this._raw('speed');
+        if (!isNum(v)) return null;
+        const us = this.setting('units') === 'us';
+        return Math.round(scaleFrac(us ? v * 0.621371 : v, SPEED_SCALE[us ? 'us' : 'metric']) * 8);
     }
 
     /** The setup rows for the drive mode now, or null before the car has said. */
@@ -632,8 +655,12 @@ class HudApp {
             this.client.uniform(ref, 'u_geo', w.geo);
             this.client.uniform(ref, 'u_k', w.k);
             this.client.uniform(ref, 'u_w', [w.band]);
+            this.client.uniform(ref, 'u_inner', [w.inner || w.band + 18]);
+            this.client.uniform(ref, 'u_scale', w.scale || [w.geo[2], w.geo[0]]);
             this.client.uniform(ref, 'u_ticks', w.ticks);
             this.client.uniform(ref, 'u_redFrom', [this.setting('redline') / (w.rpmMax || 8000)]);
+            this.client.uniform(ref, 'u_orange', [(this.setting('redline') - 700) / (w.rpmMax || 8000)]);
+            this.client.uniform(ref, 'u_fade', w.fade || [600, 760]);
             this.client.uniform(ref, 'u_fuelSeg', w.fuelSeg);
             this.client.uniform(ref, 'u_oilSeg', w.oilSeg);
             this.client.uniform(ref, 'u_hole', hole);
@@ -766,6 +793,7 @@ class HudApp {
             const s = this._resolve(w.text);
             let role = w.color || 'fg';
             if (w.colorBy === 'verdict' && this.score.last) role = VERDICT[this.score.last.verdict] || role;
+            if (w.near && this._nearMark(w.near[0]) === w.near[1]) role = w.nearColor || 'fg';
             if (w.hotWhen || w.coldWhen) {
                 const sp = this._shift();
                 if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
