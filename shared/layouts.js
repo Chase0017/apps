@@ -10,6 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const data = require('./hud_data');
+const visible = require('./visible');
 
 const TYPES = {
     text: ['text', 'font'],
@@ -30,6 +31,9 @@ const TYPES = {
     ddash: ['tach', 'gauges', 'dials', 'bars'],
     mtach: ['side', 'y0', 'y8', 'ym', 'xm', 'kTop', 'kBot', 'wBot', 'wTop'],
     icon: ['icon'],
+    swatch: [],
+    swatchimg: [],
+    boxes: ['boxes'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 
@@ -59,6 +63,10 @@ class Layouts {
             if (!raw || !Object.keys(raw).length) throw new Error('there is no layout "' + name + '"');
         }
         this._validate(raw, name);
+        // Warn (never refuse) about widgets the driver cannot see: under the hood, under BMW's
+        // gear box or belt light on the cluster, outside the windshield window on the HUD.
+        const target = this.size[0] === 1920 ? 'panel' : 'hud';
+        visible.check(raw.widgets, target).forEach((w) => this.log.warn('layout "' + name + '": ' + w));
         return raw;
     }
 

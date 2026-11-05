@@ -27,18 +27,20 @@ APPS = os.path.join(HERE, '..', 'apps')
 UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 DIGITS = '0123456789'
 LOWER = 'abcdefghijklmnopqrstuvwxyz'
+# HUD Widgets, fitted to the part of the 800x480 HUD the driver can see (485x278 from the Nov 5 2026 grid
+# photo): hero 140 -> 96, big 42 -> 34, mid 30 -> 24; label and small stay, BMW's own "mph" is that size.
 HUD_FONTS = [
     # name, file, px size, characters
-    ('hero', 'BarlowSemiCondensed-SemiBold.ttf', 140, DIGITS + 'PRND-'),
-    ('big', 'BarlowSemiCondensed-Medium.ttf', 42, DIGITS + ':.-° PRND'),
-    ('mid', 'BarlowSemiCondensed-Medium.ttf', 30, DIGITS + ':.-° ' + UPPER),
+    ('hero', 'BarlowSemiCondensed-SemiBold.ttf', 96, DIGITS + 'PRND-'),
+    ('big', 'BarlowSemiCondensed-Medium.ttf', 34, DIGITS + ':.-° PRND'),
+    ('mid', 'BarlowSemiCondensed-Medium.ttf', 24, DIGITS + ':.-° ' + UPPER),
     ('label', 'Barlow-Medium.ttf', 15, UPPER + DIGITS + '/.:-°%>· '),
     ('small', 'Barlow-Medium.ttf', 13, UPPER + DIGITS + '/.:-°%>· '),
 ]
 # Cluster Themes, 1920x720 LCD. GT3: the race-dash look, Barlow Condensed.
 CLUSTER_FONTS = [
     ('gear', 'BarlowCondensed-Bold.ttf', 330, DIGITS + 'PRND-'),
-    ('big', 'BarlowCondensed-Bold.ttf', 150, DIGITS + '.-'),
+    ('big', 'BarlowCondensed-Bold.ttf', 124, DIGITS + '.-'),   # 124: "20.3 PSI" fits a 280 px box beside the hood
     ('value', 'BarlowCondensed-Bold.ttf', 92, DIGITS + '.:- PRND'),
     ('small', 'BarlowCondensed-Bold.ttf', 50, DIGITS + '.:-° '),
     ('unit', 'BarlowCondensed-SemiBold.ttf', 34, UPPER + DIGITS + '/°%>·.: -'),

@@ -38,6 +38,9 @@
   th { color: var(--dim); font-weight: 500; }
   #log { grid-column: 1 / -1; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; height: 220px; overflow: auto; font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; }
   #log .warn { color: var(--warn); } #log .error { color: var(--err); }
+  tr.waiting td { color: var(--err); }
+  td.flag { color: var(--warn); white-space: nowrap; }
+  input[type=number] { width: 64px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; }
   body.only header, body.only aside, body.only #log, body.only .bar, body.only .note { display: none; }
   body.only main { display: block; padding: 0; } body.only .stage { padding: 0; border: 0; border-radius: 0; }
   body.only canvas#hud { width: auto; border-radius: 0; }
@@ -54,12 +57,14 @@
   <span id="conn" class="pill">page: connecting</span>
   <span class="pill" id="target">target: ?</span>
   <button id="restart">Restart app</button>
+  <label class="chk" title="The car seems to draw only an app's first 8 layers. Layers past the cap get state waiting and are not drawn; 0 = unlimited. Changing it restarts the app."><span>layer cap</span> <input type="number" id="cap" min="0" max="64" step="1" value="0"></label>
 </header>
 <main>
   <div class="stage">
     <div class="bar">
       <label class="chk"><input type="checkbox" id="outlines" checked> layer outlines</label>
       <label class="chk"><input type="checkbox" id="road"> <span id="backdropName">backdrop</span></label>
+      <label class="chk" title="What the driver sees: the hood hides the top corners of the cluster and BMW draws its gear box and belt light over us; on the HUD only a window is visible through the windshield. Measured from car photos, Nov 5 2026 (shared/visible.js)."><input type="checkbox" id="carview" checked> car view</label>
       <span id="fps"></span>
     </div>
     <canvas id="hud" width="800" height="480"></canvas>
@@ -81,7 +86,8 @@
     </section>
     <section>
       <h2>Layers</h2>
-      <table><thead><tr><th>ref</th><th>kind</th><th>class/z</th><th>rect</th></tr></thead><tbody id="layers"></tbody></table>
+      <table><thead><tr><th>ref</th><th>kind</th><th>class/z</th><th>rect</th><th>car</th></tr></thead><tbody id="layers"></tbody></table>
+      <div class="note">Red: over the layer cap, state waiting, not drawn. The car column flags a layer the driver can't fully see (hood, BMW's gear box or belt light, outside the HUD window); hover for the reason.</div>
     </section>
   </aside>
   <div id="log"></div>
@@ -125,6 +131,12 @@
     return entry;
   }
 
+  const uniformNotes = new Set();
+  function noteUniform(l, name, why) {
+    const k = l.key + ':' + name + ':' + why;
+    if (uniformNotes.has(k)) return;
+    uniformNotes.add(k); addLog({ level: 'warn', text: 'bench: layer ' + l.ref + ' uniform ' + name + ': ' + why });
+  }
   function drawEffect(l, t) {
     const e = compile(l.fs);
     if (e.err) {
@@ -141,14 +153,25 @@
     const n = gl.getProgramParameter(e.prog, gl.ACTIVE_UNIFORMS);
     for (let i = 0; i < n; i++) {
       const info = gl.getActiveUniform(e.prog, i);
-      const u = gl.getUniformLocation(e.prog, info.name);
-      let v = l.uniforms[info.name];
+      // An array uniform is reported as "name[0]" with size > 1; the client sets it by its base name
+      // (PROTOCOL.md "Uniforms": one 'uniform' message of type x size numbers). Either spelling is accepted.
+      const base = info.name.replace(/\[0\]$/, '');
+      const u = gl.getUniformLocation(e.prog, info.name) || gl.getUniformLocation(e.prog, base);
+      let entry = l.uniforms[base] || l.uniforms[info.name];
+      let v = entry ? entry.v : null;
       if (info.name === 'u_time' && l.time) v = [t / 1000];
-      if (!v) continue;
-      if (info.type === gl.FLOAT) gl.uniform1f(u, v[0]);
-      else if (info.type === gl.FLOAT_VEC2) gl.uniform2fv(u, v.slice(0, 2));
-      else if (info.type === gl.FLOAT_VEC3) gl.uniform3fv(u, v.slice(0, 3));
-      else if (info.type === gl.FLOAT_VEC4) gl.uniform4fv(u, v.slice(0, 4));
+      if (!v || !u) continue;
+      const width = { [gl.FLOAT]: 1, [gl.FLOAT_VEC2]: 2, [gl.FLOAT_VEC3]: 3, [gl.FLOAT_VEC4]: 4, [gl.FLOAT_MAT4]: 16 }[info.type];
+      if (!width) continue;
+      const count = Math.min(info.size, Math.floor(v.length / width));   // whole elements only, up to the shader's array size
+      if (count < 1) { noteUniform(l, info.name, v.length + ' numbers do not fill one element of width ' + width); continue; }
+      if (entry && entry.v.length > width * info.size) noteUniform(l, info.name, entry.v.length + ' numbers sent, shader holds ' + info.size + ' x ' + width + '; extra ignored');
+      const vals = new Float32Array(v.slice(0, count * width));
+      if (info.type === gl.FLOAT) gl.uniform1fv(u, vals);
+      else if (info.type === gl.FLOAT_VEC2) gl.uniform2fv(u, vals);
+      else if (info.type === gl.FLOAT_VEC3) gl.uniform3fv(u, vals);
+      else if (info.type === gl.FLOAT_VEC4) gl.uniform4fv(u, vals);
+      else if (info.type === gl.FLOAT_MAT4) gl.uniformMatrix4fv(u, false, vals);
     }
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     return glCanvas;
@@ -157,6 +180,53 @@
   /* ---------- compositing ---------- */
   // view: the target the app draws on (its app.json config.target), from the server's hello
   let view = 'hud', VW = 800, VH = 480;
+  // what the driver sees, from the server's hello (shared/visible.js, measured from car photos Nov 5 2026)
+  let geo = null;
+  function hoodY(x) {
+    const H = geo.HOOD;
+    if (x <= H[0][0]) return H[0][1];
+    for (let i = 1; i < H.length; i++) { const a = H[i - 1], b = H[i]; if (x <= b[0]) return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]); }
+    return H[H.length - 1][1];
+  }
+  function labelBox(text, x, y, color) {
+    ctx.font = '12px ui-monospace, Menlo, monospace';
+    const w = ctx.measureText(text).width + 8;
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(x, y, w, 16);
+    ctx.fillStyle = color; ctx.fillText(text, x + 4, y + 12);
+  }
+  // The car view: the parts of the target the driver can't see, drawn over the composited layers.
+  function drawCarView() {
+    if (!geo) return;
+    if (view === 'panel') {
+      // the hood: everything above the curve is hidden (a dark mask), the curve itself in orange
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      geo.HOOD.forEach(([x, y]) => ctx.lineTo(x, y));
+      ctx.lineTo(VW, hoodY(VW)); ctx.lineTo(VW, 0); ctx.closePath();
+      ctx.fillStyle = 'rgba(8,8,10,.78)'; ctx.fill();
+      ctx.beginPath(); geo.HOOD.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.lineTo(VW, hoodY(VW));
+      ctx.strokeStyle = '#ff8c1a'; ctx.lineWidth = 1.5; ctx.stroke();
+      labelBox('hood (hidden above the line)', 150, 60, '#ff8c1a');   // inside the masked corner (hoodY(150) is 111)
+      // BMW's gear box: solid black, as the car paints it over us
+      const [bx0, by0, bx1, by1] = geo.BLACK_BOX;
+      ctx.fillStyle = '#000'; ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+      ctx.strokeStyle = '#ff8c1a'; ctx.lineWidth = 1; ctx.strokeRect(bx0 + .5, by0 + .5, bx1 - bx0 - 1, by1 - by0 - 1);
+      labelBox('BMW gear box', bx0 + 2, by0 + 2, '#ff8c1a');
+      // the seat-belt warning light
+      const [sx0, sy0, sx1, sy1] = geo.BELT;
+      ctx.fillStyle = 'rgba(232,55,44,.55)'; ctx.fillRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
+      ctx.strokeStyle = '#ff8c1a'; ctx.strokeRect(sx0 + .5, sy0 + .5, sx1 - sx0 - 1, sy1 - sy0 - 1);
+      labelBox('belt light', sx0 - 10, sy0 - 18, '#ff8c1a');
+    } else if (view === 'hud') {
+      // only the window is visible through the windshield; mask the rest
+      const w = geo.HUD_WINDOW;
+      ctx.fillStyle = 'rgba(8,8,10,.78)';
+      ctx.fillRect(0, 0, VW, w.y); ctx.fillRect(0, w.y + w.h, VW, VH - w.y - w.h);
+      ctx.fillRect(0, w.y, w.x, w.h); ctx.fillRect(w.x + w.w, w.y, VW - w.x - w.w, w.h);
+      ctx.strokeStyle = '#ff8c1a'; ctx.lineWidth = 1.5; ctx.strokeRect(w.x + .5, w.y + .5, w.w - 1, w.h - 1);
+      labelBox('visible window ' + w.x + ',' + w.y + ' ' + w.w + 'x' + w.h, w.x + 2, w.y + w.h - 18, '#ff8c1a');
+    }
+  }
   function setView(v, targets) {
     view = v; VW = targets[v][0]; VH = targets[v][1];
     canvas.width = VW; canvas.height = VH;
@@ -187,14 +257,20 @@
     ctx.fillStyle = '#f2c94c'; ctx.beginPath(); ctx.arc(70, 640, 14, 0, 7); ctx.fill();
     ctx.fillStyle = '#e8372c'; ctx.beginPath(); ctx.arc(1850, 640, 14, 0, 7); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '20px sans-serif'; ctx.fillText('warning lights', 20, 700); ctx.fillText('warning lights', 1770, 700);
+    // BMW's gear slot: a solid black box the car paints over everything (measured Nov 5 2026)
+    const box = geo ? geo.BLACK_BOX : [1406, 342, 1597, 419];
+    ctx.fillStyle = '#000'; ctx.fillRect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '24px sans-serif'; ctx.fillText('D 7', box[0] + 60, box[1] + 50);
   }
 
   // ?clean=1: no outlines, for screenshots
   // ?only=1: just the target at 1:1 (800x480 HUD, 1920x720 cluster), nothing else
   // ?backdrop=1: start with the backdrop on
+  // ?car=0: start with the car view (hood, gear box, belt light, HUD window) off
   if (/[?&](clean|only)=1/.test(location.search)) document.getElementById('outlines').checked = false;
   if (/[?&]only=1/.test(location.search)) document.body.classList.add('only');
   if (/[?&]backdrop=1/.test(location.search)) document.getElementById('road').checked = true;
+  if (/[?&]car=0/.test(location.search)) document.getElementById('carview').checked = false;
   let frames = 0, lastFpsT = performance.now();
   function frame(t) {
     const animated = scene.some((l) => l.kind === 'effect' && l.time);
@@ -202,7 +278,8 @@
       dirty = false;
       ctx.clearRect(0, 0, VW, VH);
       if (document.getElementById('road').checked) (view === 'panel' ? drawStockCluster : drawRoad)();
-      const hud = scene.filter((l) => l.target === view && l.visible)
+      // a layer over the layer cap (state waiting) is never drawn, as on the car
+      const hud = scene.filter((l) => l.target === view && l.visible && l.state !== 'waiting')
         .sort((a, b) => (CLASS_ORDER[a.class] - CLASS_ORDER[b.class]) || (a.z - b.z));
       let start = 0;
       hud.forEach((l, i) => { if (l.exclusive) start = i; });
@@ -219,13 +296,17 @@
           ctx.fillStyle = 'rgba(79,163,255,.8)'; ctx.fillText('#' + l.ref + ' ' + l.kind, l.x + 2, l.y - 3 < 9 ? l.y + l.h + 11 : l.y - 3);
         });
       }
+      if (document.getElementById('carview').checked) drawCarView();
+      if (/[?&]dbg=1/.test(location.search)) { ctx.fillStyle = '#ff0'; ctx.font = '20px monospace'; ctx.fillText('msgs ' + dbgN + ' last ' + dbgLast + ' images ' + images.size + ' px ' + dbgPx + ' reads ' + dbgReads + ' buf ' + dbgBuf + ' err ' + dbgErr, 20, VH - 20); }
       frames++;
     }
     if (t - lastFpsT > 1000) { document.getElementById('fps').textContent = frames + ' redraws/s'; frames = 0; lastFpsT = t; }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  ['outlines', 'road'].forEach((id) => document.getElementById(id).addEventListener('change', () => { dirty = true; }));
+  ['outlines', 'road', 'carview'].forEach((id) => document.getElementById(id).addEventListener('change', () => { dirty = true; }));
+  const capEl = document.getElementById('cap');
+  capEl.addEventListener('change', () => fetch('/cap', { method: 'POST', body: JSON.stringify({ cap: Number(capEl.value) || 0 }) }));
 
   /* ---------- server events ---------- */
   function addLog(e) {
@@ -237,32 +318,71 @@
     if (atBottom) logEl.scrollTop = logEl.scrollHeight;
   }
 
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   function renderLayerTable() {
-    document.getElementById('layers').innerHTML = scene.map((l) =>
-      '<tr><td>' + l.ref + '</td><td>' + l.kind + '</td><td>' + l.class + ' / ' + l.z + '</td><td>' + l.x + ',' + l.y + ' ' + l.w + 'x' + l.h + '</td></tr>').join('');
+    document.getElementById('layers').innerHTML = scene.map((l) => {
+      const warns = l.warnings || [];
+      const flag = warns.length ? '<td class="flag" title="' + esc(warns.join('\n')) + '">' + (warns.some((w) => /hood/.test(w)) ? 'hood ' : '') + (warns.some((w) => /gear box/.test(w)) ? 'box ' : '') + (warns.some((w) => /belt/.test(w)) ? 'belt ' : '') + (warns.some((w) => /HUD window/.test(w)) ? 'window' : '') + '</td>' : '<td></td>';
+      const cls = l.state === 'waiting' ? ' class="waiting" title="' + esc(l.reason || 'waiting') + '"' : '';
+      return '<tr' + cls + '><td>' + l.ref + (l.state === 'waiting' ? ' (waiting)' : '') + '</td><td>' + l.kind + '</td><td>' + l.class + ' / ' + l.z + '</td><td>' + l.x + ',' + l.y + ' ' + l.w + 'x' + l.h + '</td>' + flag + '</tr>';
+    }).join('');
   }
 
   let lastValues = {};
-  const es = new EventSource('/events');
-  es.onopen = () => { const c = document.getElementById('conn'); c.textContent = 'page: live'; c.className = 'pill ok'; };
-  es.onerror = () => { const c = document.getElementById('conn'); c.textContent = 'page: bench server gone'; c.className = 'pill bad'; };
-  es.onmessage = (ev) => {
-    const m = JSON.parse(ev.data);
+  // The event stream is read with fetch + a stream reader, not EventSource: Chrome's EventSource silently stopped
+  // delivering after a few hundred KB of pixel messages (Nov 5 2026), with no error and the socket still open.
+  const connEl = document.getElementById('conn');
+  function setConn(text, cls) { connEl.textContent = 'page: ' + text; connEl.className = 'pill ' + cls; }
+  function onData(data) {
+    try { onMessage(JSON.parse(data)); } catch (e) { addLog({ level: 'error', text: 'bench page: ' + (e && e.message || e) + ' (' + data.slice(0, 60) + ')' }); }
+  }
+  (async function readEvents() {
+    try {
+      const res = await fetch('/events', { cache: 'no-store' });
+      if (!res.ok || !res.body) throw new Error('events: HTTP ' + res.status);
+      setConn('live', 'ok');
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { value, done } = await reader.read();
+        dbgReads++; dbgBuf = buf.length; dirty = true;
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\n\n')) >= 0) {
+          const msg = buf.slice(0, i); buf = buf.slice(i + 2);
+          msg.split('\n').forEach((line) => { if (line.indexOf('data: ') === 0) onData(line.slice(6)); });
+        }
+      }
+    } catch (e) { addLog({ level: 'error', text: 'bench page: event stream: ' + (e && e.message || e) }); dbgErr = String(e && e.message || e); dirty = true; }
+    setConn('bench server gone', 'bad');
+  })();
+  let dbgN = 0, dbgLast = '', dbgReads = 0, dbgBuf = 0, dbgErr = '', dbgPx = 0;
+  function onMessage(m) {
+    dbgN++; dbgLast = m.t + ':' + (m.key || '') + ':' + (m.w === undefined ? 'whole' : 'rect'); dirty = true;
     if (m.t === 'log') addLog(m);
-    else if (m.t === 'hello') { setView(m.view || 'hud', m.targets); document.getElementById('title').textContent = 'Bench: ' + m.app; }
+    else if (m.t === 'hello') {
+      geo = m.geometry || geo;
+      if (document.activeElement !== capEl) capEl.value = m.cap || 0;
+      setView(m.view || 'hud', m.targets); document.getElementById('title').textContent = 'Bench: ' + m.app;
+    }
     else if (m.t === 'scene') {
       scene = m.layers;
       const keys = new Set(scene.map((l) => l.key));
       Array.from(images.keys()).forEach((k) => { if (!keys.has(k)) images.delete(k); });
       renderLayerTable(); dirty = true;
     } else if (m.t === 'px') {
-      const bin = atob(m.b64); const arr = new Uint8ClampedArray(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      // a rect of an image layer changed (the whole image, or a packed sheet's text update): fetch its bytes
       let c = images.get(m.key);
       if (!c) { c = document.createElement('canvas'); images.set(m.key, c); }
-      c.width = m.iw; c.height = m.ih;
-      c.getContext('2d').putImageData(new ImageData(arr, m.iw, m.ih), 0, 0);
-      dirty = true;
+      if (c.width !== m.iw || c.height !== m.ih) { c.width = m.iw; c.height = m.ih; }
+      fetch('/px?key=' + encodeURIComponent(m.key) + '&x=' + m.x + '&y=' + m.y + '&w=' + m.w + '&h=' + m.h, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.arrayBuffer() : null))
+        .then((buf) => {
+          if (!buf || images.get(m.key) !== c) return;
+          c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buf), m.w, m.h), m.x, m.y);
+          dbgPx++; dirty = true;
+        }).catch(() => {});
     } else if (m.t === 'settings') {
       renderSettings(m);
     } else if (m.t === 'status') {
@@ -279,7 +399,7 @@
         if (v !== null && v !== undefined) document.getElementById('s_' + k).value = v;
       });
     }
-  };
+  }
 
   /* ---------- controls ---------- */
   let mode = 'demo';

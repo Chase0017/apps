@@ -1,8 +1,9 @@
 'use strict';
 /**
  * The drawing engine, shared by every bimmer-lab app that draws through cluster-render
- * (robertnisipeanu/idrive-apps, native/cluster-render): it connects, builds one layer per widget
- * of the active layout in the active theme, and keeps live widgets updated from the kit's car.js.
+ * (robertnisipeanu/idrive-apps, native/cluster-render): it connects, builds the active layout's layers in
+ * the active theme (one effect layer per shader widget, the image widgets packed into sheets, below), and
+ * keeps live widgets updated from the kit's car.js.
  * Started by an app's main.js with the kit's ctx (settings, signals, log, spec, dataDir).
  * It lives in the repo's shared/ folder; app.json "shared" ships it with each app.
  *
@@ -19,6 +20,29 @@
  * Effect shaders: cluster-render's v_uv has (0,0) at the TOP-left (PROTOCOL.md; confirmed on the car,
  * Nov 4 2026, when a box's header strip drew at the bottom). The bench draws the same way.
  *
+ * Layer packing (Nov 5 2026): on the car only the first 8 layers of a layout ever drew (two photos: a
+ * theme's shaders plus the first few text widgets in file order; whether that is a hard cap or the upload
+ * budget is unknown). So the image widgets (text, scale, stripe, badge, gridlabels, icon, swatchimg) are
+ * packed into SHEETS, one image layer per sheet, instead of one layer each. Widgets are grouped by
+ * (class, z) and placed in file order: a widget goes into the first sheet of its group opened after every
+ * earlier layer or widget its rect intersects (so an image widget never clobbers one it overlaps, and
+ * file order still decides what is on top) AND whose union box with it stays within the sheet size limit,
+ * else a new sheet is opened. A sheet's rect is the union box of its members (iw/ih that size). On create
+ * every member is painted into a local buffer and the sheet is sent whole once (a 1920x720 RGBA whole write
+ * is 5,529,600 bytes, under the 5,529,664 message limit; the client keeps its own whole copy); after that
+ * every member update is a dirty rect of the sheet, translated by the sheet's offset (_blit; gridlabels
+ * keeps its small-rects path). Effect widgets are one layer each, as before. An image widget with
+ * "own": true gets its own layer as before (the calibration probes use it to count how many layers the car
+ * draws).
+ * Sheet size vs layer count: a rebuild re-sends every sheet whole, through the car's upload budget (floor
+ * 2000 KB/s, ceiling 5500, the HUD gets at most half), so sheets are kept small: the limit starts at a
+ * quarter of the target area (345,600 px on the panel, 96,000 on the HUD). If that needs more than
+ * LAYER_BUDGET (8) layers in all (effects + own + sheets), the limit is doubled and the layout re-planned,
+ * up to unlimited; if even unlimited needs more than 8, a warning says so and the layout is drawn anyway.
+ * The rebuild log line names the layout, widget and layer counts, the limit used and the bytes of the
+ * whole-sheet writes; the status row names the layer count, not the widget count; and two seconds after a
+ * rebuild cluster-render's own status text is asked for and logged.
+ *
  * Widget types (hud/layouts/*.json, or <data>/layouts/ overrides, see layouts.js):
  *   text      image layer; template tokens below, a font from hud/fonts, colour role
  *   scale     image layer; the shift bar's rpm numbers (0 .. bar max / 1000), evenly spread
@@ -32,12 +56,18 @@
  *   badge     image layer; a rounded tag with text: "tone" verdict (the last shift's grade colour) or cold
  *   fill      effect layer; a solid colour (role "color", default "bg") over the whole widget, with an
  *             optional see-through "hole": [x, y, w, h] in target px, cut only while the bool setting
- *             "holeWhen" is on (the cluster's map window). Opaque fill hides BMW's gauges under it.
+ *             "holeWhen" is on (the cluster's map window), shrunk by "holeInset" px on every side (6) with
+ *             "holeRadius" px corners (28), so BMW's own cluster doesn't peek out at the window's corners.
+ *             Opaque fill hides BMW's gauges under it.
  *   box       effect layer; a framed box: "fill" and "line" roles, "border" px, "radius" px, and a
  *             header strip "head" px tall in role "headColor" (its label is a text widget on top)
- *   mdash     effect layer; the M theme's whole backdrop (shaders.js mdash): "card" and "panel" [x, y, w, h],
+ *   mdash     effect layer; the M theme's whole backdrop (shaders.js mdash): "card" [x, y, w, h] (the left card;
+ *             the right one is its mirror), "cardCut" [x0, y0, x1, y1] (the chamfer line that cuts the card's top
+ *             outer corner under the hood), "cardFill" 0..1 (grey level, 0 = black: outline only), "blade" { xm, ym,
+ *             kTop, kBot, round } (the left rev blade's outer edge, as mtach; the card ends "bladeGap" px before it),
  *             "line" [x0, y, x1, cap], "gmeter" [cx, cy, r] with "maxG", "gaugeL" / "gaugeR" { cx, cy, r,
- *             signal, min, max }, "mark" [x, y, scale]. Positions in target px.
+ *             signal, min, max }, "mark" [x, y, scale], "segbars" [{ x, y, w, h, max, signal } x up to 4] (the
+ *             setup level bars, "segSlant" px; the segment at round(signal) is red). Positions in target px.
  *   mtach     effect layer; the M rev bar: "side" left|right, "max" rpm, and in target px for the LEFT bar
  *             "y0" (0 rpm), "y8" (max), "ym" (the bend), "xm" (outer edge x at the bend; the right bar gives
  *             its own, mirrored), "kTop" / "kBot" (x per y px above / below the bend), "round", "wBot" / "wTop" / "wBend"
@@ -45,8 +75,8 @@
  *             "k" [above, below, round] for the left bracket's outer line (the right one is mirrored), "band"
  *             width, "inner" (the inner line's distance from the outer one), "scale" [y of 0, y of the top mark],
  *             "ticks" [speed, rpm], "rpmMax" (speed follows SPEED_SCALE), "fuelSeg" / "oilSeg" [fullX, fullY,
- *             emptyX, emptyY], "strip" [left end x, y, h, slant], "topEnd" x, "fade" [x0, x1] (the dark panels
- *             fade out); the map window is cut while "holeWhen" is on ("hole" [x, y, w, h]), else a lane view
+ *             emptyX, emptyY], "strip" [left end x, y, h, slant], "topEnd" x; the middle is black, and the map
+ *             window is cut see-through while "holeWhen" is on ("hole", "holeInset", "holeRadius" as fill)
  *   ddash     effect layer; the whole Dials theme (shaders.js ddash): "tach" [cx, cy, radius, band], "max" rpm,
  *             four side gauges "gauges" [{ signal, min, max }] drawn per the "styleFrom" choice setting
  *             (round | bar | digital): "dials" [[cx, cy, r] x4] (round dials, digital tiles), "bars"
@@ -56,6 +86,16 @@
  *   arc also takes "start" and "sweep" in degrees (clockwise from 12 o'clock; negative = anticlockwise)
  *   grid      calibration: effect layer of lines every "step" px (brighter every "major" steps)
  *   gridlabels  calibration: image layer, "x/y" at every "step" px (only the labels are uploaded)
+ *   swatch    calibration: effect layer (calibration.js SWATCH), "steps" (11) grey steps 0..1 over the top
+ *             half, four dark test colours over the bottom half
+ *   swatchimg calibration: image layer, the identical picture painted into pixels (calibration.js
+ *             swatchImage), so a photo of the two strips shows how the effect and image paths differ
+ * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
+ *   boxes     effect layer; the GT3 dash's frame in ONE layer (shaders.js boxes; the car draws only a few effect
+ *             layers): the background (role "color", default "bg") with the optional map "hole" as fill, and up to
+ *             12 framed boxes "boxes": [{ id, x, y, w, h (target px), head (header strip px), border (2), radius
+ *             (0), headColor "accent" (else the "head" role), toggle }]. Roles "fill" (panel), "line", "head",
+ *             "accent" for all of them; the labels are text widgets on top. Sent as array uniforms (vec4 x 12).
  * Any widget: "toggle": "<bool setting>" hides it when that setting is off, "!<setting>" when it is on,
  * "<choice setting>=<value>" shows it only while that choice is picked (also with "!");
  * "themes": [...] shows it only in those themes. Text "color2": a second role, the colour at the bottom
@@ -100,9 +140,15 @@ const sun = require('./sun');
 const textRaster = require('./hud_text');
 const { paintIcon } = require('./icons');
 const shaders = require('./shaders');
+const calibration = require('./calibration');
 const Car = require('./kit/car');
 
 const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
+// the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
+const IMAGE_TYPES = { text: true, scale: true, stripe: true, badge: true, gridlabels: true, icon: true, swatchimg: true };
+const STATUS_ASK_MS = 2000;      // after a rebuild: ask cluster-render for its own status text
+const LAYER_BUDGET = 8;          // layers per layout the car is believed to draw (two car photos, Nov 5 2026)
+const SHEET_AREA_FRAC = 4;       // the first sheet size limit: 1/4 of the target area (see the header)
 const TICK_MS = 50;              // 20 Hz: shift bar and gauges
 const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
 const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
@@ -175,7 +221,8 @@ class HudApp {
         this.label = this.config.statusName || 'HUD';
         this.layoutTheme = null;         // the active layout's own theme, if it has one
         this.layouts = new Layouts(ctx.dataDir, this.log, this.size);
-        this.widgets = new Map();        // widget.id -> { w, ref, last, lastPaint }
+        this.widgets = new Map();        // widget.id -> { w, ref, sheet | null, last, lastPaint }
+        this.sheets = [];                // the packed image layers: { ref, klass, z, x, y, w, h, members, buf }
         this.boostFes = null; this.boostFesAt = 0;    // bar, from the sport display signal
         this.boostDme = null; this.boostDmeAt = 0;    // bar, from the engine unit (fallback)
         this.needsBoost = false;         // a shown widget uses boost (the engine unit is only asked then)
@@ -282,6 +329,7 @@ class HudApp {
             this._statusSoon();
         });
         this.client.on('budget', (capKb, maxKb, reason) => this.log.info('budget ' + capKb + '/' + maxKb + ' kb/s (' + reason + ')'));
+        this.client.on('status', (text) => this.log.info('cluster-render status: ' + text));
     }
 
     start() {
@@ -332,6 +380,7 @@ class HudApp {
         clearInterval(this.themeTimer);
         clearInterval(this.statusTimer);
         clearInterval(this.dmeTimer);
+        clearTimeout(this.statusAskT);
         this.client.close();
     }
 
@@ -359,25 +408,35 @@ class HudApp {
         return o ? o[1] : name;
     }
 
+    /** The first widget on that layer, for the logs; a sheet is named by its first member plus how many more it holds. */
     _widgetOf(ref) {
-        let id = null;
-        this.widgets.forEach((x) => { if (x.ref === ref) id = x.w.id; });
-        return id;
+        let id = null, n = 0;
+        this.widgets.forEach((x) => { if (x.ref === ref) { if (!id) id = x.w.id; n++; } });
+        return n > 1 ? id + ' +' + (n - 1) : id;
     }
+
+    /** The refs of every layer of the layout now (effects, sheets and own image layers), each once. */
+    _layerRefs() {
+        const refs = [];
+        this.widgets.forEach((x) => { if (refs.indexOf(x.ref) < 0) refs.push(x.ref); });
+        return refs;
+    }
+
+    _layerCount(n) { return n === 1 ? '1 layer' : n + ' layers'; }
 
     _statusSoon() {
         if (this._statusT) return;
         this._statusT = setTimeout(() => { this._statusT = null; this._guard('status', () => this._status()); }, 500);
     }
 
-    /** ", 12 of 14 drawn, 2 waiting: <reason>" while some layers aren't shown; "" when all are. */
+    /** ", 3 of 5 layers drawn (2 waiting: <reason>)" while some layers aren't shown; "" when all are. Counts layers, not widgets. */
     _drawnNote() {
         const ts = this.targetState;
         if (ts && (ts.state === 'waiting' || ts.state === 'parked') && ts.holder) {
             return ts.holder === 'foreign' ? ', waiting: another app has this display' : ', waiting: BMW is using this display';
         }
         const refused = this.refused ? ', refused ' + this.refused : '';
-        const refs = []; this.widgets.forEach((x) => refs.push(x.ref));
+        const refs = this._layerRefs();
         if (!refs.length) return refused;
         let shown = 0, why = null, whyN = 0;
         refs.forEach((r) => {
@@ -386,7 +445,7 @@ class HudApp {
             else if (st) { whyN++; if (!why) why = st.state + (st.reason ? ': ' + st.reason : ''); }
         });
         if (shown === refs.length || (!why && !shown)) return refused;
-        return ', ' + shown + ' of ' + refs.length + ' drawn' + (why ? ' (' + whyN + ' ' + why + ')' : '') + refused;
+        return ', ' + shown + ' of ' + this._layerCount(refs.length) + ' drawn' + (why ? ' (' + whyN + ' ' + why + ')' : '') + refused;
     }
 
     statusText() {
@@ -404,10 +463,11 @@ class HudApp {
         const d = this.car.data();
         const demo = d.demo ? ', demo data' : '';
         const drawn = this._drawnNote();
-        if (this.layoutTheme) return this.label + ' on' + mode + ': ' + name + ' theme' + demo + drawn;
+        const layers = ', ' + this._layerCount(this._layerRefs().length);
+        if (this.layoutTheme) return this.label + ' on' + mode + ': ' + name + ' theme' + layers + demo + drawn;
         const theme = THEMES[this.themeName] ? THEMES[this.themeName].name : this.themeName;
         const auto = this.setting('hudTheme') === 'auto' ? ' (Auto)' : '';
-        return this.label + ' on' + mode + ': ' + name + ' layout, ' + theme + ' theme' + auto + demo + drawn;
+        return this.label + ' on' + mode + ': ' + name + ' layout, ' + theme + ' theme' + auto + layers + demo + drawn;
     }
 
     _status() {
@@ -584,10 +644,12 @@ class HudApp {
 
     _rebuildInner() {
         if (!this.client.ready) return; // the 'ready' handler calls us again
-        this.widgets.forEach((x) => this.client.drop(x.ref));
+        this._layerRefs().forEach((ref) => this.client.drop(ref));
         this.widgets.clear();
+        this.sheets = [];
         this.layerStates.clear();
         this.refused = null;
+        clearTimeout(this.statusAskT); this.statusAskT = null;
         this.car.setRedline(this.setting('redline'));
         const name = this._layoutName();
         this.activeName = name;
@@ -609,7 +671,97 @@ class HudApp {
         this.log.info('layout "' + layout.name + '", theme ' + this.theme.name + (this.layoutTheme ? '' : ' (' + this.setting('hudTheme') + ')'));
         const shown = layout.widgets.filter((w) => !(w.toggle && !this._toggleOn(w.toggle)) && !(w.themes && w.themes.indexOf(this.themeName) < 0));
         this.needsBoost = /boost/.test(JSON.stringify(shown));
-        shown.forEach((w) => this._guard('widget ' + w.id, () => this._create(w)));
+        // plan the layers first (a sheet's size is only known once every member is placed), then make them
+        // in that order: within a class and z, cluster-render puts the newer layer on top. Small sheets
+        // first; a bigger limit only when the layer budget needs it (see the header).
+        const area = this.size[0] * this.size[1];
+        let maxPx = Math.floor(area / SHEET_AREA_FRAC), plan = this._plan(shown, maxPx);
+        while (plan.length > LAYER_BUDGET && maxPx !== Infinity) {
+            maxPx = maxPx * 2 >= area ? Infinity : maxPx * 2;
+            plan = this._plan(shown, maxPx);
+        }
+        let effects = 0, own = 0, sheets = 0, bytes = 0;
+        plan.forEach((e) => {
+            if (e.kind === 'sheet') { sheets++; bytes += e.w * e.h * 4; this._guard('sheet ' + e.members[0].id, () => this._createSheet(e)); }
+            else { if (IMAGE_TYPES[e.w.type]) own++; else effects++; this._guard('widget ' + e.w.id, () => this._create(e.w, null)); }
+        });
+        const n = this._layerRefs().length;
+        this.log.info('layout "' + layout.name + '": ' + shown.length + ' widgets, ' + this._layerCount(n) + ' (' + effects + ' effects, ' +
+            sheets + ' image sheets' + (own ? ', ' + own + ' own image layers' : '') + '), sheet limit ' +
+            (maxPx === Infinity ? 'unlimited' : maxPx + ' px') + ', whole-sheet writes ' + bytes + ' bytes');
+        if (plan.length > LAYER_BUDGET) this.log.warn('layout "' + layout.name + '" needs ' + plan.length + ' layers, the car is believed to draw ' + LAYER_BUDGET);
+        this.statusAskT = setTimeout(() => { this.statusAskT = null; this._guard('status request', () => this.client.status()); }, STATUS_ASK_MS);
+    }
+
+    /**
+     * The layers of a layout, in the order to make them: { kind: 'layer', w } for an effect or an "own"
+     * image widget, { kind: 'sheet', klass, z, x, y, w, h, members } for a packed image layer. Widgets are
+     * taken in file order; an image widget joins the first sheet of its (class, z) group that was opened
+     * after every earlier entry of that group its rect intersects (so what overlaps it stays under it, as
+     * file order says) and whose union box with it stays within maxPx pixels, else a new sheet is opened
+     * at the end.
+     */
+    _plan(widgets, maxPx) {
+        const plan = [];
+        const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+        const union = (s, w) => {
+            const x = Math.min(s.x, w.x), y = Math.min(s.y, w.y);
+            return { x, y, w: Math.max(s.x + s.w, w.x + w.w) - x, h: Math.max(s.y + s.h, w.y + w.h) - y };
+        };
+        widgets.forEach((w) => {
+            const klass = w.class || 'content', z = w.z || 0;
+            if (!IMAGE_TYPES[w.type] || w.own === true) { plan.push({ kind: 'layer', w, klass, z }); return; }
+            let after = -1;
+            plan.forEach((e, i) => {
+                if (e.klass !== klass || e.z !== z) return;
+                if (e.kind === 'layer' ? hit(e.w, w) : e.members.some((m) => hit(m, w))) after = i;
+            });
+            let sheet = null, box = null;
+            for (let i = after + 1; i < plan.length && !sheet; i++) {
+                const s = plan[i];
+                if (s.kind !== 'sheet' || s.klass !== klass || s.z !== z) continue;
+                const u = union(s, w);
+                if (u.w * u.h <= maxPx) { sheet = s; box = u; }
+            }
+            if (!sheet) { sheet = { kind: 'sheet', klass, z, x: w.x, y: w.y, w: w.w, h: w.h, members: [], ref: 0, buf: null }; plan.push(sheet); }
+            else { sheet.x = box.x; sheet.y = box.y; sheet.w = box.w; sheet.h = box.h; }
+            sheet.members.push(w);
+        });
+        return plan;
+    }
+
+    /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
+    _createSheet(s) {
+        const ref = this.client.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h });
+        if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
+        s.ref = ref;
+        s.buf = Buffer.alloc(s.w * s.h * 4, 0);
+        this.sheets.push(s);
+        s.members.forEach((w) => this._guard('widget ' + w.id, () => this._create(w, s)));
+        const buf = s.buf;
+        s.buf = null;                    // from here on _blit sends dirty rects
+        this.client.pixels(ref, null, buf);
+    }
+
+    /**
+     * Every pixel painter goes through here: the widget's pixels (rects in the widget's own px, or null for
+     * the whole widget) to its own layer, or into its sheet: the local buffer while the sheet is being
+     * filled on create, else dirty rects translated by the sheet's offset.
+     */
+    _blit(x, rects, buf) {
+        const w = x.w, s = x.sheet;
+        if (!s) { this.client.pixels(x.ref, rects, buf); return; }
+        const rs = rects && rects.length ? rects : [{ x: 0, y: 0, w: w.w, h: w.h }];
+        const dx = w.x - s.x, dy = w.y - s.y;
+        const moved = rs.map((r) => ({ x: r.x + dx, y: r.y + dy, w: r.w, h: r.h }));
+        if (!s.buf) { this.client.pixels(s.ref, moved, buf); return; }
+        let off = 0;
+        moved.forEach((r) => {
+            for (let y = 0; y < r.h; y++) {
+                buf.copy(s.buf, ((r.y + y) * s.w + r.x) * 4, off, off + r.w * 4);
+                off += r.w * 4;
+            }
+        });
     }
 
     /** "key" is on while that bool setting is on; "!key" while it is off. */
@@ -620,20 +772,21 @@ class HudApp {
         return not ? !on : on;
     }
 
-    _create(w) {
-        const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
+    /** A widget: on its own layer (sheet null: an effect, or an image widget with "own": true), or a member of a sheet. */
+    _create(w, sheet) {
         let ref;
-        if (w.type === 'text' || w.type === 'scale' || w.type === 'stripe' || w.type === 'badge' || w.type === 'gridlabels' || w.type === 'icon') {
-            ref = this.client.image(Object.assign({ iw: w.w, ih: w.h }, base));
-        } else {
-            ref = this.client.effect(Object.assign({ fs: shaders[w.type] }, base));
+        if (sheet) ref = sheet.ref;
+        else {
+            const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
+            if (IMAGE_TYPES[w.type]) ref = this.client.image(Object.assign({ iw: w.w, ih: w.h }, base));
+            else ref = this.client.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
+            if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
         }
-        if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
-        const x = { w, ref, last: null, lastPaint: 0 };
+        const x = { w, ref, sheet: sheet || null, last: null, lastPaint: 0 };
         this.widgets.set(w.id, x);
         const t = this.theme;
         if (w.type === 'gridlabels') this._paintGridLabels(x);
-        else if (w.type === 'icon') this.client.pixels(ref, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
+        else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
         else if (w.type === 'ddash') {
             const G = w.gauges, n = (i) => (Array.isArray(w.dials[i]) ? w.dials[i] : [0, 0, 0]);
             const b = (i) => (Array.isArray(w.bars[i]) ? w.bars[i] : [0, -99, 0, 1]);
@@ -650,7 +803,6 @@ class HudApp {
             this.client.uniform(ref, 'u_head', w.head || [-99, 0]);
             x.gauges = G;
         } else if (w.type === 'sdash') {
-            const hole = w.hole && w.holeWhen && this.setting(w.holeWhen) === true ? w.hole : [0, 0, 0, 0];
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_geo', w.geo);
             this.client.uniform(ref, 'u_k', w.k);
@@ -660,24 +812,35 @@ class HudApp {
             this.client.uniform(ref, 'u_ticks', w.ticks);
             this.client.uniform(ref, 'u_redFrom', [this.setting('redline') / (w.rpmMax || 8000)]);
             this.client.uniform(ref, 'u_orange', [(this.setting('redline') - 700) / (w.rpmMax || 8000)]);
-            this.client.uniform(ref, 'u_fade', w.fade || [600, 760]);
             this.client.uniform(ref, 'u_fuelSeg', w.fuelSeg);
             this.client.uniform(ref, 'u_oilSeg', w.oilSeg);
-            this.client.uniform(ref, 'u_hole', hole);
+            this.client.uniform(ref, 'u_hole', this._hole(w));
+            this.client.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
             this.client.uniform(ref, 'u_strip', w.strip);
             this.client.uniform(ref, 'u_topEnd', [w.topEnd]);
-            x.dist = 0; x.lastT = Date.now();
         } else if (w.type === 'mdash') {
-            const g = w.gmeter || [0, 0, 0], L = w.gaugeL || {}, R = w.gaugeR || {};
+            const g = w.gmeter || [0, 0, 0], L = w.gaugeL || {}, R = w.gaugeR || {}, b = w.blade || {};
+            const bars = Array.isArray(w.segbars) ? w.segbars.slice(0, 4) : [];
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_card', w.card || [0, 0, 0, 0]);
-            this.client.uniform(ref, 'u_panel', w.panel || [0, 0, 0, 0]);
+            // no chamfer / no blade: a line far off to the left, so nothing is cut
+            this.client.uniform(ref, 'u_cardCut', w.cardCut || [-99999, 0, -99999, -1]);
+            this.client.uniform(ref, 'u_cardFill', [isNum(w.cardFill) ? w.cardFill : 0]);
+            this.client.uniform(ref, 'u_blade', [isNum(b.xm) ? b.xm - w.x : 99999, (b.ym || 0) - w.y, b.kTop || 0, b.kBot || 0]);
+            this.client.uniform(ref, 'u_bladeB', [b.round || 40, isNum(w.bladeGap) ? w.bladeGap : 14]);
             this.client.uniform(ref, 'u_line', w.line || [0, -99, 0, 1]);
             this.client.uniform(ref, 'u_gm', [g[0] - w.x, g[1] - w.y, g[2]]);
             this.client.uniform(ref, 'u_maxG', [w.maxG || 1.2]);
             this.client.uniform(ref, 'u_mark', w.mark || [0, 0, 0]);
             this.client.uniform(ref, 'u_red', rgb(t.hot));
+            [0, 1, 2, 3].forEach((i) => {
+                const s = bars[i];
+                this.client.uniform(ref, 'u_seg' + i, s ? [s.x - w.x, s.y - w.y, s.w, s.h] : [0, 0, 0, 0]);
+            });
+            this.client.uniform(ref, 'u_segMax', [0, 1, 2, 3].map((i) => (bars[i] && bars[i].max) || 1));
+            this.client.uniform(ref, 'u_segSlant', [isNum(w.segSlant) ? w.segSlant : 9]);
             x.gauges = [['u_gaugeL', L], ['u_gaugeR', R]];
+            x.bars = bars;
         } else if (w.type === 'mtach') {
             const max = w.max || 8000, red = this.setting('redline');
             const right = w.side === 'right';
@@ -748,11 +911,10 @@ class HudApp {
             this.client.uniform(ref, 'u_blue', rgb(LIGHTS.blue));
             this.client.uniform(ref, 'u_off', [w.off === undefined ? 0.14 : w.off]);
         } else if (w.type === 'fill') {
-            const h = w.hole && w.holeWhen && this.setting(w.holeWhen) === true ? w.hole : null;
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_color', rgba(color(t, w.color || 'bg')));
-            this.client.uniform(ref, 'u_hole', h ? [h[0] - w.x, h[1] - w.y, h[2], h[3]] : [0, 0, 0, 0]);
-            this.client.uniform(ref, 'u_holeR', [w.holeRadius || 0]);
+            this.client.uniform(ref, 'u_hole', this._hole(w));
+            this.client.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
         } else if (w.type === 'box') {
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
@@ -761,9 +923,44 @@ class HudApp {
             this.client.uniform(ref, 'u_headH', [w.head || 0]);
             this.client.uniform(ref, 'u_border', [w.border === undefined ? 2 : w.border]);
             this.client.uniform(ref, 'u_radius', [w.radius || 0]);
+        } else if (w.type === 'swatch') {
+            this.client.uniform(ref, 'u_size', [w.w, w.h]);
+            this.client.uniform(ref, 'u_n', [w.steps || 11]);
+        } else if (w.type === 'swatchimg') this._blit(x, null, calibration.swatchImage(w.w, w.h, w.steps || 11));
+        else if (w.type === 'boxes') {
+            // the box list goes up as two vec4 arrays (x, y, w, h and headH, border, radius, headKind), 12 slots
+            const list = (Array.isArray(w.boxes) ? w.boxes : []).filter((b) => b && isNum(b.x) && isNum(b.y) && isNum(b.w) && isNum(b.h)
+                && !(b.toggle && !this._toggleOn(b.toggle))).slice(0, 12);
+            const rects = [], styles = [];
+            for (let i = 0; i < 12; i++) {
+                const b = list[i];
+                rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
+                styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.headColor === 'accent' ? 1 : 0);
+            }
+            this.client.uniform(ref, 'u_size', [w.w, w.h]);
+            this.client.uniform(ref, 'u_bg', rgba(color(t, w.color || 'bg')));
+            this.client.uniform(ref, 'u_hole', this._hole(w));
+            this.client.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
+            this.client.uniform(ref, 'u_n', [list.length]);
+            this.client.uniform(ref, 'u_box', rects, { type: 'vec4' });
+            this.client.uniform(ref, 'u_boxStyle', styles, { type: 'vec4' });
+            this.client.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
+            this.client.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
+            this.client.uniform(ref, 'u_head', rgba(color(t, w.head || 'head')));
+            this.client.uniform(ref, 'u_accent', rgba(color(t, w.accent || 'accent')));
         }
         this._update(x, Date.now(), true);
     }
+
+    /** A widget's map hole in layer px, inset by "holeInset" (6) a side, while "holeWhen" is on; else no hole. */
+    _hole(w) {
+        const h = w.hole && w.holeWhen && this.setting(w.holeWhen) === true ? w.hole : null;
+        if (!h) return [0, 0, 0, 0];
+        const inset = isNum(w.holeInset) ? w.holeInset : 6;
+        return [h[0] + inset - w.x, h[1] + inset - w.y, Math.max(0, h[2] - 2 * inset), Math.max(0, h[3] - 2 * inset)];
+    }
+
+    _holeRadius(w) { return isNum(w.holeRadius) ? w.holeRadius : 28; }
 
     _tick() {
         const now = Date.now();
@@ -807,7 +1004,7 @@ class HudApp {
                 color2: w.color2 && role !== 'hot' ? color(this.theme, w.color2) : null,
                 glow: w.glow ? this.theme.glow : 0,
             });
-            this.client.pixels(x.ref, null, buf);
+            this._blit(x, null, buf);
         } else if (w.type === 'badge') {
             if (!force && now - x.lastPaint < TEXT_MS) return;
             const s = this._resolve(w.text);
@@ -819,7 +1016,7 @@ class HudApp {
             const key = s + '|' + tone + '|' + fresh;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
-            this.client.pixels(x.ref, null, this._paintBadge(w, s, tone, fresh));
+            this._blit(x, null, this._paintBadge(w, s, tone, fresh));
         } else if (w.type === 'shiftbar') {
             const rpm = this._raw('rpm');
             const segs = w.segments || 40;
@@ -847,18 +1044,13 @@ class HudApp {
                 q(isNum(fuel) ? fuel : 0),
                 q(isNum(oil) ? (oil - 50) / 100 : 0),
             ];
-            // lane dashes move with the car: one dash cycle per 9 m
-            const dt = Math.min(0.5, (now - x.lastT) / 1000); x.lastT = now;
-            if (isNum(sp)) x.dist += sp / 3.6 * dt;
-            const dash = this.setting(w.holeWhen) === true ? 0 : Math.round(((x.dist / 9) % 1) * 100) / 100;
-            const key = vals.join('|') + '|' + dash;
+            const key = vals.join('|');
             if (!force && key === x.last) return;
             x.last = key;
             this.client.uniform(x.ref, 'u_speed', [vals[0]]);
             this.client.uniform(x.ref, 'u_rpm', [vals[1]]);
             this.client.uniform(x.ref, 'u_fuel', [vals[2]]);
             this.client.uniform(x.ref, 'u_oil', [vals[3]]);
-            this.client.uniform(x.ref, 'u_dash', [dash]);
         } else if (w.type === 'ddash') {
             const rpm = this._raw('rpm'), sp = this._shift();
             const q = (v, n) => Math.round(Math.min(1, Math.max(0, v)) * n) / n;
@@ -880,11 +1072,17 @@ class HudApp {
                 const v = G.signal ? this._raw(G.signal) : null;
                 return [u, G, isNum(v) ? Math.round(Math.min(1, Math.max(0, (v - G.min) / (G.max - G.min))) * 200) / 200 : 0];
             });
-            const key = g.join('|') + '|' + vals.map((v) => v[2]).join('|');
+            // the setup level bars: the segment at round(signal) is lit (1-based; 0 = none)
+            const lit = [0, 1, 2, 3].map((i) => {
+                const s = x.bars[i], v = s && s.signal ? this._raw(s.signal) : null;
+                return s && isNum(v) ? Math.max(0, Math.min(s.max || 1, Math.round(v))) : 0;
+            });
+            const key = g.join('|') + '|' + vals.map((v) => v[2]).join('|') + '|' + lit.join('|');
             if (!force && key === x.last) return;
             x.last = key;
             this.client.uniform(x.ref, 'u_g', g);
             vals.forEach(([u, G, v]) => this.client.uniform(x.ref, u, [G.cx || 0, G.cy || 0, G.r || 0, v]));
+            this.client.uniform(x.ref, 'u_segLit', lit);
         } else if (w.type === 'mtach') {
             const rpm = this._raw('rpm'), sp = this._shift();
             const v = isNum(rpm) ? Math.min(1, Math.max(0, rpm / (w.max || 8000))) : 0;
@@ -966,7 +1164,7 @@ class HudApp {
                 parts.push(buf);
             }
         }
-        this.client.pixels(x.ref, rects, Buffer.concat(parts));
+        this._blit(x, rects, Buffer.concat(parts));
     }
 
     _paintStripe(x) {
@@ -975,7 +1173,7 @@ class HudApp {
             const c = M_STRIPE[Math.min(2, Math.floor(px * 3 / w.w))];
             for (let py = 0; py < w.h; py++) c.forEach((v, i) => { buf[(py * w.w + px) * 4 + i] = v; });
         }
-        this.client.pixels(x.ref, null, buf);
+        this._blit(x, null, buf);
     }
 
     _paintScale(x) {
@@ -995,7 +1193,7 @@ class HudApp {
             const hb = textRaster.tint(hot, w.w, w.h, { color: this.theme.hot, font: w.font });
             for (let k = 0; k < hot.length; k++) if (hot[k]) hb.copy(buf, k * 4, k * 4, k * 4 + 4);
         }
-        this.client.pixels(x.ref, null, buf);
+        this._blit(x, null, buf);
     }
 }
 

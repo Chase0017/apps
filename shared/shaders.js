@@ -300,6 +300,62 @@ void main() {
 }
 `;
 
+const BOXES = `// The GT3 race dash's frame in one cluster-render "effect" layer (GLSL ES 1.00): the background u_bg over the
+// whole layer, a see-through rounded hole for BMW's map (u_hole x, y, w, h in layer px, already inset; w 0 = none;
+// corner radius u_holeR) and up to 12 framed readout boxes from the layout: each a rounded frame in u_line, filled
+// u_fill, with a header strip across its top in u_head (or u_accent). Array uniforms (sent with type vec4):
+//   u_box[i]       x, y, w, h in layer px
+//   u_boxStyle[i]  header height px, border px, corner radius px, header kind (0 u_head, 1 u_accent)
+//   u_n            boxes in use (the rest are skipped). Boxes must not overlap each other or the hole.
+// Colours rgba, straight alpha. The loop bound is constant and the arrays are indexed by the loop counter only,
+// as GLSL ES 1.00 requires.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec4 u_bg;
+uniform vec4 u_hole;
+uniform float u_holeR;
+uniform float u_n;
+uniform vec4 u_box[12];
+uniform vec4 u_boxStyle[12];
+uniform vec4 u_fill;
+uniform vec4 u_line;
+uniform vec4 u_head;
+uniform vec4 u_accent;
+
+// signed distance to the rounded rect r (x, y, w, h), radius rad; < 0 inside
+float sdBox(vec2 p, vec4 r, float rad) {
+    vec2 hs = r.zw * 0.5;
+    vec2 q = abs(p - (r.xy + hs)) - (hs - vec2(rad));
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rad;
+}
+vec4 over(vec4 top, vec4 under) {           // straight-alpha "top over under"
+    float a = top.a + under.a * (1.0 - top.a);
+    if (a <= 0.0) return vec4(0.0);
+    return vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
+
+void main() {
+    vec2 p = v_uv * u_size;
+    vec4 c = u_bg;
+    if (u_hole.z > 0.0) c.a *= clamp(sdBox(p, u_hole, u_holeR) + 0.5, 0.0, 1.0);
+    for (int i = 0; i < 12; i++) {
+        if (float(i) >= u_n) break;
+        vec4 b = u_box[i];
+        vec4 s = u_boxStyle[i];
+        if (p.x < b.x - 1.0 || p.x > b.x + b.z + 1.0 || p.y < b.y - 1.0 || p.y > b.y + b.w + 1.0) continue;
+        float d = sdBox(p, b, s.z);
+        float outer = clamp(0.5 - d, 0.0, 1.0);
+        if (outer <= 0.0) continue;
+        vec4 inner = p.y < b.y + s.x ? (s.w > 0.5 ? u_accent : u_head) : u_fill;
+        float edge = clamp(d + s.y + 0.5, 0.0, 1.0);               // 1 within the frame
+        vec4 col = mix(inner, u_line, edge);
+        c = over(vec4(col.rgb, col.a * outer), c);
+    }
+    gl_FragColor = c;
+}
+`;
+
 const GRID = `// Calibration grid for a cluster-render "effect" layer (GLSL ES 1.00): a line every u_step px, a brighter
 // one every u_major steps, a frame round the edge. v_uv (0,0) is the top-left.
 precision mediump float;
@@ -346,10 +402,14 @@ void main() {
 }
 `;
 
-const MDASH = `// The M theme's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00), so nothing static is
-// uploaded: navy with a soft glow, the slate card on the left, the frame on the right, the centre line with
-// its end caps, the G-meter (rings, crosshair, dot), the two side gauges (arc, ticks, colour zones, red
-// needle) and the tricolour mark. Positions in target px from the layout (hud.js). v_uv (0,0) is the top-left.
+const MDASH = `// The M theme's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00), after a current M8's cluster
+// (design/photos/ref-m8-cluster.png): black, with a dark card either side whose inner edge follows the rev blade,
+// whose top outer corner is cut on the hood's slant and whose bottom outer corner is bitten by the side gauge; the
+// centre line with its end caps, the G-meter (rings, crosshair, dot), the two side gauges (arc, ticks, colour
+// zones, red needle), the tricolour mark and the four setup level bars (slanted segments, the one at the level
+// red, the rest grey, as the M8 draws them). Positions in target px from the layout (hud.js). v_uv (0,0) is the
+// top-left. The card fill is black by default (u_cardFill 0): the car brightens dark tints, so only the outline
+// draws until that curve is measured.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -357,8 +417,11 @@ precision mediump float;
 #endif
 varying vec2 v_uv;
 uniform vec2 u_size;
-uniform vec4 u_card;      // left card x, y, w, h
-uniform vec4 u_panel;     // right frame x, y, w, h
+uniform vec4 u_card;      // left card x, y, w, h (the right one is its mirror)
+uniform vec4 u_cardCut;   // the left card's top-left chamfer: the line from (x0, y0) to (x1, y1), the corner above it cut
+uniform float u_cardFill; // the card's grey level 0..1 (0 = black, outline only)
+uniform vec4 u_blade;     // the left rev blade's outer edge: x at the bend, y of the bend, x per y px above / below it
+uniform vec2 u_bladeB;    // the bend's roundness px, the card's gap from the blade px
 uniform vec4 u_line;      // centre line x0, y, x1, cap length
 uniform vec3 u_gm;        // G-meter centre x, y, outer ring radius
 uniform vec2 u_g;         // the dot, g (x right, y up)
@@ -367,6 +430,13 @@ uniform vec4 u_gaugeL;    // left gauge centre x, y, radius, value 0..1
 uniform vec4 u_gaugeR;    // right gauge
 uniform vec3 u_mark;      // tricolour mark x, y, scale (0 = none)
 uniform vec3 u_red;
+uniform vec4 u_seg0;      // setup level bars x, y, w, h (a height of 0: none)
+uniform vec4 u_seg1;
+uniform vec4 u_seg2;
+uniform vec4 u_seg3;
+uniform vec4 u_segLit;    // the level per bar (1-based; 0 = none lit)
+uniform vec4 u_segMax;    // segments per bar
+uniform float u_segSlant; // px each segment leans
 
 const float PI = 3.14159265;
 
@@ -384,6 +454,44 @@ float sdRoundBox(vec2 p, vec4 r, float rad) {
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rad;
 }
 float angOf(vec2 d) { float a = atan(d.x, -d.y); return a < 0.0 ? a + 2.0 * PI : a; }
+// the left blade's outer edge x at y (mtach's curve)
+float bladeX(float y) {
+    float dy = y - u_blade.y;
+    float k = dy < 0.0 ? u_blade.z : u_blade.w;
+    return u_blade.x + k * (sqrt(dy * dy + u_bladeB.x * u_bladeB.x) - u_bladeB.x);
+}
+// the left card: a rounded box, its top-left corner cut on the chamfer line, its right side cut along the blade,
+// its bottom-left corner bitten by the gauge; < 0 inside
+float cardD(vec2 p, vec4 g) {
+    float d = sdRoundBox(p, u_card, 36.0);
+    vec2 a = u_cardCut.xy, e = u_cardCut.zw - u_cardCut.xy;
+    d = max(d, -(e.x * (p.y - a.y) - e.y * (p.x - a.x)) / length(e));
+    d = max(d, p.x - (bladeX(p.y) - u_bladeB.y));
+    d = max(d, (g.z + 14.0) - length(p - g.xy));
+    return d;
+}
+vec4 card(vec2 p, vec4 g, vec4 c) {
+    float d = cardD(p, g);
+    if (d > 2.0) return c;
+    c = over(vec4(vec3(u_cardFill), cov(d)), c);
+    c = over(vec4(0.5, 0.53, 0.58, 0.55 * cov(abs(d + 1.2) - 0.9)), c);
+    return c;
+}
+// a setup level bar: s.y segments slanted, number lit (1-based) red, the rest grey
+vec4 segbar(vec2 p, vec4 b, vec2 s, vec4 c) {
+    if (b.w <= 0.0 || p.y < b.y - 1.0 || p.y > b.y + b.w + 1.0 || p.x < b.x - 1.0 || p.x > b.x + b.z + 1.0) return c;
+    float fy = (p.y - b.y) / b.w;
+    float x = p.x - b.x - u_segSlant * (1.0 - fy);
+    float gap = 8.0;
+    float slot = (b.z - u_segSlant + gap) / s.y;
+    float i = floor(x / slot);
+    float fx = x - i * slot;
+    float a = clamp(fx + 0.5, 0.0, 1.0) * clamp(slot - gap - fx + 0.5, 0.0, 1.0) * clamp(p.y - b.y + 0.5, 0.0, 1.0) * clamp(b.y + b.w - p.y + 0.5, 0.0, 1.0);
+    if (i < 0.0 || i >= s.y || a <= 0.0) return c;
+    bool on = abs(i + 1.0 - s.x) < 0.5;
+    vec3 col = on ? u_red * mix(0.8, 1.0, fx / (slot - gap)) : vec3(0.5, 0.53, 0.58);
+    return over(vec4(col, (on ? 1.0 : 0.8) * a), c);
+}
 
 // a side gauge: arc from a0 (value 0) to a1 (value 1), clockwise angles from 12 o'clock
 vec4 gauge(vec2 p, vec4 g, float a0, float a1, float zones, vec4 c) {
@@ -414,28 +522,12 @@ vec4 gauge(vec2 p, vec4 g, float a0, float a1, float zones, vec4 c) {
 
 void main() {
     vec2 p = v_uv * u_size;
-    // navy, a soft glow behind the middle, darker under the hood at the top
-    vec2 q = (p - vec2(u_size.x * 0.5, u_size.y * 0.42)) / vec2(u_size.x * 0.5, u_size.y * 0.85);
-    float glow = exp(-dot(q, q) * 1.5);
-    vec3 base = mix(vec3(0.014, 0.027, 0.05), vec3(0.055, 0.105, 0.155), glow);
-    base *= mix(0.55, 1.0, smoothstep(0.0, 0.22, v_uv.y)) * mix(0.75, 1.0, smoothstep(1.0, 0.82, v_uv.y));
-    vec4 c = vec4(base, 1.0);
+    vec2 pm = vec2(u_size.x - p.x, p.y);        // the right half, mirrored into the left frame
+    vec4 c = vec4(0.0, 0.0, 0.0, 1.0);           // black, as the M8
 
-    // left card: slate blue, lighter on the left, fading out under the rev bar
-    float dc = sdRoundBox(p, u_card, 48.0);
-    if (dc < 1.5) {
-        float fx = clamp((p.x - u_card.x) / u_card.z, 0.0, 1.0);
-        float fy = clamp((p.y - u_card.y) / u_card.w, 0.0, 1.0);
-        vec3 cc = mix(vec3(0.21, 0.31, 0.43), vec3(0.08, 0.14, 0.21), smoothstep(0.0, 0.9, fx)) * mix(1.05, 0.8, fy);
-        float a = cov(dc) * (1.0 - smoothstep(0.6, 1.0, fx));
-        c = over(vec4(cc, a), c);
-        c = over(vec4(0.65, 0.78, 0.92, 0.22 * cov(abs(dc + 1.0) - 0.7) * (1.0 - fx)), c);
-    }
-    // right frame, its left side fading under the rev bar
-    float dp = sdRoundBox(p, u_panel, 44.0);
-    float fade = smoothstep(u_panel.x + 40.0, u_panel.x + 200.0, p.x);
-    c = over(vec4(1.0, 1.0, 1.0, 0.03 * cov(dp) * fade), c);
-    c = over(vec4(0.72, 0.78, 0.86, 0.24 * cov(abs(dp) - 0.8) * fade), c);
+    // the two cards: the left one as laid out, the right one its mirror
+    c = card(p, u_gaugeL, c);
+    c = card(pm, vec4(u_size.x - u_gaugeR.x, u_gaugeR.yzw), c);
 
     // centre line, bright caps at both ends
     if (abs(p.y - u_line.y) < 6.0) {
@@ -453,16 +545,21 @@ void main() {
         c = over(vec4(0.78, 0.84, 0.9, 0.5 * cov(abs(gr - R) - 0.7)), c);
         float seg = mod(angOf(gd) + 0.13, 2.0 * PI / 8.0) < (2.0 * PI / 8.0 - 0.26) ? 1.0 : 0.0;
         c = over(vec4(0.42, 0.48, 0.55, 0.65 * seg * cov(abs(gr - rI) - 3.5)), c);
-        float cross = (abs(gd.y) < R + 24.0 ? cov(abs(gd.x) - 0.6) : 0.0) + (abs(gd.x) < R + 24.0 ? cov(abs(gd.y) - 0.6) : 0.0);
-        c = over(vec4(0.78, 0.84, 0.9, 0.45 * clamp(cross, 0.0, 1.0)), c);
-        vec2 dot = u_gm.xy + vec2(u_g.x, -u_g.y) / u_maxG * R;
-        float dd = length(p - dot);
+        float hair = (abs(gd.y) < R + 24.0 ? cov(abs(gd.x) - 0.6) : 0.0) + (abs(gd.x) < R + 24.0 ? cov(abs(gd.y) - 0.6) : 0.0);
+        c = over(vec4(0.78, 0.84, 0.9, 0.45 * clamp(hair, 0.0, 1.0)), c);
+        vec2 gpos = u_gm.xy + vec2(u_g.x, -u_g.y) / u_maxG * R;
+        float dd = length(p - gpos);
         c = over(vec4(u_red, 0.35 * exp(-dd * dd / 300.0)), c);
         c = over(vec4(u_red, cov(dd - 9.0)), c);
     }
 
     c = gauge(p, u_gaugeL, radians(196.0), radians(300.0), 0.0, c);
     c = gauge(p, u_gaugeR, radians(164.0), radians(60.0), 1.0, c);
+
+    c = segbar(p, u_seg0, vec2(u_segLit.x, u_segMax.x), c);
+    c = segbar(p, u_seg1, vec2(u_segLit.y, u_segMax.y), c);
+    c = segbar(p, u_seg2, vec2(u_segLit.z, u_segMax.z), c);
+    c = segbar(p, u_seg3, vec2(u_segLit.w, u_segMax.w), c);
 
     // tricolour mark: three slanted bars
     if (u_mark.z > 0.0) {
@@ -556,8 +653,9 @@ void main() {
 const SDASH = `// The Sport theme in one cluster-render "effect" layer (GLSL ES 1.00), after BMW's Live Cockpit Sport view:
 // a blue speed bracket left and a red rev bracket right (the left one mirrored). Each is a thin bright outer
 // line, a band that fills from the bottom (white marker at the value), a dark gap and a thin inner line round a
-// dark panel that fades into the middle: BMW's map (u_hole, cut see-through) or a lane view running with the
-// speed. Two-tone fuel and oil bars inside the brackets, a blue / red strip at the bottom. v_uv (0,0) is the top-left.
+// black middle: plain black, or BMW's map through a see-through rounded hole (u_hole; only the fuel and oil bars
+// and the bottom strip draw over it). Two-tone fuel and oil bars inside the brackets, a blue / red strip at the bottom. v_uv (0,0) is
+// the top-left. The backdrop is pure black: the car brightens dark tints (seen Nov 5 2026), so no dark panels.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -579,11 +677,10 @@ uniform float u_fuel;     // 0..1
 uniform float u_oil;      // 0..1
 uniform vec4 u_fuelSeg;   // full end x, y, empty end x, y
 uniform vec4 u_oilSeg;
-uniform vec4 u_hole;      // map window x, y, w, h (w 0 = lanes instead)
-uniform float u_dash;     // lane dash phase 0..1
+uniform vec4 u_hole;      // map window x, y, w, h, already inset (w 0 = none)
+uniform float u_holeR;    // the hole's corner radius px
 uniform vec4 u_strip;     // bottom strip: left end x, top y, height, slant px
 uniform float u_topEnd;   // the top lines run from the bracket to this x (left; mirrored on the right)
-uniform vec2 u_fade;      // the dark panel fades out between these x (left; mirrored)
 
 const vec3 BLUE_LINE = vec3(0.36, 0.62, 1.0);
 const vec3 BLUE_BAND = vec3(0.13, 0.3, 0.78);
@@ -677,41 +774,18 @@ vec4 bar(vec2 p, vec4 s, float val, float zones, vec4 c) {
 void main() {
     vec2 p = v_uv * u_size;
     vec2 pm = vec2(u_size.x - p.x, p.y);
-    vec4 c = vec4(vec3(0.035, 0.038, 0.07) * mix(0.75, 1.0, smoothstep(0.0, 0.3, v_uv.y)), 1.0);
-
-    // the middle: inside both inner lines, below their top runs, above the bottom line
-    float inL = dIn(p) - u_inner, inR = dIn(pm) - u_inner;
-    float yTopI = u_geo.x + 8.0;
-    float mid = (p.y > yTopI && p.y < u_geo.z) ? cov(-min(inL, inR)) : 0.0;
-    bool hole = u_hole.z > 0.0 && p.x > u_hole.x && p.x < u_hole.x + u_hole.z && p.y > u_hole.y && p.y < u_hole.y + u_hole.w;
-    if (mid > 0.0) {
-        float gy = clamp((p.y - yTopI) / (u_geo.z - yTopI), 0.0, 1.0);
-        vec4 m = vec4(mix(vec3(0.08, 0.17, 0.36), vec3(0.13, 0.27, 0.52), gy), 1.0);
-        if (hole) m = vec4(0.0);
-        else if (u_hole.z <= 0.0) {
-            // lane view: vanishing point above the middle, solid road edges, dashed lane lines
-            vec2 v = vec2(u_size.x * 0.5, yTopI + 60.0);
-            float persp = clamp((p.y - v.y) / (u_geo.z - v.y), 0.0, 1.0);
-            float fade = smoothstep(0.02, 0.3, persp);
-            float wl = 0.8 + 3.0 * persp;
-            float z = 900.0 / max(p.y - v.y, 1.0);
-            float dash = step(fract(z - u_dash), 0.55);
-            float lanes = 0.0;
-            lanes = max(lanes, cov(segD(p, v, vec2(v.x - 420.0, u_geo.z)) - wl));
-            lanes = max(lanes, cov(segD(p, v, vec2(v.x + 420.0, u_geo.z)) - wl));
-            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x - 150.0, u_geo.z)) - wl));
-            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x + 150.0, u_geo.z)) - wl));
-            m.rgb = mix(m.rgb, vec3(0.78, 0.86, 0.95), lanes * fade * 0.85);
-        }
-        // the dark panels inside the brackets, fading into the middle
-        float xs = min(p.x, pm.x);
-        float dark = 1.0 - smoothstep(u_fade.x, u_fade.y, xs);
-        m = over(vec4(0.02, 0.025, 0.06, 0.97 * dark), m);
-        c = hole ? m : over(vec4(m.rgb, m.a * mid), c);     // over the map window: only the panels' shade
-    }
+    vec4 c = vec4(0.0, 0.0, 0.0, 1.0);
 
     c = bracket(p, u_speed, 2.0, 2.0, u_ticks.x, BLUE_LINE, BLUE_BAND, BLUE_LIT, BLUE_IN, c);
     c = bracket(pm, u_rpm, u_redFrom, u_orange, u_ticks.y, RED_LINE, RED_BAND, RED_LIT, RED_IN, c);
+    // the map window: a rounded hole cut out of the backdrop and brackets, so BMW's map shows clean; the fuel and
+    // oil bars and the bottom strip draw over it, as BMW's own Sport view lays them beside the map
+    if (u_hole.z > 0.0) {
+        vec2 hs = u_hole.zw * 0.5;
+        vec2 q = abs(p - (u_hole.xy + hs)) - (hs - vec2(u_holeR));
+        float hd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_holeR;
+        c.a *= clamp(hd + 0.5, 0.0, 1.0);
+    }
     c = bar(p, u_fuelSeg, u_fuel, 0.0, c);
     c = bar(p, u_oilSeg, u_oil, 1.0, c);
     // the bottom line between the brackets
@@ -735,7 +809,7 @@ void main() {
 }
 `;
 
-const DDASH = `// The Dials theme in one cluster-render "effect" layer (GLSL ES 1.00): a dark hatched backdrop, a big round
+const DDASH = `// The Dials theme in one cluster-render "effect" layer (GLSL ES 1.00): a black hatched backdrop, a big round
 // tach in the middle (grey band, ticks, red zone, orange needle, dark inner disc for the speed and gear), four
 // side gauges drawn as round dials, slanted bars or digital tiles (u_style), two thin bars at the bottom and the
 // header lines. Positions in target px from the layout (hud.js). v_uv (0,0) is the top-left.
@@ -793,7 +867,7 @@ vec4 tach(vec2 p, vec4 c) {
     float endD = max(-t, t - 1.0) * SW * r;         // px past the scale's ends
     float fy = clamp((d.y / R + 1.0) * 0.5, 0.0, 1.0);
 
-    c = over(vec4(0.0, 0.0, 0.0, 0.55 * smoothstep(R + 28.0, R, r)), c);        // drop shadow
+    c = over(vec4(0.0, 0.0, 0.0, 0.55 * (1.0 - smoothstep(R, R + 28.0, r))), c);        // drop shadow
     // the grey band, lighter at the top and towards the rim
     float inBand = cov(max(r - (R - 3.0), (R - B) - r)) * cov(endD);
     float rr = clamp((r - (R - B)) / B, 0.0, 1.0);
@@ -844,7 +918,7 @@ vec4 dial(vec2 p, vec3 g, float v, vec4 c) {
     float r = length(d);
     if (r > g.z + 24.0) return c;
     float fy = clamp((d.y / g.z + 1.0) * 0.5, 0.0, 1.0);
-    c = over(vec4(0.0, 0.0, 0.0, 0.5 * smoothstep(g.z + 22.0, g.z, r)), c);
+    c = over(vec4(0.0, 0.0, 0.0, 0.5 * (1.0 - smoothstep(g.z, g.z + 22.0, r))), c);
     vec3 metal = mix(vec3(0.72, 0.73, 0.76), vec3(0.22, 0.225, 0.24), fy);
     c = over(vec4(metal, cov(r - g.z)), c);
     c = over(vec4(mix(vec3(0.1, 0.105, 0.115), vec3(0.035, 0.037, 0.04), smoothstep(0.0, g.z, r)), cov(r - (g.z - 11.0))), c);
@@ -888,7 +962,7 @@ vec4 tile(vec2 p, vec3 g, float v, vec4 c) {
     vec2 ctr = g.xy + vec2(0.0, g.z * 0.05);
     float dd = sdBox(p, ctr, hs, 14.0);
     if (dd > 24.0) return c;
-    c = over(vec4(0.0, 0.0, 0.0, 0.45 * smoothstep(22.0, 0.0, dd)), c);
+    c = over(vec4(0.0, 0.0, 0.0, 0.45 * (1.0 - smoothstep(0.0, 22.0, dd))), c);
     float fy = clamp((p.y - ctr.y + hs.y) / (2.0 * hs.y), 0.0, 1.0);
     c = over(vec4(mix(vec3(0.1, 0.105, 0.115), vec3(0.05, 0.052, 0.058), fy), cov(dd)), c);
     c = over(vec4(mix(vec3(0.6, 0.61, 0.64), vec3(0.26, 0.27, 0.29), fy), cov(abs(dd + 1.0) - 1.2)), c);
@@ -914,16 +988,16 @@ vec4 low(vec2 p, vec4 b, float v, float warnBelow, vec4 c) {
 
 void main() {
     vec2 p = v_uv * u_size;
-    // charcoal, a fine diagonal crosshatch fading out towards the edges
+    // black (the car brightens dark tints, Nov 5 2026), a fine diagonal crosshatch fading out towards the edges
     vec2 q = (p - u_size * 0.5) / (u_size * vec2(0.62, 0.75));
     float vig = exp(-dot(q, q) * 1.2);
-    vec4 c = vec4(mix(vec3(0.018, 0.019, 0.022), vec3(0.075, 0.078, 0.085), vig), 1.0);
+    vec4 c = vec4(0.0, 0.0, 0.0, 1.0);
     float h1 = abs(fract((p.x + p.y) / 18.0) - 0.5) * 18.0, h2 = abs(fract((p.x - p.y) / 18.0) - 0.5) * 18.0;
     c = over(vec4(1.0, 1.0, 1.0, 0.035 * vig * max(cov(h1 - 0.6), cov(h2 - 0.6))), c);
     // header: a faint lighter strip and a line either side of the tach
     float gap = u_tach.z + 40.0;
     if (p.y < u_head.x + 4.0) {
-        c = over(vec4(1.0, 1.0, 1.0, 0.025 * smoothstep(u_head.x, 0.0, p.y)), c);
+        c = over(vec4(1.0, 1.0, 1.0, 0.025 * (1.0 - smoothstep(0.0, u_head.x, p.y))), c);
         float lx = min(p.x - u_head.y, (u_tach.x - gap) - p.x), rx = min(p.x - (u_tach.x + gap), (u_size.x - u_head.y) - p.x);
         float seg = max(cov(-lx), cov(-rx)) * smoothstep(0.0, 60.0, max(lx, rx));
         c = over(vec4(0.55, 0.56, 0.6, 0.7 * seg * cov(abs(p.y - u_head.x) - 0.8)), c);
@@ -946,4 +1020,4 @@ void main() {
 }
 `;
 
-module.exports = { ddash: DDASH, shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH };
+module.exports = { ddash: DDASH, shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES };

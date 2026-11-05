@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport or Dials, with shift lights, boost, temps and shift scoring",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -16,7 +16,9 @@
     "icons.js",
     "shift_score.js",
     "sun.js",
-    "cluster_render_client.js"
+    "cluster_render_client.js",
+    "calibration.js",
+    "visible.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {

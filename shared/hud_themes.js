@@ -36,14 +36,16 @@ const THEMES = {
     // Cluster theme (a layout's own "theme"). The cluster is an LCD, not glass: black is solid black there,
     // and it covers BMW's gauges under it. Extra roles: bg (the screen), panel (box inside), line (box
     // frame), head (box header strip), ink (text on a header), accent (a highlighted header).
+    // The car brightens dark tints (Nov 5 2026: a navy backdrop came out light steel blue), so until that curve
+    // is measured every large area (bg, panel, well) is pure black in all the cluster themes.
     gt3: {
         name: 'GT3',
         fg: [244, 244, 244, 255], dim: [150, 154, 160, 255], track: [255, 255, 255, 26], arc: [244, 244, 244, 255],
         glow: 0, stripe: false,
         bar: { low: [57, 222, 72], mid: [255, 196, 0], high: [255, 42, 42], midAt: 'shift' },
         rev: { from: [57, 222, 72], to: [57, 222, 72] },
-        bg: [0, 0, 0, 255], panel: [8, 9, 11, 255], line: [205, 208, 214, 255], head: [226, 228, 232, 255],
-        ink: [12, 12, 14, 255], accent: [255, 196, 0, 255], well: [20, 22, 26, 255],
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [205, 208, 214, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [255, 196, 0, 255], well: [0, 0, 0, 255], wellLine: [70, 74, 80, 255],
     },
     // Sport (layout sport.json): BMW's Live Cockpit Sport view, blue speed and red revs round the map.
     // Extra roles: sblue / spink (the speed and rpm scale numbers), sred (the rpm caption).
@@ -53,8 +55,8 @@ const THEMES = {
         glow: 0, stripe: false,
         bar: { low: [60, 215, 255], mid: [60, 215, 255], high: [255, 42, 42], midAt: 'shift' },
         rev: { from: [224, 26, 56], to: [224, 26, 56] },
-        bg: [4, 5, 9, 255], panel: [10, 14, 24, 255], line: [60, 215, 255, 255], head: [226, 228, 232, 255],
-        ink: [12, 12, 14, 255], accent: [60, 215, 255, 255], well: [16, 19, 25, 255], faint: [96, 110, 135, 255],
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [60, 215, 255, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [60, 215, 255, 255], well: [0, 0, 0, 255], faint: [96, 110, 135, 255],
         sblue: [120, 170, 245, 255], spink: [236, 140, 140, 255], sred: [235, 60, 70, 255],
     },
     // Dials (layout dials.json): a round tach with side gauges, charcoal, white numbers, orange needles.
@@ -64,19 +66,20 @@ const THEMES = {
         glow: 0, stripe: false,
         bar: { low: [255, 107, 20], mid: [255, 107, 20], high: [255, 42, 42], midAt: 'shift' },
         rev: { from: [255, 107, 20], to: [255, 107, 20] },
-        bg: [5, 5, 6, 255], panel: [14, 15, 17, 255], line: [160, 163, 170, 255], head: [226, 228, 232, 255],
-        ink: [12, 12, 14, 255], accent: [255, 107, 20, 255], well: [16, 17, 19, 255], faint: [110, 113, 120, 255],
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [160, 163, 170, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [255, 107, 20, 255], well: [0, 0, 0, 255], faint: [110, 113, 120, 255],
     },
-    // M cluster look (layout m.json): navy, white numbers with a chrome fade, M red needles and setup bars.
-    // Extra roles: redTrack, chrome (bottom of a chrome fade), grey / grey2 (the dim gear number's fade), faint.
+    // M cluster look (layout m.json, after design/photos/ref-m8-cluster.png): black, white numbers with a chrome
+    // fade, M red needles and setup bars. Extra roles: redTrack, chrome (bottom of a chrome fade), grey / grey2
+    // (the dim gear number's fade), faint.
     mdash: {
         name: 'M',
         fg: [238, 241, 246, 255], dim: [132, 140, 152, 255], track: [104, 110, 120, 255], arc: [226, 36, 44, 255],
         glow: 0, stripe: false,
         bar: { low: [226, 36, 44], mid: [226, 36, 44], high: [255, 42, 42], midAt: 'shift' },
         rev: { from: [226, 36, 44], to: [226, 36, 44] },
-        bg: [5, 7, 11, 255], panel: [12, 15, 21, 255], line: [196, 202, 212, 255], head: [226, 228, 232, 255],
-        ink: [12, 12, 14, 255], accent: [226, 36, 44, 255], well: [16, 19, 25, 255], redTrack: [90, 16, 20, 255],
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [196, 202, 212, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [226, 36, 44, 255], well: [0, 0, 0, 255], redTrack: [90, 16, 20, 255],
         chrome: [182, 188, 198, 255], grey: [160, 166, 176, 255], grey2: [104, 110, 122, 255], faint: [96, 104, 118, 255],
     },
 };

@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "HUD Widgets",
   "description": "Speed, gear, shift bar, boost, oil and coolant on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -16,7 +16,9 @@
     "icons.js",
     "shift_score.js",
     "sun.js",
-    "cluster_render_client.js"
+    "cluster_render_client.js",
+    "calibration.js",
+    "visible.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -107,7 +109,7 @@
     },
     {
       "key": "inComfort",
-      "label": "In Comfort",
+      "label": "In Comfort (Daily by default; BMW keeps its speed bottom-left)",
       "type": "choice",
       "default": "daily",
       "options": [
@@ -131,7 +133,7 @@
     },
     {
       "key": "inSport",
-      "label": "In Sport",
+      "label": "In Sport (off by default: BMW's Sport HUD takes the middle)",
       "type": "choice",
       "default": "off",
       "options": [
@@ -155,7 +157,7 @@
     },
     {
       "key": "inEco",
-      "label": "In Eco Pro",
+      "label": "In Eco Pro (off by default: BMW's own HUD)",
       "type": "choice",
       "default": "off",
       "options": [

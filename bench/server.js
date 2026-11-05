@@ -31,8 +31,14 @@ const net = require('net');
 const http = require('http');
 const path = require('path');
 const { fork, execFileSync } = require('child_process');
+// What the driver sees of each target (hood curve, BMW's gear box and belt light, the HUD window):
+// one source of truth, shared with the app's layout check. The page gets it in the 'hello' event.
+const visible = require('../shared/visible');
 
 const PORT = Number(process.env.BENCH_PORT) || 8078;
+// BENCH_LAYER_CAP: the car seems to draw only an app's first 8 layers (photos, Nov 5 2026).
+// 0 = unlimited. Layers past the cap get state 'waiting' and are not drawn. POST /cap sets it live.
+let layerCap = Math.max(0, Number(process.env.BENCH_LAYER_CAP) || 0);
 const SOCK = path.join(os.tmpdir(), 'hud-bench-' + process.pid + '.sock');
 const ROOT = path.join(__dirname, '..');
 const APP_ID = process.argv[2] || process.env.BENCH_APP || 'idrive_hud_widgets';
@@ -72,21 +78,48 @@ function log(level, text) {
 const layers = new Map();   // key "conn:ref" -> layer
 let nextConn = 1;
 
+/** The visibility warnings for one layer's rect on its target (the same check layouts.js runs per widget). */
+function layerWarnings(l) {
+    return visible.check([{ id: '#' + l.ref, x: l.x, y: l.y, w: l.w, h: l.h }], l.target === 'panel' ? 'panel' : 'hud')
+        .map((w) => w.replace(/^#\d+: /, ''));
+}
+function overCap() { return Array.from(layers.values()).filter((l) => l.state === 'waiting').length; }
 function sceneMeta() {
     return Array.from(layers.values()).map((l) => ({
         key: l.key, conn: l.conn, ref: l.ref, app: l.app, kind: l.kind, target: l.target,
         class: l.class, z: l.z, x: l.x, y: l.y, w: l.w, h: l.h, visible: l.visible, opacity: l.opacity,
         exclusive: l.exclusive, iw: l.iw, ih: l.ih, fs: l.fs, time: l.time, uniforms: l.uniforms,
+        state: l.state, reason: l.reason, warnings: layerWarnings(l),
     }));
+}
+function helloMsg() {
+    return { t: 'hello', targets: TARGETS, view: appView(), app: APP_ID, cap: layerCap,
+        geometry: { HOOD: visible.HOOD, BLACK_BOX: visible.BLACK_BOX, BELT: visible.BELT, HUD_WINDOW: visible.HUD_WINDOW } };
 }
 let sceneTimer = null;
 function sceneChanged() {
     if (sceneTimer) return;
     sceneTimer = setTimeout(() => { sceneTimer = null; send({ t: 'scene', layers: sceneMeta() }); }, 16);
 }
+/* Pixels never travel on the event stream: a 'px' notice names a rect of an image layer and the page fetches its
+ * bytes from GET /px (binary, the layer's current pixels). Base64 on the stream choked the page once the engine
+ * packed text into 1 MB sheets (Nov 5 2026). */
 function sendPixels(l, only) {
     if (!l.image) return;
-    send({ t: 'px', key: l.key, iw: l.iw, ih: l.ih, b64: l.image.toString('base64') }, only);
+    sendRect(l, 0, 0, l.iw, l.ih, only);
+}
+function sendRect(l, x, y, w, h, only) {
+    send({ t: 'px', key: l.key, iw: l.iw, ih: l.ih, x, y, w, h }, only);
+}
+/** GET /px?key=&x=&y=&w=&h=: that rect of the layer's image, raw RGBA rows. */
+function pixelRect(q) {
+    const l = layers.get(q.key);
+    const x = Number(q.x), y = Number(q.y), w = Number(q.w), h = Number(q.h);
+    if (!l || !l.image || !(w > 0 && h > 0 && x >= 0 && y >= 0 && x + w <= l.iw && y + h <= l.ih)) return null;
+    if (x === 0 && w === l.iw) return l.image.slice(y * l.iw * 4, (y + h) * l.iw * 4);
+    const out = Buffer.alloc(w * h * 4);
+    for (let r = 0; r < h; r++) l.image.copy(out, r * w * 4, ((y + r) * l.iw + x) * 4, ((y + r) * l.iw + x + w) * 4);
+    return out;
 }
 
 function writeEv(sock, obj) {
@@ -158,8 +191,18 @@ const renderServer = net.createServer((sock) => {
                     key, conn, ref: m.ref, app: st.app, kind: m.kind, target: m.target,
                     class: m.class || 'content', z: m.z || 0, x: m.x || 0, y: m.y || 0, w: m.w || 0, h: m.h || 0,
                     visible: m.visible === undefined ? 1 : m.visible, opacity: m.opacity === undefined ? 1 : m.opacity,
-                    exclusive: m.exclusive || 0, uniforms: {},
+                    exclusive: m.exclusive || 0, uniforms: {}, state: 'shown', reason: '',
                 };
+                // The layer cap: count this connection's live layers that got a slot; past the cap, the
+                // layer is registered (so set/uniform/frames on it stay valid) but waits and is not drawn.
+                if (layerCap > 0) {
+                    let shown = 0, live = 0;
+                    layers.forEach((o) => { if (o.conn === conn) { live++; if (o.state === 'shown') shown++; } });
+                    if (shown >= layerCap) {
+                        nl.state = 'waiting'; nl.reason = 'bench: over the layer cap of ' + layerCap;
+                        log('warn', 'layer ' + m.ref + ' (' + m.kind + ' ' + nl.x + ',' + nl.y + ' ' + nl.w + 'x' + nl.h + ') is live layer #' + (live + 1) + ' on this connection: over the layer cap of ' + layerCap + ', not drawn');
+                    }
+                }
                 if (nl.x + nl.w > tw || nl.y + nl.h > th || nl.x < 0 || nl.y < 0) {
                     log('warn', 'layer ' + m.ref + ' (' + nl.x + ',' + nl.y + ' ' + nl.w + 'x' + nl.h + ') runs off the ' + tw + 'x' + th + ' ' + m.target + ' target');
                 }
@@ -174,8 +217,9 @@ const renderServer = net.createServer((sock) => {
                 } else {
                     log('warn', 'layer ' + m.ref + ': kind ' + m.kind + ' is not drawn by the bench');
                 }
-                layers.set(key, nl);
-                writeEv(sock, { ev: 'layer', ref: m.ref, state: 'shown' });
+                layers.set(key, nl);   // its visibility warnings (hood, gear box, belt light, HUD window) ride along in sceneMeta()
+                if (nl.state === 'waiting') writeEv(sock, { ev: 'layer', ref: m.ref, state: 'waiting', reason: nl.reason });
+                else writeEv(sock, { ev: 'layer', ref: m.ref, state: 'shown' });
                 sceneChanged();
                 return;
             }
@@ -196,12 +240,19 @@ const renderServer = net.createServer((sock) => {
                 if (l.kind !== 'effect') return refuse('uniform', m.ref, 'uniform on a ' + l.kind + ' layer');
                 const v = String(m.v).trim().split(/\s+/).map(Number);
                 if (v.some((n) => !isFinite(n))) return refuse('uniform', m.ref, 'non-numeric value "' + m.v + '"');
-                l.uniforms[m.name] = v;
+                // PROTOCOL.md "Uniforms": without type, 1-4 numbers; with type, whole elements, up to 1024
+                // numbers (an array uniform). Both the numbers and the type reach the page.
+                const WIDTH = { float: 1, vec2: 2, vec3: 3, vec4: 4, mat4: 16 };
+                if (m.type !== undefined) {
+                    if (!WIDTH[m.type]) return refuse('uniform', m.ref, 'unknown uniform type "' + m.type + '"');
+                    if (v.length > 1024 || v.length % WIDTH[m.type]) return refuse('uniform', m.ref, 'uniform ' + m.name + ': ' + v.length + ' numbers is not whole ' + m.type + 's (or over 1024)');
+                } else if (v.length > 4) return refuse('uniform', m.ref, 'uniform ' + m.name + ': ' + v.length + ' numbers without a type (max 4)');
+                l.uniforms[m.name] = { v, type: m.type || null };
                 sceneChanged();
                 return;
             }
             case 'status':
-                writeEv(sock, { ev: 'status', text: 'bench: ' + layers.size + ' layers' });
+                writeEv(sock, { ev: 'status', text: 'bench: ' + layers.size + ' layers, layer cap ' + (layerCap || 'off') + ', ' + overCap() + ' over it' });
                 return;
             default:
                 bad('op "' + m.op + '" not handled by the bench');
@@ -222,14 +273,18 @@ const renderServer = net.createServer((sock) => {
             px.copy(l.image);
         } else {
             let o = 0;
+            const rects = [];
             for (let i = 0; i < n; i++) {
                 const x = body.readUInt16LE(14 + i * 8), y = body.readUInt16LE(16 + i * 8);
                 const w = body.readUInt16LE(18 + i * 8), h = body.readUInt16LE(20 + i * 8);
                 if (x + w > l.iw || y + h > l.ih) return bad('dirty rect off the image on ref ' + ref);
                 for (let r = 0; r < h; r++) { px.copy(l.image, ((y + r) * l.iw + x) * 4, o, o + w * 4); o += w * 4; }
+                rects.push([x, y, w, h]);
             }
             if (o !== px.length) return bad('dirty rects for ref ' + ref + ' carry ' + px.length + ' bytes, expected ' + o);
+            if (l.sentWhole) { rects.forEach((r) => sendRect(l, r[0], r[1], r[2], r[3])); return; }
         }
+        l.sentWhole = true;
         sendPixels(l);
     }
 });
@@ -262,7 +317,7 @@ function build() {
 
 function startApp() {
     try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* there */ }
-    send({ t: 'hello', targets: TARGETS, view: appView(), app: APP_ID });
+    send(helloMsg());
     if (!build()) { send({ t: 'app', state: 'stopped' }); return; }
     const opts = { cwd: DATA_DIR, stdio: ['ignore', 'pipe', 'pipe', 'ipc'], env: Object.assign({}, process.env, { HUD_CLUSTER_SOCKET: SOCK }) };
     if (APP_NODE) opts.execPath = APP_NODE;
@@ -333,11 +388,19 @@ const web = http.createServer(async (req, res) => {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
         return fs.createReadStream(path.join(__dirname, 'page.html')).pipe(res);
     }
+    if (req.method === 'GET' && url === '/px') {
+        const q = {};
+        (req.url.split('?')[1] || '').split('&').forEach((kv) => { const i = kv.indexOf('='); if (i > 0) q[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1)); });
+        const px = pixelRect(q);
+        if (!px) { res.writeHead(404); return res.end(); }
+        res.writeHead(200, { 'content-type': 'application/octet-stream', 'cache-control': 'no-store' });
+        return res.end(px);
+    }
     if (req.method === 'GET' && url === '/events') {
         res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
         clients.add(res);
         req.on('close', () => clients.delete(res));
-        send({ t: 'hello', targets: TARGETS, view: appView(), app: APP_ID }, res);
+        send(helloMsg(), res);
         logLines.forEach((e) => send(e, res));
         send({ t: 'scene', layers: sceneMeta() }, res);
         layers.forEach((l) => sendPixels(l, res));
@@ -363,6 +426,17 @@ const web = http.createServer(async (req, res) => {
         restartApp('restart button');
         res.writeHead(204); return res.end();
     }
+    if (req.method === 'POST' && url === '/cap') {
+        // The layer cap, set live from the page. The app restarts so it registers its layers again under the new cap.
+        const b = await body(req);
+        const n = Math.max(0, Math.floor(Number(b.cap) || 0));
+        if (n !== layerCap) {
+            layerCap = n;
+            send(helloMsg());
+            restartApp('layer cap set to ' + (n || 'unlimited') + ', the app registers its layers again');
+        }
+        res.writeHead(204); return res.end();
+    }
     if (req.method === 'POST' && url === '/setting') {
         // Pressed on the stub's RHMI components, as the car's settings page sends it (run-app.js).
         const b = await body(req);
@@ -379,6 +453,7 @@ renderServer.listen(SOCK, () => {
     web.listen(PORT, '127.0.0.1', () => {
         log('info', 'bench renderer on ' + SOCK);
         log('info', 'open http://localhost:' + PORT);
+        if (layerCap) log('info', 'layer cap ' + layerCap + ' (BENCH_LAYER_CAP): layers past it get state waiting and are not drawn');
         startApp();
     });
 });
