@@ -20,9 +20,18 @@ Redraws the whole instrument cluster with your own themes. Open **Cluster Themes
 - **Left:** a G-meter and a fuel gauge on a slate card.
 - **Right:** what the engine, chassis, steering and gearbox are set to (they follow the drive mode buttons), and an oil temperature gauge.
 - **Bottom:** range, the clock, and the outside temperature.
-- "Leave room for the map" works in GT3 only for now.
+- "Leave room for the map" works in GT3 and Sport, not in M yet.
 
 <img src="../../docs/images/cluster-m.png" width="840" alt="M theme">
+
+**Sport:** the look of BMW's newer Live Cockpit Sport view.
+
+- **Left:** speed as a blue angled bracket, with the digital speed and a fuel bar inside it.
+- **Right:** revs as a red bracket, with the gear, the drive mode and an oil temperature bar inside it.
+- **Middle:** a lane view whose dashes move with your speed. With "Leave room for the map" on, BMW's map shows there instead, framed by the brackets.
+- **Bottom:** boost and coolant in the blue and red strip, plus the clock, range and outside temperature.
+
+<img src="../../docs/images/cluster-sport.png" width="840" alt="Sport theme">
 
 More themes are on the way.
 
@@ -57,7 +66,7 @@ More themes are on the way.
 
 ## Status
 
-Version 0.3.0 (adds the M theme). First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Still to be checked on a car:
+Version 0.4.0 (adds the Sport theme). First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Still to be checked on a car:
 
 - **Whether the whole dash draws.** If it doesn't, the first row of the app's page says how many parts are drawn and why the rest aren't.
 - **Whether BMW's warning lights still show over the dash.** The GT3 theme is solid black and covers whatever is under it. Test it parked: start the car with a seat belt off and look for the warning.

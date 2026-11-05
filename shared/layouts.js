@@ -26,6 +26,7 @@ const TYPES = {
     gridlabels: ['font'],
     segbar: ['signal', 'max'],
     mdash: [],
+    sdash: ['geo', 'k', 'band', 'ticks', 'fuelSeg', 'oilSeg', 'strip', 'topEnd'],
     mtach: ['side', 'y0', 'y8', 'ym', 'xm', 'kTop', 'kBot', 'wBot', 'wTop'],
     icon: ['icon'],
 };

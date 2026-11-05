@@ -54,6 +54,14 @@ CLUSTER_FONTS = [
     ('m_unit', 'Barlow-Medium.ttf', 30, LOWER + UPPER + '°/-.'),
     ('m_label', 'BarlowSemiCondensed-SemiBold.ttf', 33, UPPER + ' '),
     ('m_tiny', 'Barlow-Medium.ttf', 23, LOWER + DIGITS + './ -'),
+    # Sport: BMW Live Cockpit style, plain Barlow, a little heavier
+    ('s_scale', 'Barlow-Medium.ttf', 34, DIGITS, 1),
+    ('s_speed', 'Barlow-Medium.ttf', 128, DIGITS + '-', 2),
+    ('s_gear', 'Barlow-Medium.ttf', 120, DIGITS + 'PRNDSM-', 2),
+    ('s_val', 'Barlow-Medium.ttf', 42, DIGITS + ':+-.', 1),
+    ('s_unit', 'Barlow-Medium.ttf', 26, LOWER + UPPER + '°/-.'),
+    ('s_label', 'BarlowSemiCondensed-SemiBold.ttf', 30, UPPER + DIGITS + ' .'),
+    ('s_gl', 'Barlow-Medium.ttf', 28, DIGITS + '/', 1),
 ]
 FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2

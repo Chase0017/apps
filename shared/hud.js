@@ -41,6 +41,11 @@
  *   mtach     effect layer; the M rev bar: "side" left|right, "max" rpm, and in target px for the LEFT bar
  *             "y0" (0 rpm), "y8" (max), "ym" (the bend), "xm" (outer edge x at the bend; the right bar gives
  *             its own, mirrored), "kTop" / "kBot" (x per y px above / below the bend), "round", "wBot" / "wTop" / "wBend"
+ *   sdash     effect layer; the whole Sport theme (shaders.js sdash): "geo" [yTop, yBend, yBottom, xBend] and
+ *             "k" [above, below, round] for the left bracket's outer edge (the right one is mirrored), "band",
+ *             "ticks" [speed, rpm], "speedMax" [mph, km/h], "rpmMax", "fuelSeg" / "oilSeg" [fullX, fullY,
+ *             emptyX, emptyY], "strip" [cx, y, half width, h], "topEnd" x; the map window is cut while
+ *             "holeWhen" is on ("hole" [x, y, w, h]), else a lane view runs with the speed
  *   segbar    effect layer; "max" segments, the first round(signal) lit (e.g. "setupLevel:engine"), "slant" px
  *   icon      image layer; a line icon from icons.js ("icon": gauge, shock, wheel, cog, stack, therm, oilcan, fuel)
  *   arc also takes "start" and "sweep" in degrees (clockwise from 12 o'clock; negative = anticlockwise)
@@ -62,7 +67,7 @@
  *
  * Text tokens: {{speed}} {{u:speed}} {{oil}} {{coolant}} {{boost}} {{u:boost}} {{rpm}}
  * {{gear}} (P / R / N, D3, or just 3 when the selector position is unknown), {{gearnum}} (3, or P / R / N)
- * {{range}} {{u:distLc}} (mi, km) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{boostHi}} {{boostMid}}
+ * {{spd:<i>}} (speed scale label i: 20 mph or 30 km/h steps) {{range}} {{u:distLc}} (mi, km) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{boostHi}} {{boostMid}}
  * (gauge labels for 1.4 / 0.7 bar in the display unit) {{stage}} (P R N D) {{gearInD}} (gear number while in D) {{mode}} (COMFORT, SPORT, SPORT PLUS, ECO PRO)
  * {{temp:<deg C>}} (that temperature in the display unit, °F rounded to 10, for gauge labels) {{setup:engine|chassis|steering|gearbox}} (what that part is set to in the drive mode now)
  * {{time}} {{ampm}} {{u:temp}} (°F / °C) {{gLat}} {{gLong}} (g, 2 decimals) {{signal:<car.data() key>}} (raw, 1 decimal).
@@ -508,6 +513,7 @@ class HudApp {
                 return ((h % 12) || 12) + ':' + pad2(m);
             }
             default:
+                if (tok.indexOf('spd:') === 0) { const i = Number(tok.slice(4)); return String(i * (us ? 20 : 30)); }   // speed scale labels
                 if (tok.indexOf('temp:') === 0) { const c = Number(tok.slice(5)); return isNum(c) ? String(us ? Math.round((c * 9 / 5 + 32) / 10) * 10 : Math.round(c)) : '--'; }   // gauge labels: °F to the 10
                 if (tok.indexOf('setup:') === 0) { const s = this._setup(); return s ? s[tok.slice(6)] || '' : '--'; }
                 if (tok.indexOf('signal:') === 0) { const v = this._raw(tok.slice(7)); return isNum(v) ? (Math.round(v * 10) / 10).toString() : '--'; }
@@ -583,7 +589,21 @@ class HudApp {
         const t = this.theme;
         if (w.type === 'gridlabels') this._paintGridLabels(x);
         else if (w.type === 'icon') this.client.pixels(ref, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
-        else if (w.type === 'mdash') {
+        else if (w.type === 'sdash') {
+            const hole = w.hole && w.holeWhen && this.setting(w.holeWhen) === true ? w.hole : [0, 0, 0, 0];
+            this.client.uniform(ref, 'u_size', [w.w, w.h]);
+            this.client.uniform(ref, 'u_geo', w.geo);
+            this.client.uniform(ref, 'u_k', w.k);
+            this.client.uniform(ref, 'u_w', [w.band]);
+            this.client.uniform(ref, 'u_ticks', w.ticks);
+            this.client.uniform(ref, 'u_redFrom', [this.setting('redline') / (w.rpmMax || 8000)]);
+            this.client.uniform(ref, 'u_fuelSeg', w.fuelSeg);
+            this.client.uniform(ref, 'u_oilSeg', w.oilSeg);
+            this.client.uniform(ref, 'u_hole', hole);
+            this.client.uniform(ref, 'u_strip', w.strip);
+            this.client.uniform(ref, 'u_topEnd', [w.topEnd]);
+            x.dist = 0; x.lastT = Date.now();
+        } else if (w.type === 'mdash') {
             const g = w.gmeter || [0, 0, 0], L = w.gaugeL || {}, R = w.gaugeR || {};
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_card', w.card || [0, 0, 0, 0]);
@@ -752,6 +772,29 @@ class HudApp {
             if (!force && q === x.last) return;
             x.last = q;
             this.client.uniform(x.ref, 'u_value', [q]);
+        } else if (w.type === 'sdash') {
+            const us = this.setting('units') === 'us';
+            const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
+            const smax = (w.speedMax || [160, 260])[us ? 0 : 1];
+            const q = (v) => Math.round(Math.min(1, Math.max(0, v)) * 500) / 500;
+            const vals = [
+                q(isNum(sp) ? (us ? sp * 0.621371 : sp) / smax : 0),
+                q(isNum(rpm) ? rpm / (w.rpmMax || 8000) : 0),
+                q(isNum(fuel) ? fuel : 0),
+                q(isNum(oil) ? (oil - 50) / 100 : 0),
+            ];
+            // lane dashes move with the car: one dash cycle per 9 m
+            const dt = Math.min(0.5, (now - x.lastT) / 1000); x.lastT = now;
+            if (isNum(sp)) x.dist += sp / 3.6 * dt;
+            const dash = this.setting(w.holeWhen) === true ? 0 : Math.round(((x.dist / 9) % 1) * 100) / 100;
+            const key = vals.join('|') + '|' + dash;
+            if (!force && key === x.last) return;
+            x.last = key;
+            this.client.uniform(x.ref, 'u_speed', [vals[0]]);
+            this.client.uniform(x.ref, 'u_rpm', [vals[1]]);
+            this.client.uniform(x.ref, 'u_fuel', [vals[2]]);
+            this.client.uniform(x.ref, 'u_oil', [vals[3]]);
+            this.client.uniform(x.ref, 'u_dash', [dash]);
         } else if (w.type === 'mdash') {
             const lat = this._raw('gLat'), lon = this._raw('gLong');
             const g = [isNum(lat) ? Math.round(lat * 100) / 100 : 0, isNum(lon) ? -Math.round(lon * 100) / 100 : 0];

@@ -45,6 +45,16 @@ const THEMES = {
         bg: [0, 0, 0, 255], panel: [8, 9, 11, 255], line: [205, 208, 214, 255], head: [226, 228, 232, 255],
         ink: [12, 12, 14, 255], accent: [255, 196, 0, 255], well: [20, 22, 26, 255],
     },
+    // Sport (layout sport.json): BMW's Live Cockpit Sport view, blue speed and red revs round the map.
+    sportdash: {
+        name: 'Sport',
+        fg: [244, 247, 252, 255], dim: [150, 170, 205, 255], track: [70, 80, 100, 255], arc: [60, 215, 255, 255],
+        glow: 0, stripe: false,
+        bar: { low: [60, 215, 255], mid: [60, 215, 255], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [224, 26, 56], to: [224, 26, 56] },
+        bg: [4, 5, 9, 255], panel: [10, 14, 24, 255], line: [60, 215, 255, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [60, 215, 255, 255], well: [16, 19, 25, 255], faint: [96, 110, 135, 255],
+    },
     // M cluster look (layout m.json): navy, white numbers with a chrome fade, M red needles and setup bars.
     // Extra roles: redTrack, chrome (bottom of a chrome fade), grey / grey2 (the dim gear number's fade), faint.
     mdash: {

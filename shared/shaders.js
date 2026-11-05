@@ -550,5 +550,158 @@ void main() {
     gl_FragColor = c;
 }
 `;
+const SDASH = `// The Sport theme in one cluster-render "effect" layer (GLSL ES 1.00): a blue speed bracket on the left and a
+// red rev bracket on the right (angled, filled from the bottom), framing either the map window (u_hole, cut
+// see-through) or a lane view with dashes that run with the speed; slanted fuel and oil bars inside the
+// brackets; a blue / red strip at the bottom. The right bracket is the left one mirrored. v_uv (0,0) is the top-left.
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec4 u_geo;       // outer edge: y at the top, y at the bend, y at the bottom, x at the bend (left side)
+uniform vec3 u_k;         // x per y px above the bend, below it, bend roundness px
+uniform float u_w;        // bracket band width
+uniform vec2 u_ticks;     // tick count left (speed), right (rpm)
+uniform float u_speed;    // 0..1
+uniform float u_rpm;      // 0..1
+uniform float u_redFrom;  // 0..1 (the redline)
+uniform float u_fuel;     // 0..1
+uniform float u_oil;      // 0..1
+uniform vec4 u_fuelSeg;   // full end x, y, empty end x, y
+uniform vec4 u_oilSeg;
+uniform vec4 u_hole;      // map window x, y, w, h (w 0 = lanes instead)
+uniform float u_dash;     // lane dash phase 0..1
+uniform vec4 u_strip;     // bottom strip: centre x, top y, half width at the top, height
+uniform float u_topEnd;   // the top line runs from the bracket to this x (left; mirrored on the right)
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH };
+const vec3 BLUE = vec3(0.12, 0.36, 0.95);
+const vec3 CYAN = vec3(0.24, 0.85, 1.0);
+const vec3 BLUE_DK = vec3(0.05, 0.12, 0.38);
+const vec3 RED = vec3(0.86, 0.1, 0.22);
+const vec3 PINK = vec3(1.0, 0.36, 0.45);
+const vec3 RED_DK = vec3(0.33, 0.04, 0.09);
+
+float cov(float d) { return clamp(0.5 - d, 0.0, 1.0); }
+vec4 over(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    if (a <= 0.0) return vec4(0.0);
+    return vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
+float segD(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+float segH(vec2 p, vec2 a, vec2 b) { vec2 ba = b - a; return clamp(dot(p - a, ba) / dot(ba, ba), 0.0, 1.0); }
+
+float outerX(float y) {
+    float dy = y - u_geo.y;
+    float k = dy < 0.0 ? u_k.x : u_k.y;
+    return u_geo.w + k * (sqrt(dy * dy + u_k.z * u_k.z) - u_k.z);
+}
+float outerSlope(float y) {
+    float dy = y - u_geo.y;
+    float k = dy < 0.0 ? u_k.x : u_k.y;
+    return k * dy / sqrt(dy * dy + u_k.z * u_k.z);
+}
+
+// one bracket, in the left frame (q = the pixel, mirrored for the right one)
+vec4 bracket(vec2 q, float val, float redFrom, float ticks, vec3 lit, vec3 edge, vec3 dark, vec4 c) {
+    float H = u_geo.z - u_geo.x;
+    float t = (u_geo.z - q.y) / H;
+    float d = (q.x - outerX(q.y)) / sqrt(1.0 + outerSlope(q.y) * outerSlope(q.y));
+    if (t >= 0.0 && t <= 1.0) {
+        float inB = clamp(d + 0.5, 0.0, 1.0) * clamp(u_w - d + 0.5, 0.0, 1.0);
+        if (inB > 0.0) {
+            float across = clamp(d / u_w, 0.0, 1.0);
+            vec4 b = vec4(dark, 0.9);
+            if (t <= val) {
+                vec3 col = mix(edge, lit, smoothstep(0.0, 0.7, across)) * mix(0.75, 1.0, t / max(val, 0.001));
+                if (t >= redFrom) col = mix(col, vec3(1.0, 0.25, 0.3), 0.55);
+                b = vec4(col, 0.97);
+            }
+            float yv = u_geo.z - val * H;
+            b = over(vec4(1.0, 1.0, 1.0, val > 0.002 ? cov(abs(q.y - yv) - 1.6) : 0.0), b);
+            c = over(vec4(b.rgb, b.a * inB), c);
+        }
+        c = over(vec4(edge, cov(abs(d) - 2.0)), c);
+        c = over(vec4(mix(edge, vec3(1.0), 0.35), 0.55 * cov(abs(d - u_w) - 0.9)), c);
+        float kk = floor(t * ticks + 0.5);
+        float yk = u_geo.z - kk / ticks * H;
+        if (d < -3.0 && d > -13.0) c = over(vec4(vec3(0.85, 0.9, 1.0), 0.8 * cov(abs(q.y - yk) - 1.0)), c);
+    }
+    // top line out to u_topEnd, the band's bottom cap, and the bottom line in to the middle
+    vec2 top = vec2(outerX(u_geo.x), u_geo.x);
+    c = over(vec4(edge, cov(segD(q, top, vec2(u_topEnd, u_geo.x)) - 2.0)), c);
+    vec2 bot = vec2(outerX(u_geo.z), u_geo.z);
+    c = over(vec4(edge, cov(segD(q, bot, bot + vec2(u_w, 0.0)) - 2.0)), c);
+    c = over(vec4(mix(edge, vec3(1.0), 0.4), 0.7 * cov(segD(q, bot + vec2(u_w, 0.0), vec2(u_size.x * 0.5, u_geo.z)) - 1.0)), c);
+    return c;
+}
+
+// a slanted bar gauge from the empty end b to the full end a
+vec4 bar(vec2 p, vec4 s, float val, float zones, vec4 c) {
+    vec2 a = s.xy, b = s.zw;
+    float dist = segD(p, a, b);
+    if (dist > 9.0) return c;
+    float h = 1.0 - segH(p, a, b);               // 0 at the empty end, 1 at the full end
+    float body = cov(dist - 5.0);
+    vec3 col = h <= val ? vec3(0.95, 0.97, 1.0) : vec3(0.35, 0.4, 0.5);
+    float al = h <= val ? 1.0 : 0.55;
+    if (zones > 0.5 && h > 0.85) col = h <= val ? vec3(1.0, 0.3, 0.35) : vec3(0.55, 0.12, 0.16);
+    if (zones > 0.5 && h < 0.12) col = h <= val ? vec3(0.4, 0.6, 1.0) : vec3(0.12, 0.2, 0.45);
+    return over(vec4(col, al * body), c);
+}
+
+void main() {
+    vec2 p = v_uv * u_size;
+    vec2 pm = vec2(u_size.x - p.x, p.y);
+    vec4 c = vec4(vec3(0.016, 0.02, 0.034) * mix(0.6, 1.0, smoothstep(0.0, 0.25, v_uv.y)), 1.0);
+
+    // the middle, between the brackets' inner edges
+    float inL = p.x - outerX(p.y) - u_w, inR = pm.x - outerX(p.y) - u_w;
+    float mid = (p.y > u_geo.x + 4.0 && p.y < u_geo.z) ? cov(-min(inL, inR)) : 0.0;
+    if (mid > 0.0) {
+        float gy = clamp((p.y - u_geo.x) / (u_geo.z - u_geo.x), 0.0, 1.0);
+        vec3 bg = mix(vec3(0.03, 0.07, 0.22), vec3(0.08, 0.2, 0.6), gy);
+        if (u_hole.z <= 0.0) {
+            // lane view: vanishing point above the middle, solid road edges, dashed lane lines
+            vec2 v = vec2(u_size.x * 0.5, u_geo.x + 95.0);
+            float persp = clamp((p.y - v.y) / (u_geo.z - v.y), 0.0, 1.0);
+            float fade = smoothstep(0.02, 0.3, persp);
+            float wl = 0.8 + 3.2 * persp;
+            float z = 900.0 / max(p.y - v.y, 1.0);
+            float dash = step(fract(z - u_dash), 0.55);
+            float lanes = 0.0;
+            lanes = max(lanes, cov(segD(p, v, vec2(v.x - 440.0, u_geo.z)) - wl));
+            lanes = max(lanes, cov(segD(p, v, vec2(v.x + 440.0, u_geo.z)) - wl));
+            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x - 158.0, u_geo.z)) - wl));
+            lanes = max(lanes, dash * cov(segD(p, v, vec2(v.x + 158.0, u_geo.z)) - wl));
+            bg = mix(bg, vec3(0.62, 0.8, 1.0), lanes * fade * 0.85);
+            bg += vec3(0.05, 0.1, 0.25) * exp(-pow((p.y - v.y) / 60.0, 2.0));   // horizon glow
+        }
+        c = over(vec4(bg, mid), c);
+    }
+    // the map window: see-through, so BMW's map shows (the brackets still draw over its edges)
+    if (u_hole.z > 0.0 && p.x > u_hole.x && p.x < u_hole.x + u_hole.z && p.y > u_hole.y && p.y < u_hole.y + u_hole.w) c = vec4(0.0);
+
+    c = bracket(p, u_speed, 2.0, u_ticks.x, BLUE, CYAN, BLUE_DK, c);
+    c = bracket(pm, u_rpm, u_redFrom, u_ticks.y, RED, PINK, RED_DK, c);
+    c = bar(p, u_fuelSeg, u_fuel, 0.0, c);
+    c = bar(p, u_oilSeg, u_oil, 1.0, c);
+
+    // bottom strip: a trapezoid, blue left of the middle, red right
+    float sy = p.y - u_strip.y;
+    if (sy > -2.0 && sy < u_strip.w + 2.0) {
+        float hw = u_strip.z - sy * 0.6;
+        float dx = abs(p.x - u_strip.x);
+        float inside = cov(dx - hw) * cov(-sy) * cov(sy - u_strip.w);
+        vec3 sc = p.x < u_strip.x ? mix(BLUE_DK, BLUE, 0.6 + 0.4 * (dx / u_strip.z)) : mix(RED_DK, RED, 0.6 + 0.4 * (dx / u_strip.z));
+        c = over(vec4(sc, 0.92 * inside), c);
+        c = over(vec4(p.x < u_strip.x ? CYAN : PINK, inside * cov(abs(sy) - 1.2)), c);
+        c = over(vec4(1.0, 1.0, 1.0, 0.35 * inside * cov(abs(p.x - u_strip.x) - 1.0)), c);
+    }
+    gl_FragColor = c;
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH };
