@@ -22,7 +22,7 @@ The page draws whichever target the app's `app.json` `config.target` names. One 
 
 **Center screen:** the panel shows the status row the car shows, and the settings. A change is pressed on the stub's components (`SET_<KEY>`, a drop-down row or a checkbox press), the same way the car's HMI sends it, so the kit's own settings code handles it. Values are saved in `bench/.data/<app id>/settings.json`; delete the folder to go back to the defaults.
 
-**Signals:** "Demo drive" is the kit's `sim.js`. It has no boost, so boost reads `--`. "Manual" feeds raw SOME/IP values (the fields and scaling the car sends, including FES `displayBoostPressure`), and the kit's `car.js` decodes them. Slider units are rpm, km/h, °C and bar. A manual gear above 0 reads as D.
+**Signals:** "Demo drive" is the kit's `sim.js`. It has no boost, so boost reads `--`. "Manual" feeds raw SOME/IP values (the fields and scaling the car sends, including FES `displayBoostPressure`), and the kit's `car.js` decodes them. Slider units are rpm, km/h, °C and bar. A manual gear above 0 reads as D. A manual POST to `/signals` may also carry `tyreP` (bar) and `tyreT` (°C), fed as the TPMS fields for all four corners (the rear pair a notch higher).
 
 **What the bench can't tell you:** whether SOME/IP signals arrive on the car, real HUD brightness, color and blur, GPU timing, how our layers sit next to the CarPlay or Android Auto HUD map, or how the HMI draws the center-screen page. Only the car shows those. The bench also doesn't draw mesh or video layers.
 

@@ -23,9 +23,9 @@ A race dash.
 
 The look of a current M8's cluster, on black.
 
-- **Middle:** two glass rev blades either side of the gear and speed, with a red needle line and orange and red marks before your redline.
-- **Left:** a G-meter (the red dot moves with cornering, braking and acceleration) and a fuel gauge.
-- **Right:** what the engine, chassis, steering and gearbox are set to, and an oil temperature gauge. The rows follow the drive mode buttons: Comfort, Sport, Sport Plus and Eco Pro. The car only reports the overall mode, so an Individual setup shows as its base mode.
+- **Middle:** two bowed glass rev blades either side of the gear and speed. A red marker rides each blade at the rpm, the blade lights up below it, and orange and red marks sit before and past your redline.
+- **Left:** a charcoal card with the tyre block: pressure and temperature at each corner round a car glyph (from the car's tyre monitor, read every 10 seconds). The fuel gauge sits in the card's lower corner.
+- **Right:** what the engine, chassis, steering and gearbox are set to, as rows with a three-step bar, and the oil temperature gauge. The rows follow the drive mode buttons: Comfort, Sport, Sport Plus and Eco Pro. The car only reports the overall mode, so an Individual setup shows as its base mode.
 - **Bottom:** range, the clock, and the outside temperature.
 
 <p align="center"><img src="../../docs/images/cluster-m.png" width="900" alt="M theme"></p>

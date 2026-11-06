@@ -403,13 +403,12 @@ void main() {
 `;
 
 const MDASH = `// The M theme's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00), after a current M8's cluster
-// (design/photos/ref-m8-cluster.png): black, with a dark card either side whose inner edge follows the rev blade,
+// (design/photos/ref-m8-cluster.png): black, with a charcoal card either side whose inner edge follows the rev blade,
 // whose top outer corner is cut on the hood's slant and whose bottom outer corner is bitten by the side gauge; the
-// centre line with its end caps, the G-meter (rings, crosshair, dot), the two side gauges (arc, ticks, colour
-// zones, red needle), the tricolour mark and the four setup level bars (slanted segments, the one at the level
-// red, the rest grey, as the M8 draws them). Positions in target px from the layout (hud.js). v_uv (0,0) is the
-// top-left. The card fill is black by default (u_cardFill 0): the car brightens dark tints, so only the outline
-// draws until that curve is measured.
+// centre line with its bright end caps, the tyre block's car glyph and dividers (the eight values are text widgets),
+// the two side gauges (arc, ticks, colour zones, red needle), the tricolour mark and the four setup level bars
+// (slanted segments, the one at the level red, the rest grey, as the M8 draws them). Positions in target px from
+// the layout (hud.js). v_uv (0,0) is the top-left.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -423,9 +422,7 @@ uniform float u_cardFill; // the card's grey level 0..1 (0 = black, outline only
 uniform vec4 u_blade;     // the left rev blade's outer edge: x at the bend, y of the bend, x per y px above / below it
 uniform vec2 u_bladeB;    // the bend's roundness px, the card's gap from the blade px
 uniform vec4 u_line;      // centre line x0, y, x1, cap length
-uniform vec3 u_gm;        // G-meter centre x, y, outer ring radius
-uniform vec2 u_g;         // the dot, g (x right, y up)
-uniform float u_maxG;     // g at the outer ring
+uniform vec3 u_tyre;      // the tyre block's car glyph: centre x, y, scale (0 = none)
 uniform vec4 u_gaugeL;    // left gauge centre x, y, radius, value 0..1
 uniform vec4 u_gaugeR;    // right gauge
 uniform vec3 u_mark;      // tricolour mark x, y, scale (0 = none)
@@ -463,18 +460,36 @@ float bladeX(float y) {
 // the left card: a rounded box, its top-left corner cut on the chamfer line, its right side cut along the blade,
 // its bottom-left corner bitten by the gauge; < 0 inside
 float cardD(vec2 p, vec4 g) {
-    float d = sdRoundBox(p, u_card, 36.0);
+    float d = sdRoundBox(p, u_card, 30.0);
     vec2 a = u_cardCut.xy, e = u_cardCut.zw - u_cardCut.xy;
     d = max(d, -(e.x * (p.y - a.y) - e.y * (p.x - a.x)) / length(e));
     d = max(d, p.x - (bladeX(p.y) - u_bladeB.y));
-    d = max(d, (g.z + 14.0) - length(p - g.xy));
+    d = max(d, (g.z + 10.0) - length(p - g.xy));
     return d;
 }
+// the card: charcoal, a shade lighter at the top, with a soft lighter rim
 vec4 card(vec2 p, vec4 g, vec4 c) {
     float d = cardD(p, g);
     if (d > 2.0) return c;
-    c = over(vec4(vec3(u_cardFill), cov(d)), c);
-    c = over(vec4(0.5, 0.53, 0.58, 0.55 * cov(abs(d + 1.2) - 0.9)), c);
+    float fy = clamp((p.y - u_card.y) / max(u_card.w, 1.0), 0.0, 1.0);
+    float grey = u_cardFill * mix(1.25, 0.8, fy);
+    c = over(vec4(vec3(grey, grey, grey * 1.08), cov(d)), c);
+    c = over(vec4(0.5, 0.53, 0.58, 0.7 * cov(abs(d + 1.2) - 0.9)), c);
+    return c;
+}
+// the tyre block: the car seen from above (outline body, four wheels) between the four readouts,
+// a divider under each front pair, a tick above and below the car
+vec4 tyreBlock(vec2 p, vec4 c) {
+    if (u_tyre.z <= 0.0) return c;
+    vec2 q = (p - u_tyre.xy) / u_tyre.z;
+    if (abs(q.x) > 80.0 || abs(q.y) > 70.0) return c;
+    float body = abs(sdRoundBox(q, vec4(-11.0, -20.0, 22.0, 40.0), 7.0)) - 1.1;
+    vec2 a = vec2(abs(q.x) - 13.5, abs(q.y) - 11.0);
+    float wheel = max(abs(a.x) - 2.2, abs(a.y) - 4.5);
+    float hl = min(segD(q, vec2(-68.0, 0.0), vec2(-28.0, 0.0)), segD(q, vec2(28.0, 0.0), vec2(68.0, 0.0))) - 0.9;
+    float vt = min(segD(q, vec2(0.0, -62.0), vec2(0.0, -42.0)), segD(q, vec2(0.0, 42.0), vec2(0.0, 62.0))) - 0.9;
+    c = over(vec4(0.72, 0.76, 0.82, cov(min(body, min(hl, vt)) * u_tyre.z)), c);
+    c = over(vec4(0.36, 0.78, 0.42, cov(wheel * u_tyre.z)), c);
     return c;
 }
 // a setup level bar: s.y segments slanted, number lit (1-based) red, the rest grey
@@ -482,14 +497,14 @@ vec4 segbar(vec2 p, vec4 b, vec2 s, vec4 c) {
     if (b.w <= 0.0 || p.y < b.y - 1.0 || p.y > b.y + b.w + 1.0 || p.x < b.x - 1.0 || p.x > b.x + b.z + 1.0) return c;
     float fy = (p.y - b.y) / b.w;
     float x = p.x - b.x - u_segSlant * (1.0 - fy);
-    float gap = 8.0;
+    float gap = 10.0;
     float slot = (b.z - u_segSlant + gap) / s.y;
     float i = floor(x / slot);
     float fx = x - i * slot;
     float a = clamp(fx + 0.5, 0.0, 1.0) * clamp(slot - gap - fx + 0.5, 0.0, 1.0) * clamp(p.y - b.y + 0.5, 0.0, 1.0) * clamp(b.y + b.w - p.y + 0.5, 0.0, 1.0);
     if (i < 0.0 || i >= s.y || a <= 0.0) return c;
     bool on = abs(i + 1.0 - s.x) < 0.5;
-    vec3 col = on ? u_red * mix(0.8, 1.0, fx / (slot - gap)) : vec3(0.5, 0.53, 0.58);
+    vec3 col = on ? u_red * mix(0.85, 1.0, fx / (slot - gap)) : vec3(0.5, 0.53, 0.58);
     return over(vec4(col, (on ? 1.0 : 0.8) * a), c);
 }
 
@@ -531,27 +546,13 @@ void main() {
 
     // centre line, bright caps at both ends
     if (abs(p.y - u_line.y) < 6.0) {
-        c = over(vec4(0.6, 0.65, 0.72, 0.75 * cov(segD(p, u_line.xy, u_line.zy) - 0.7)), c);
-        float l = segD(p, u_line.xy + vec2(6.0, 0.0), u_line.xy + vec2(u_line.w, 0.0)) - 1.6 - 0.8 * clamp((p.x - u_line.x) / u_line.w, 0.0, 1.0);
-        float r = segD(p, u_line.zy - vec2(u_line.w, 0.0), u_line.zy - vec2(6.0, 0.0)) - 1.6 - 0.8 * clamp((u_line.z - p.x) / u_line.w, 0.0, 1.0);
+        c = over(vec4(0.62, 0.66, 0.73, 0.8 * cov(segD(p, u_line.xy, u_line.zy) - 1.0)), c);
+        float l = segD(p, u_line.xy + vec2(6.0, 0.0), u_line.xy + vec2(u_line.w, 0.0)) - 1.6 - 0.9 * clamp((p.x - u_line.x) / u_line.w, 0.0, 1.0);
+        float r = segD(p, u_line.zy - vec2(u_line.w, 0.0), u_line.zy - vec2(6.0, 0.0)) - 1.6 - 0.9 * clamp((u_line.z - p.x) / u_line.w, 0.0, 1.0);
         c = over(vec4(0.95, 0.96, 0.98, cov(min(l, r))), c);
     }
 
-    // G-meter
-    vec2 gd = p - u_gm.xy;
-    float gr = length(gd);
-    if (gr < u_gm.z + 30.0) {
-        float R = u_gm.z, rI = R * 0.8 / u_maxG;
-        c = over(vec4(0.78, 0.84, 0.9, 0.5 * cov(abs(gr - R) - 0.7)), c);
-        float seg = mod(angOf(gd) + 0.13, 2.0 * PI / 8.0) < (2.0 * PI / 8.0 - 0.26) ? 1.0 : 0.0;
-        c = over(vec4(0.42, 0.48, 0.55, 0.65 * seg * cov(abs(gr - rI) - 3.5)), c);
-        float hair = (abs(gd.y) < R + 24.0 ? cov(abs(gd.x) - 0.6) : 0.0) + (abs(gd.x) < R + 24.0 ? cov(abs(gd.y) - 0.6) : 0.0);
-        c = over(vec4(0.78, 0.84, 0.9, 0.45 * clamp(hair, 0.0, 1.0)), c);
-        vec2 gpos = u_gm.xy + vec2(u_g.x, -u_g.y) / u_maxG * R;
-        float dd = length(p - gpos);
-        c = over(vec4(u_red, 0.35 * exp(-dd * dd / 300.0)), c);
-        c = over(vec4(u_red, cov(dd - 9.0)), c);
-    }
+    c = tyreBlock(p, c);
 
     c = gauge(p, u_gaugeL, radians(196.0), radians(300.0), 0.0, c);
     c = gauge(p, u_gaugeR, radians(164.0), radians(60.0), 1.0, c);
@@ -576,10 +577,11 @@ void main() {
     gl_FragColor = c;
 }
 `;
-const MTACH = `// The M theme's rev bar (GLSL ES 1.00): a glass blade with a bright silver outer edge that bends at u_geoA.z,
-// tick notches pointing out every 1000 rpm (a long one at the bend), the part below the rpm lit light grey,
-// a red needle line at the rpm with a red glow above it, orange dashes before the redline and a solid red line past it.
-// Drawn as the left bar; u_side 1 mirrors it into the right one. v_uv (0,0) is the top-left.
+const MTACH = `// The M theme's rev bar (GLSL ES 1.00), after the M8's: a bowed glass blade (the curve bends at u_geoA.z with a
+// large roundness, so it reads as one arc), wide at 0 rpm and narrow at the top, with a bright silver outer
+// edge and tick notches pointing out every 1000 rpm. The part below the rpm is lit light grey, a glowing red
+// block rides the blade at the rpm (the M8's marker), a grey foot caps the bottom, orange dashes sit before
+// the redline and a solid red line past it. Drawn as the left bar; u_side 1 mirrors it. v_uv (0,0) is the top-left.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -623,11 +625,14 @@ void main() {
         float inBand = clamp(d + 0.5, 0.0, 1.0) * clamp(w - d + 0.5, 0.0, 1.0);
         float across = clamp(d / w, 0.0, 1.0);
         float yn = y0 - u_value * (y0 - y8);
-        vec4 g = vec4(0.62, 0.67, 0.74, mix(0.2, 0.05, across));          // empty glass
-        if (p.y > yn) g = u_shiftNow > 0.5 ? vec4(u_red * 0.8, 0.55) : vec4(mix(vec3(0.8, 0.82, 0.86), vec3(0.55, 0.58, 0.63), across), mix(0.42, 0.24, across));
-        else g = over(vec4(u_red, 0.5 * exp(-(yn - p.y) / 42.0) * (1.0 - 0.4 * across)), g);
-        float nl = cov(abs(p.y - yn) - 2.8);
-        g = over(vec4(mix(u_red, vec3(1.0, 0.55, 0.55), cov(abs(p.y - yn) - 0.8)), nl), g);
+        vec4 g = vec4(0.62, 0.67, 0.74, mix(0.16, 0.04, across));          // empty glass
+        if (p.y > yn) g = u_shiftNow > 0.5 ? vec4(u_red * 0.8, 0.6) : vec4(mix(vec3(0.86, 0.88, 0.92), vec3(0.6, 0.63, 0.68), across), mix(0.5, 0.3, across));
+        if (p.y > y0 - 20.0) g = over(vec4(0.8, 0.82, 0.86, 0.35), g);        // the grey foot at 0 rpm
+        g = over(vec4(0.9, 0.92, 0.95, 0.6 * cov(abs(p.y - (y0 - 20.0)) - 0.7)), g);
+        // the marker: a red block at the rpm with a glow either side of it
+        float dm = abs(p.y - yn);
+        g = over(vec4(u_red, 0.5 * exp(-dm / 26.0)), g);
+        g = over(vec4(mix(u_red, vec3(1.0, 0.45, 0.4), 0.35 * cov(dm - 5.0)), cov(dm - 14.0)), g);
         c = vec4(g.rgb, g.a * inBand);
         c = over(vec4(0.93, 0.95, 0.98, cov(abs(d) - 1.6)), c);               // outer edge
         c = over(vec4(1.0, 1.0, 1.0, 0.3 * cov(abs(d - 4.0) - 0.6)), c);       // its bevel
@@ -642,9 +647,8 @@ void main() {
     float kk = floor(t * u_ticks + 0.5);
     float yk = y0 - kk / u_ticks * (y0 - y8);
     if (kk >= 0.0 && kk <= u_ticks && d < 0.0) {
-        float bend = abs(yk - ym) < 10.0 ? 1.0 : 0.0;
-        float len = mix(11.0, 22.0, bend);
-        float ty = abs(p.y - yk) - mix(1.1, 1.8, bend) * (bend > 0.5 ? (1.0 + d / len) : 1.0);
+        float len = 12.0;
+        float ty = abs(p.y - yk) - 1.2;
         if (d > -len) c = over(vec4(0.93, 0.95, 0.98, cov(ty)), c);
     }
     gl_FragColor = c;

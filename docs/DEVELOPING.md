@@ -39,7 +39,8 @@ Each app's layouts are `apps/<id>/hud/layouts/<name>.json` (`schemaVersion: 2`).
 - **Cluster (1920x720):** the same types, plus `fill` (a solid colour with a see-through `hole` cut while a setting is on) and `box` (a framed readout with a header strip). A cluster layout names its own `"theme"`.
 - **Sport theme:** `sdash` draws the whole theme (brackets, fills, the map cut-out or a black middle, fuel and oil bars, bottom strip) in one shader. Text `near: ["speed" | "rpm", i]` lights up the scale label nearest the value.
 - **GT3 theme:** `boxes` draws the background, the map cut-out and every framed box in one shader (array uniforms, up to 12 boxes); the labels are text widgets on top.
-- **M theme pieces:** `mdash` (the whole backdrop, G-meter, side gauges and the four setup bars in one shader, nothing uploaded), `mtach` (the glass rev blade), `icon` (line icons drawn in `shared/icons.js`), and text `color2` (a chrome fade).
+- **M theme pieces:** `mdash` (the whole backdrop: cards, the tyre block's car glyph, side gauges and the four setup bars in one shader, nothing uploaded), `mtach` (the bowed glass rev blade with its red marker), `icon` (line icons drawn in `shared/icons.js`), and text `color2` (a chrome fade).
+- **Layout generators:** the GT3, Sport and M layouts are written by `design/gen_gt3.py`, `gen_sport.py` and `gen_m.py` (next to the repo, `python3 design/gen_m.py apps/cluster_themes/hud/layouts/m.json`); edit the generator, not the JSON.
 - **Calibration:** `grid` (lines every `step` px, brighter every `major` steps) and `gridlabels` (x/y labels every `step` px). Each app ships a `grid.json` layout.
 - **Off:** the layout name `off` draws nothing and releases the screen. With `byMode` on, the `inComfort` / `inSport` / `inEco` settings pick the layout from the car's drive mode (FES `statusFESVehicleDynamicSwitchHMI`).
 - **Effect shaders:** cluster-render's `v_uv` has (0,0) at the top-left. The bench draws the same way.

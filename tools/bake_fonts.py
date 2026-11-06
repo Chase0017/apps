@@ -53,9 +53,11 @@ CLUSTER_FONTS = [
     ('m_speed', 'Michroma-Regular.ttf', 80, DIGITS + '-', 3),
     ('m_gl', 'Michroma-Regular.ttf', 26, DIGITS + '/.-', 1),
     ('m_val', 'Barlow-Medium.ttf', 54, DIGITS + ':+-.'),
+    ('m_mid', 'Barlow-Medium.ttf', 38, DIGITS + ':+-.'),
+    ('m_tyre', 'BarlowSemiCondensed-SemiBold.ttf', 28, DIGITS + '.-'),
     ('m_unit', 'Barlow-Medium.ttf', 30, LOWER + UPPER + '°/-.'),
     ('m_label', 'BarlowSemiCondensed-SemiBold.ttf', 33, UPPER + ' '),
-    ('m_tiny', 'Barlow-Medium.ttf', 23, LOWER + DIGITS + './ -'),
+    ('m_tiny', 'Barlow-Medium.ttf', 23, LOWER + DIGITS + 'CF./ -°'),
     # Sport: BMW Live Cockpit style, the wide numbers in Michroma like BMW's own
     ('s_scale', 'Michroma-Regular.ttf', 27, DIGITS, 1),
     ('s_speed', 'Michroma-Regular.ttf', 74, DIGITS + '-', 3),

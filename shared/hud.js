@@ -65,7 +65,8 @@
  *             the right one is its mirror), "cardCut" [x0, y0, x1, y1] (the chamfer line that cuts the card's top
  *             outer corner under the hood), "cardFill" 0..1 (grey level, 0 = black: outline only), "blade" { xm, ym,
  *             kTop, kBot, round } (the left rev blade's outer edge, as mtach; the card ends "bladeGap" px before it),
- *             "line" [x0, y, x1, cap], "gmeter" [cx, cy, r] with "maxG", "gaugeL" / "gaugeR" { cx, cy, r,
+ *             "line" [x0, y, x1, cap], "tyres" [cx, cy, scale] (the tyre block's car glyph and dividers; the eight
+ *             readouts are text widgets with {{tyreP:FL}} .. {{tyreT:RR}} and {{u:pressure}}), "gaugeL" / "gaugeR" { cx, cy, r,
  *             signal, min, max }, "mark" [x, y, scale], "segbars" [{ x, y, w, h, max, signal } x up to 4] (the
  *             setup level bars, "segSlant" px; the segment at round(signal) is red). Positions in target px.
  *   mtach     effect layer; the M rev bar: "side" left|right, "max" rpm, and in target px for the LEFT bar
@@ -171,6 +172,7 @@ const TEXT_MS = 200;             // text re-draws at most 5 times a second (what
 const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for the Auto theme's sunset
 const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
+const TYRE_CORNERS = ['FL', 'FR', 'RL', 'RR'];
 const MODE_NAME = { comfort: 'Comfort', sport: 'Sport', eco: 'Eco Pro' };
 const FRESH_MS = 3000;
 // BMW's speed scale: even steps to 120 mph (180 km/h), then wider ones to 200 mph (320 km/h)
@@ -276,6 +278,7 @@ class HudApp {
         this.driveMode = null;           // 'comfort' | 'sport' | 'eco', once the car has said
         this.drivePlus = false;          // Sport+ (or Comfort+ / Eco Pro+)
         this.fuelL = null; this.rangeKm = null; this.ambient = null;   // KombiIF tank / range, outside temperature
+        this.tyres = { p: {}, t: {} };                                  // TPMS pressure (bar) and temperature (C) per corner FL FR RL RR
         this.activeName = null;          // the layout shown now ('off' = nothing)
         this.pixelBytes = 0;             // what the layout's image layers and glyph atlases cost of cluster-render's pixel memory
         this.atlases = new Map();        // "<conn>:<font>" -> { ref, c, ci, cols, rows, cellW, cellH, chars, bytes }: R8 assets, kept across rebuilds
@@ -312,6 +315,19 @@ class HudApp {
                     this.fuelL = isNum(f) && f >= 0 && f < 255 ? f : null;
                     this.rangeKm = isNum(r) && r >= 0 && r < 4095 ? r : null;
                 },
+            },
+            // tyre pressure (0.1 bar, 65532 and up = none) and temperature (raw - 40 C, 65535 = none) per corner.
+            // The car never notifies these (BMW's own x_call only ever reads them), so they are polled.
+            'de.bmw.infotainment.vehicle.TPMS': {
+                $pollMs: 10000,
+                statusTyrePressure: (v) => TYRE_CORNERS.forEach((k) => {
+                    const r = v && v['actualValuePressureTyre' + k + 'H'];
+                    this.tyres.p[k] = isNum(r) && r >= 0 && r < 65532 ? r / 10 : null;
+                }),
+                statusTyreTemperature: (v) => TYRE_CORNERS.forEach((k) => {
+                    const r = v && v['actualValueTemperatureTyre' + k + 'H'];
+                    this.tyres.t[k] = isNum(r) && r >= 0 && r < 65535 ? r - 40 : null;
+                }),
             },
             // outside temperature: raw * 0.5 - 40 deg C, 255 = none (car_vitals, MIT)
             'de.bmw.infrastructure.EnvironmentalInformation': {
@@ -652,6 +668,15 @@ class HudApp {
         return null;
     }
 
+    /** A tyre's pressure ('p', bar) or temperature ('t', C) at corner FL FR RL RR; steady made-up values on the demo drive. */
+    _tyre(kind, corner) {
+        const v = this.tyres[kind][corner];
+        if (isNum(v)) return v;
+        if (!this.car.data().demo) return null;
+        const rear = corner === 'RL' || corner === 'RR';
+        return kind === 'p' ? (rear ? 2.5 : 2.3) : (rear ? 27 : 24);
+    }
+
     _raw(name) {
         if (name === 'boost') return this._boost();
         if (name === 'rpm' && isNum(this.rpmF)) return this.rpmF;
@@ -698,7 +723,10 @@ class HudApp {
     _token(tok) {
         const us = this.setting('units') === 'us';
         const fix = (v, n) => (isNum(v) ? v.toFixed(n) : '--');
+        if (tok.indexOf('tyreP:') === 0) { const v = this._tyre('p', tok.slice(6)); return isNum(v) ? (us ? fix(v * 14.5038, 0) : fix(v, 1)) : '--'; }
+        if (tok.indexOf('tyreT:') === 0) { const v = this._tyre('t', tok.slice(6)); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
         switch (tok) {
+            case 'u:pressure': return us ? 'psi' : 'bar';
             case 'speed': { const v = this._raw('speed'); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
             case 'u:speed': return us ? 'MPH' : 'KM/H';
             case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
@@ -990,7 +1018,7 @@ class HudApp {
             c.uniform(ref, 'u_strip', w.strip);
             c.uniform(ref, 'u_topEnd', [w.topEnd]);
         } else if (w.type === 'mdash') {
-            const g = w.gmeter || [0, 0, 0], L = w.gaugeL || {}, R = w.gaugeR || {}, b = w.blade || {};
+            const ty = w.tyres || [0, 0, 0], L = w.gaugeL || {}, R = w.gaugeR || {}, b = w.blade || {};
             const bars = Array.isArray(w.segbars) ? w.segbars.slice(0, 4) : [];
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_card', w.card || [0, 0, 0, 0]);
@@ -1000,8 +1028,7 @@ class HudApp {
             c.uniform(ref, 'u_blade', [isNum(b.xm) ? b.xm - w.x : 99999, (b.ym || 0) - w.y, b.kTop || 0, b.kBot || 0]);
             c.uniform(ref, 'u_bladeB', [b.round || 40, isNum(w.bladeGap) ? w.bladeGap : 14]);
             c.uniform(ref, 'u_line', w.line || [0, -99, 0, 1]);
-            c.uniform(ref, 'u_gm', [g[0] - w.x, g[1] - w.y, g[2]]);
-            c.uniform(ref, 'u_maxG', [w.maxG || 1.2]);
+            c.uniform(ref, 'u_tyre', [ty[0] - w.x, ty[1] - w.y, ty[2] || 0]);
             c.uniform(ref, 'u_mark', w.mark || [0, 0, 0]);
             c.uniform(ref, 'u_red', rgb(t.hot));
             [0, 1, 2, 3].forEach((i) => {
@@ -1229,8 +1256,6 @@ class HudApp {
             x.c.uniform(x.ref, 'u_fuel', [vals[2]]);
             x.c.uniform(x.ref, 'u_oil', [vals[3]]);
         } else if (w.type === 'mdash') {
-            const lat = this._raw('gLat'), lon = this._raw('gLong');
-            const g = [isNum(lat) ? Math.round(lat * 100) / 100 : 0, isNum(lon) ? -Math.round(lon * 100) / 100 : 0];
             const vals = x.gauges.map(([u, G]) => {
                 const v = G.signal ? this._raw(G.signal) : null;
                 return [u, G, isNum(v) ? Math.round(Math.min(1, Math.max(0, (v - G.min) / (G.max - G.min))) * 200) / 200 : 0];
@@ -1240,10 +1265,9 @@ class HudApp {
                 const s = x.bars[i], v = s && s.signal ? this._raw(s.signal) : null;
                 return s && isNum(v) ? Math.max(0, Math.min(s.max || 1, Math.round(v))) : 0;
             });
-            const key = g.join('|') + '|' + vals.map((v) => v[2]).join('|') + '|' + lit.join('|');
+            const key = vals.map((v) => v[2]).join('|') + '|' + lit.join('|');
             if (!force && key === x.last) return;
             x.last = key;
-            x.c.uniform(x.ref, 'u_g', g);
             vals.forEach(([u, G, v]) => x.c.uniform(x.ref, u, [G.cx || 0, G.cy || 0, G.r || 0, v]));
             x.c.uniform(x.ref, 'u_segLit', lit);
         } else if (w.type === 'mtach') {
