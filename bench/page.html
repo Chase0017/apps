@@ -56,6 +56,7 @@
   <span id="appState" class="pill">app: ?</span>
   <span id="conn" class="pill">page: connecting</span>
   <span class="pill" id="target">target: ?</span>
+  <span class="pill" id="pixels" title="cluster-render's pixel memory: 16 MiB for every image of every app together, each image counted twice">pixels: ?</span>
   <button id="restart">Restart app</button>
   <label class="chk" title="The car seems to draw only an app's first 8 layers. Layers past the cap get state waiting and are not drawn; 0 = unlimited. Changing it restarts the app."><span>layer cap</span> <input type="number" id="cap" min="0" max="64" step="1" value="0"></label>
 </header>
@@ -86,8 +87,8 @@
     </section>
     <section>
       <h2>Layers</h2>
-      <table><thead><tr><th>ref</th><th>kind</th><th>class/z</th><th>rect</th><th>car</th></tr></thead><tbody id="layers"></tbody></table>
-      <div class="note">Red: over the layer cap, state waiting, not drawn. The car column flags a layer the driver can't fully see (hood, BMW's gear box or belt light, outside the HUD window); hover for the reason.</div>
+      <table><thead><tr><th>conn:ref</th><th>kind</th><th>class/z</th><th>rect</th><th>car</th></tr></thead><tbody id="layers"></tbody></table>
+      <div class="note">conn: the app's connection to cluster-render (1 is its own; a layout's "conn" widgets open more, each with its own 8 layers). Red: over the layer cap, state waiting, not drawn. The car column flags a layer the driver can't fully see (hood, BMW's gear box or belt light, outside the HUD window); hover for the reason.</div>
     </section>
   </aside>
   <div id="log"></div>
@@ -232,7 +233,7 @@
     canvas.width = VW; canvas.height = VH;
     document.getElementById('target').textContent = 'target: ' + v + ' ' + VW + ' x ' + VH;
     document.getElementById('backdropName').textContent = v === 'panel' ? 'stock cluster backdrop' : 'road backdrop';
-    if (v === 'panel') document.getElementById('stageNote').textContent = 'The whole instrument cluster. The backdrop stands in for BMW\'s own gauges and the map window under our layers; the map window is where it sat on Max\'s X3. Anything the app draws opaque covers them, as it would on the car.';
+    if (v === 'panel') document.getElementById('stageNote').textContent = 'The whole instrument cluster. The backdrop stands in for BMW\'s own gauges and the map window under our layers; the map window is where it sat on the X3. Anything the app draws opaque covers them, as it would on the car.';
     dirty = true;
   }
   function drawRoad() {
@@ -242,7 +243,7 @@
     ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 4; ctx.setLineDash([30, 30]);
     ctx.beginPath(); ctx.moveTo(400, 222); ctx.lineTo(400, 480); ctx.stroke(); ctx.setLineDash([]);
   }
-  // a rough stand-in for BMW's own cluster: two angular gauges and the map window (416,120 1088x480, from Max's photo Nov 4)
+  // a rough stand-in for BMW's own cluster: two angular gauges and the map window (416,120 1088x480, from the car photo of Nov 4)
   function drawStockCluster() {
     ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, VW, VH);
     ctx.fillStyle = '#1d3b5c'; ctx.fillRect(416, 120, 1088, 480);
@@ -293,7 +294,7 @@
         ctx.font = '11px ui-monospace, Menlo, monospace';
         hud.forEach((l) => {
           ctx.strokeStyle = 'rgba(79,163,255,.55)'; ctx.lineWidth = 1; ctx.strokeRect(l.x + .5, l.y + .5, l.w - 1, l.h - 1);
-          ctx.fillStyle = 'rgba(79,163,255,.8)'; ctx.fillText('#' + l.ref + ' ' + l.kind, l.x + 2, l.y - 3 < 9 ? l.y + l.h + 11 : l.y - 3);
+          ctx.fillStyle = 'rgba(79,163,255,.8)'; ctx.fillText('#' + l.conn + ':' + l.ref + ' ' + l.kind, l.x + 2, l.y - 3 < 9 ? l.y + l.h + 11 : l.y - 3);
         });
       }
       if (document.getElementById('carview').checked) drawCarView();
@@ -320,11 +321,12 @@
 
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   function renderLayerTable() {
+    const firstConn = scene.length ? Math.min.apply(null, scene.map((l) => l.conn)) : 1;   // the app's own connection reads as 1
     document.getElementById('layers').innerHTML = scene.map((l) => {
       const warns = l.warnings || [];
       const flag = warns.length ? '<td class="flag" title="' + esc(warns.join('\n')) + '">' + (warns.some((w) => /hood/.test(w)) ? 'hood ' : '') + (warns.some((w) => /gear box/.test(w)) ? 'box ' : '') + (warns.some((w) => /belt/.test(w)) ? 'belt ' : '') + (warns.some((w) => /HUD window/.test(w)) ? 'window' : '') + '</td>' : '<td></td>';
       const cls = l.state === 'waiting' ? ' class="waiting" title="' + esc(l.reason || 'waiting') + '"' : '';
-      return '<tr' + cls + '><td>' + l.ref + (l.state === 'waiting' ? ' (waiting)' : '') + '</td><td>' + l.kind + '</td><td>' + l.class + ' / ' + l.z + '</td><td>' + l.x + ',' + l.y + ' ' + l.w + 'x' + l.h + '</td>' + flag + '</tr>';
+      return '<tr' + cls + '><td>' + (l.conn - firstConn + 1) + ':' + l.ref + (l.state === 'waiting' ? ' (waiting)' : '') + '</td><td>' + l.kind + '</td><td>' + l.class + ' / ' + l.z + '</td><td>' + l.x + ',' + l.y + ' ' + l.w + 'x' + l.h + '</td>' + flag + '</tr>';
     }).join('');
   }
 
@@ -357,17 +359,19 @@
     } catch (e) { addLog({ level: 'error', text: 'bench page: event stream: ' + (e && e.message || e) }); dbgErr = String(e && e.message || e); dirty = true; }
     setConn('bench server gone', 'bad');
   })();
-  let dbgN = 0, dbgLast = '', dbgReads = 0, dbgBuf = 0, dbgErr = '', dbgPx = 0;
+  let dbgN = 0, dbgLast = '', dbgReads = 0, dbgBuf = 0, dbgErr = '', dbgPx = 0, pixelCap = 16 * 1048576;
   function onMessage(m) {
     dbgN++; dbgLast = m.t + ':' + (m.key || '') + ':' + (m.w === undefined ? 'whole' : 'rect'); dirty = true;
     if (m.t === 'log') addLog(m);
     else if (m.t === 'hello') {
       geo = m.geometry || geo;
+      pixelCap = m.pixelCap === undefined ? pixelCap : m.pixelCap;
       if (document.activeElement !== capEl) capEl.value = m.cap || 0;
       setView(m.view || 'hud', m.targets); document.getElementById('title').textContent = 'Bench: ' + m.app;
     }
     else if (m.t === 'scene') {
       scene = m.layers;
+      if (m.pixels !== undefined) document.getElementById('pixels').textContent = 'pixels: ' + (m.pixels / 1048576).toFixed(1) + ' of ' + (pixelCap ? (pixelCap / 1048576).toFixed(0) + ' MiB' : 'unlimited');
       const keys = new Set(scene.map((l) => l.key));
       Array.from(images.keys()).forEach((k) => { if (!keys.has(k)) images.delete(k); });
       renderLayerTable(); dirty = true;

@@ -6,6 +6,8 @@
  *
  * app_id: idrive_hud_widgets (the default, the 800x480 HUD) or cluster_themes (the 1920x720 cluster).
  * The page draws the target the app's app.json config.target names.
+ * The service's limits are modelled: 8 layers per connection (BENCH_LAYER_CAP=8; off by default), 32 across every
+ * connection and 16 MiB of pixel memory with each image counted twice (both always on; see bench/README.md).
  *
  * - Listens on a Unix socket speaking cluster-render protocol v1 (the framing
  *   and ops the vendored client sends: u32 LE length, u8 type 'J'/'F'/'M').
@@ -39,6 +41,13 @@ const PORT = Number(process.env.BENCH_PORT) || 8078;
 // BENCH_LAYER_CAP: the car seems to draw only an app's first 8 layers (photos, Nov 5 2026).
 // 0 = unlimited. Layers past the cap get state 'waiting' and are not drawn. POST /cap sets it live.
 let layerCap = Math.max(0, Number(process.env.BENCH_LAYER_CAP) || 0);
+// The service's other two limits, always on (CompositorLimits): 32 layers across every connection, and 16 MiB of
+// pixel memory for every image together, each image counted twice (Compositor::add_image), refused with the
+// service's own words "the service's pixel memory is full". BENCH_PIXEL_MIB overrides the 16 (0 = unlimited).
+const TOTAL_LAYERS = 32;
+const PIXEL_BYTES = (process.env.BENCH_PIXEL_MIB === undefined ? 16 : Math.max(0, Number(process.env.BENCH_PIXEL_MIB) || 0)) * 1024 * 1024;
+function pixelBytes() { let n = 0; layers.forEach((l) => { if (l.image) n += l.iw * l.ih * 8; }); return n; }
+const mib = (b) => (b / 1048576).toFixed(1) + ' MiB';
 const SOCK = path.join(os.tmpdir(), 'hud-bench-' + process.pid + '.sock');
 const ROOT = path.join(__dirname, '..');
 const APP_ID = process.argv[2] || process.env.BENCH_APP || 'idrive_hud_widgets';
@@ -93,13 +102,13 @@ function sceneMeta() {
     }));
 }
 function helloMsg() {
-    return { t: 'hello', targets: TARGETS, view: appView(), app: APP_ID, cap: layerCap,
+    return { t: 'hello', targets: TARGETS, view: appView(), app: APP_ID, cap: layerCap, pixelCap: PIXEL_BYTES,
         geometry: { HOOD: visible.HOOD, BLACK_BOX: visible.BLACK_BOX, BELT: visible.BELT, HUD_WINDOW: visible.HUD_WINDOW } };
 }
 let sceneTimer = null;
 function sceneChanged() {
     if (sceneTimer) return;
-    sceneTimer = setTimeout(() => { sceneTimer = null; send({ t: 'scene', layers: sceneMeta() }); }, 16);
+    sceneTimer = setTimeout(() => { sceneTimer = null; send({ t: 'scene', layers: sceneMeta(), pixels: pixelBytes() }); }, 16);
 }
 /* Pixels never travel on the event stream: a 'px' notice names a rect of an image layer and the page fetches its
  * bytes from GET /px (binary, the layer's current pixels). Base64 on the stream choked the page once the engine
@@ -187,6 +196,10 @@ const renderServer = net.createServer((sock) => {
                 if (m.class && CLASSES.indexOf(m.class) < 0) return refuse('layer', m.ref, 'unknown class ' + m.class);
                 if (m.z !== undefined && (m.z < -1000 || m.z > 1000)) return refuse('layer', m.ref, 'z out of -1000..1000');
                 const [tw, th] = TARGETS[m.target];
+                if (layers.size >= TOTAL_LAYERS) return refuse('layer', m.ref, 'too many layers');
+                if (m.kind === 'image' && PIXEL_BYTES && m.iw > 0 && m.ih > 0 && pixelBytes() + m.iw * m.ih * 8 > PIXEL_BYTES) {
+                    return refuse('layer', m.ref, "the service's pixel memory is full");
+                }
                 const nl = {
                     key, conn, ref: m.ref, app: st.app, kind: m.kind, target: m.target,
                     class: m.class || 'content', z: m.z || 0, x: m.x || 0, y: m.y || 0, w: m.w || 0, h: m.h || 0,
@@ -252,7 +265,8 @@ const renderServer = net.createServer((sock) => {
                 return;
             }
             case 'status':
-                writeEv(sock, { ev: 'status', text: 'bench: ' + layers.size + ' layers, layer cap ' + (layerCap || 'off') + ', ' + overCap() + ' over it' });
+                const conns = new Set(Array.from(layers.values()).map((l) => l.conn)).size;
+                writeEv(sock, { ev: 'status', text: 'bench: ' + layers.size + ' layers on ' + conns + ' connection(s), layer cap ' + (layerCap || 'off') + ', ' + overCap() + ' over it, pixel memory ' + mib(pixelBytes()) + ' of ' + (PIXEL_BYTES ? mib(PIXEL_BYTES) : 'unlimited') });
                 return;
             default:
                 bad('op "' + m.op + '" not handled by the bench');
@@ -402,7 +416,7 @@ const web = http.createServer(async (req, res) => {
         req.on('close', () => clients.delete(res));
         send(helloMsg(), res);
         logLines.forEach((e) => send(e, res));
-        send({ t: 'scene', layers: sceneMeta() }, res);
+        send({ t: 'scene', layers: sceneMeta(), pixels: pixelBytes() }, res);
         layers.forEach((l) => sendPixels(l, res));
         if (lastSettings) send(lastSettings, res);
         if (lastStatus) send(lastStatus, res);
@@ -454,6 +468,7 @@ renderServer.listen(SOCK, () => {
         log('info', 'bench renderer on ' + SOCK);
         log('info', 'open http://localhost:' + PORT);
         if (layerCap) log('info', 'layer cap ' + layerCap + ' (BENCH_LAYER_CAP): layers past it get state waiting and are not drawn');
+        log('info', 'the service\'s limits: ' + TOTAL_LAYERS + ' layers across every connection, pixel memory ' + (PIXEL_BYTES ? mib(PIXEL_BYTES) : 'unlimited') + ' (every image counted twice)');
         startApp();
     });
 });

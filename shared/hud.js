@@ -87,6 +87,17 @@
  *   swatchimg calibration: image layer, the identical picture painted into pixels (calibration.js
  *             swatchImage), so a photo of the two strips shows how the effect and image paths differ
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
+ * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
+ *   is per connection, so a second socket from the same app gets another 8 (DukeAPenguin saw 28 layers over four
+ *   sockets on his car, Nov 5 2026; the calibration grids probe it here: L5..L16 on connections 2..4). 0 (the
+ *   default) is the app's own connection; a layout never asks for more than it needs, each extra one is opened
+ *   on first use and named <app id>_<n>. Sheets never span connections.
+ * Pixel memory: cluster-render has 16 MiB for every app's images together and counts each image twice
+ *   (Compositor::add_image; a layer past it is refused with "the service's pixel memory is full"), so every
+ *   image layer costs w*h*8 bytes. The rebuild log and the status row say what a layout costs.
+ * Text and badge updates send only the one rectangle around the pixels that changed since the last paint
+ *   (changes() below, after PenguinDukeYDAuto/idrive7-EVAHUD's eva_canvas.js, MIT): a 3-digit readout
+ *   that goes 123 -> 124 sends its last digit, not the widget.
  *   boxes     effect layer; the GT3 dash's frame in ONE layer (shaders.js boxes; the car draws only a few effect
  *             layers): the background (role "color", default "bg") with the optional map "hole" as fill, and up to
  *             12 framed boxes "boxes": [{ id, x, y, w, h (target px), head (header strip px), border (2), radius
@@ -145,6 +156,8 @@ const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header com
 const IMAGE_TYPES = { text: true, scale: true, stripe: true, badge: true, gridlabels: true, icon: true, swatchimg: true };
 const STATUS_ASK_MS = 2000;      // after a rebuild: ask cluster-render for its own status text
 const LAYER_BUDGET = 8;          // cluster-render's limit per client connection (CompositorLimits.per_client; confirmed on the car Nov 5 2026)
+const MAX_CONN = 4;              // connections a layout may ask for ("conn"): 32 layers service-wide / 8 per connection
+const PIXEL_BYTES = 16 * 1024 * 1024;   // cluster-render's pixel memory for every app's images together (CompositorLimits.pixel_bytes)
 const SHEET_AREA_FRAC = 4;       // the first sheet size limit: 1/4 of the target area (see the header)
 const TICK_MS = 50;              // 20 Hz: shift bar and gauges
 const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
@@ -201,6 +214,33 @@ function driveModeOf(raw) {
 }
 
 function rgb(c) { return [c[0] / 255, c[1] / 255, c[2] / 255]; }
+
+/**
+ * The one rectangle around what differs between two RGBA images of the same size, with its pixels, or null
+ * when they are the same (after idrive7-EVAHUD's eva_canvas.js, MIT). The link is what is short, not the CPU:
+ * comparing a widget costs about a tenth of painting it.
+ */
+function changes(was, now, w, h) {
+    const row = w * 4;
+    const sameRow = (y) => now.compare(was, y * row, (y + 1) * row, y * row, (y + 1) * row) === 0;
+    const samePx = (o) => now[o] === was[o] && now[o + 1] === was[o + 1] && now[o + 2] === was[o + 2] && now[o + 3] === was[o + 3];
+    let top = 0;
+    while (top < h && sameRow(top)) top++;
+    if (top === h) return null;
+    let bottom = h - 1;
+    while (sameRow(bottom)) bottom--;
+    let left = w, right = -1;
+    for (let y = top; y <= bottom; y++) {
+        if (sameRow(y)) continue;
+        const o = y * row;
+        for (let x = 0; x < left; x++) if (!samePx(o + x * 4)) { left = x; break; }
+        for (let x = w - 1; x > right; x--) if (!samePx(o + x * 4)) { right = x; break; }
+    }
+    const rect = { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
+    const px = Buffer.allocUnsafe(rect.w * rect.h * 4);
+    for (let y = 0; y < rect.h; y++) now.copy(px, y * rect.w * 4, (top + y) * row + left * 4, (top + y) * row + (right + 1) * 4);
+    return { rect, px };
+}
 function rgba(c) { return [c[0] / 255, c[1] / 255, c[2] / 255, (c[3] === undefined ? 255 : c[3]) / 255]; }
 function isNum(v) { return typeof v === 'number' && isFinite(v); }
 
@@ -212,7 +252,10 @@ class HudApp {
         this.location = this.config.location || DEFAULT_LOCATION;
         // HUD_CLUSTER_SOCKET: the Mac bench's fake cluster-render; never set on the car
         this.socketPath = process.env.HUD_CLUSTER_SOCKET || this.config.socketPath || DEFAULT_PATH;
-        this.client = new ClusterRender(ctx.spec.id, this.socketPath);
+        this.clients = [];               // the connections to cluster-render: [0] the app's own, more for "conn" widgets
+        this.started = false;
+        this.layerStates = new Map();    // "<conn>:<ref>" -> { state, reason } from cluster-render
+        this.client = this._clientAt(0);
         this.target = TARGET_SIZES[this.config.target] ? this.config.target : 'hud';
         this.size = TARGET_SIZES[this.target];
         this.label = this.config.statusName || 'HUD';
@@ -227,7 +270,7 @@ class HudApp {
         this.drivePlus = false;          // Sport+ (or Comfort+ / Eco Pro+)
         this.fuelL = null; this.rangeKm = null; this.ambient = null;   // KombiIF tank / range, outside temperature
         this.activeName = null;          // the layout shown now ('off' = nothing)
-        this.layerStates = new Map();    // ref -> { state, reason } from cluster-render
+        this.pixelBytes = 0;             // what the layout's image layers cost of cluster-render's pixel memory
         this.targetState = null;         // { state, holder, reason } of our target
         this.rpmF = null; this.rpmShown = null; this.lastTickT = 0;
         this.themeName = null;
@@ -237,7 +280,6 @@ class HudApp {
         this.lastStatus = null;
 
         this._setupVehicleData();
-        this._wireClientEvents();
         this.layouts.onChange(() => this._rebuild());
         ctx.settings.onChange((key) => { if (key !== 'demo') this._rebuild(); else this._status(); });
     }
@@ -301,37 +343,56 @@ class HudApp {
         }), this.log);
     }
 
-    _wireClientEvents() {
-        this.client.on('ready', () => { this.log.info('cluster-render ready (backend=' + this.client.backend + ')'); this._rebuild(); });
-        this.client.on('disconnected', () => { this.log.warn('cluster-render disconnected, client will retry'); this._status(); });
-        this.client.on('layer', (ref, state, reason) => {
-            const old = this.layerStates.get(ref);
-            this.layerStates.set(ref, { state, reason });
+    /**
+     * Connection i to cluster-render, made on first use: 0 is the app's own (named after the app); a widget's
+     * "conn" asks for 1..3, named <app id>_2 .. _4, each with its own 8 layers. Layers made before a connection
+     * is up are replayed by the client when it connects.
+     */
+    _clientAt(i) {
+        while (this.clients.length <= i) {
+            const ci = this.clients.length;
+            const c = new ClusterRender(ci ? this.ctx.spec.id + '_' + (ci + 1) : this.ctx.spec.id, this.socketPath);
+            this.clients.push(c);
+            this._wireClientEvents(c, ci);
+            if (this.started) { this.log.info('connection ' + (ci + 1) + ' to cluster-render'); c.connect(); }
+        }
+        return this.clients[i];
+    }
+
+    _wireClientEvents(c, ci) {
+        const tag = ci ? ' [connection ' + (ci + 1) + ']' : '';
+        c.on('ready', () => { this.log.info('cluster-render ready' + tag + ' (backend=' + c.backend + ')'); if (ci === 0) this._rebuild(); else this._status(); });
+        c.on('disconnected', () => { this.log.warn('cluster-render disconnected' + tag + ', client will retry'); this._status(); });
+        c.on('layer', (ref, state, reason) => {
+            const key = ci + ':' + ref;
+            const old = this.layerStates.get(key);
+            this.layerStates.set(key, { state, reason });
             if (state === 'error' || ((state === 'waiting' || state === 'stalled') && (!old || old.state !== state))) {
-                const w = this._widgetOf(ref);
-                this.log.warn('layer ' + ref + (w ? ' (' + w + ')' : '') + ' ' + state + (reason ? ': ' + reason : ''));
+                const w = this._widgetOf(ci, ref);
+                this.log.warn('layer ' + ref + tag + (w ? ' (' + w + ')' : '') + ' ' + state + (reason ? ': ' + reason : ''));
             }
             this._statusSoon();
         });
-        this.client.on('target', (name, state, holder, reason) => {
+        c.on('target', (name, state, holder, reason) => {
             if (name !== this.target) return;
             this.targetState = { state, holder, reason };
-            this.log.info('target ' + name + ' ' + state + (holder ? ' (holder ' + holder + ')' : '') + (reason ? ': ' + reason : ''));
+            this.log.info('target ' + name + tag + ' ' + state + (holder ? ' (holder ' + holder + ')' : '') + (reason ? ': ' + reason : ''));
             this._statusSoon();
         });
-        this.client.on('refused', (op, ref, reason) => {
-            const w = this._widgetOf(ref);
-            this.log.warn('refused ' + op + ' on ' + ref + (w ? ' (' + w + ')' : '') + ': ' + reason);
+        c.on('refused', (op, ref, reason) => {
+            const w = this._widgetOf(ci, ref);
+            this.log.warn('refused ' + op + ' on ' + ref + tag + (w ? ' (' + w + ')' : '') + ': ' + reason);
             if (!this.refused) this.refused = (w || op) + ': ' + reason;   // the first one, until the next rebuild
             this._statusSoon();
         });
-        this.client.on('budget', (capKb, maxKb, reason) => this.log.info('budget ' + capKb + '/' + maxKb + ' kb/s (' + reason + ')'));
-        this.client.on('status', (text) => this.log.info('cluster-render status: ' + text));
+        c.on('budget', (capKb, maxKb, reason) => this.log.info('budget' + tag + ' ' + capKb + '/' + maxKb + ' kb/s (' + reason + ')'));
+        c.on('status', (text) => this.log.info('cluster-render status: ' + text));
     }
 
     start() {
         this.log.info('connecting to cluster-render at ' + this.socketPath);
-        this.client.connect();
+        this.started = true;
+        this.clients.forEach((c) => c.connect());
         this.tickTimer = setInterval(() => this._guard('tick', () => this._tick()), TICK_MS);
         // Auto theme: check for sunrise / sunset once a minute; the status line too
         this.themeTimer = setInterval(() => this._guard('theme check', () => {
@@ -378,7 +439,7 @@ class HudApp {
         clearInterval(this.statusTimer);
         clearInterval(this.dmeTimer);
         clearTimeout(this.statusAskT);
-        this.client.close();
+        this.clients.forEach((c) => c.close());
     }
 
     _guard(what, fn) {
@@ -406,17 +467,41 @@ class HudApp {
     }
 
     /** The first widget on that layer, for the logs; a sheet is named by its first member plus how many more it holds. */
-    _widgetOf(ref) {
+    _widgetOf(ci, ref) {
         let id = null, n = 0;
-        this.widgets.forEach((x) => { if (x.ref === ref) { if (!id) id = x.w.id; n++; } });
+        this.widgets.forEach((x) => { if (x.ci === ci && x.ref === ref) { if (!id) id = x.w.id; n++; } });
         return n > 1 ? id + ' +' + (n - 1) : id;
     }
 
-    /** The refs of every layer of the layout now (effects, sheets and own image layers), each once. */
+    /** Every layer of the layout now (effects, sheets and own image layers), each once: { c, ci, ref, key }. */
     _layerRefs() {
-        const refs = [];
-        this.widgets.forEach((x) => { if (refs.indexOf(x.ref) < 0) refs.push(x.ref); });
+        const refs = [], seen = {};
+        this.widgets.forEach((x) => {
+            const key = x.ci + ':' + x.ref;
+            if (!seen[key]) { seen[key] = true; refs.push({ c: x.c, ci: x.ci, ref: x.ref, key }); }
+        });
         return refs;
+    }
+
+    /** How many connections the layout now uses. */
+    _connCount() {
+        const seen = {};
+        this.widgets.forEach((x) => { seen[x.ci] = true; });
+        return Object.keys(seen).length;
+    }
+
+    /** The connection a widget asks for ("conn", 0..3; 0 the app's own). */
+    _connOf(w) {
+        const n = isNum(w.conn) ? Math.floor(w.conn) : 0;
+        return Math.max(0, Math.min(MAX_CONN - 1, n));
+    }
+
+    /** Layers per connection in a plan: [n on connection 1, n on 2, ...]. */
+    _connCounts(plan) {
+        const counts = [];
+        plan.forEach((e) => { counts[e.conn] = (counts[e.conn] || 0) + 1; });
+        for (let i = 0; i < counts.length; i++) counts[i] = counts[i] || 0;
+        return counts;
     }
 
     _layerCount(n) { return n === 1 ? '1 layer' : n + ' layers'; }
@@ -437,7 +522,7 @@ class HudApp {
         if (!refs.length) return refused;
         let shown = 0, why = null, whyN = 0;
         refs.forEach((r) => {
-            const st = this.layerStates.get(r);
+            const st = this.layerStates.get(r.key);
             if (st && st.state === 'shown') shown++;
             else if (st) { whyN++; if (!why) why = st.state + (st.reason ? ': ' + st.reason : ''); }
         });
@@ -460,7 +545,9 @@ class HudApp {
         const d = this.car.data();
         const demo = d.demo ? ', demo data' : '';
         const drawn = this._drawnNote();
-        const layers = ', ' + this._layerCount(this._layerRefs().length);
+        const conns = this._connCount();
+        const layers = ', ' + this._layerCount(this._layerRefs().length) + (conns > 1 ? ' on ' + conns + ' connections' : '')
+            + (this.pixelBytes ? ', ' + mib(this.pixelBytes) + ' of 16 MiB pixels' : '');
         if (this.layoutTheme) return this.label + ' on' + mode + ': ' + name + ' theme' + layers + demo + drawn;
         const theme = THEMES[this.themeName] ? THEMES[this.themeName].name : this.themeName;
         const auto = this.setting('hudTheme') === 'auto' ? ' (Auto)' : '';
@@ -641,9 +728,10 @@ class HudApp {
 
     _rebuildInner() {
         if (!this.client.ready) return; // the 'ready' handler calls us again
-        this._layerRefs().forEach((ref) => this.client.drop(ref));
+        this._layerRefs().forEach((r) => r.c.drop(r.ref));
         this.widgets.clear();
         this.sheets = [];
+        this.pixelBytes = 0;
         this.layerStates.clear();
         this.refused = null;
         clearTimeout(this.statusAskT); this.statusAskT = null;
@@ -672,21 +760,30 @@ class HudApp {
         // in that order: within a class and z, cluster-render puts the newer layer on top. Small sheets
         // first; a bigger limit only when the layer budget needs it (see the header).
         const area = this.size[0] * this.size[1];
+        const over = (p) => this._connCounts(p).some((k) => k > LAYER_BUDGET);
         let maxPx = Math.floor(area / SHEET_AREA_FRAC), plan = this._plan(shown, maxPx);
-        while (plan.length > LAYER_BUDGET && maxPx !== Infinity) {
+        while (over(plan) && maxPx !== Infinity) {
             maxPx = maxPx * 2 >= area ? Infinity : maxPx * 2;
             plan = this._plan(shown, maxPx);
         }
-        let effects = 0, own = 0, sheets = 0, bytes = 0;
+        let effects = 0, own = 0, sheets = 0, bytes = 0, px = 0;
         plan.forEach((e) => {
-            if (e.kind === 'sheet') { sheets++; bytes += e.w * e.h * 4; this._guard('sheet ' + e.members[0].id, () => this._createSheet(e)); }
-            else { if (IMAGE_TYPES[e.w.type]) own++; else effects++; this._guard('widget ' + e.w.id, () => this._create(e.w, null)); }
+            if (e.kind === 'sheet') { sheets++; bytes += e.w * e.h * 4; px += e.w * e.h * 8; this._guard('sheet ' + e.members[0].id, () => this._createSheet(e)); }
+            else {
+                if (IMAGE_TYPES[e.w.type]) { own++; px += e.w.w * e.w.h * 8; } else effects++;
+                this._guard('widget ' + e.w.id, () => this._create(e.w, null));
+            }
         });
-        const n = this._layerRefs().length;
+        this.pixelBytes = px;
+        const n = this._layerRefs().length, counts = this._connCounts(plan);
         this.log.info('layout "' + layout.name + '": ' + shown.length + ' widgets, ' + this._layerCount(n) + ' (' + effects + ' effects, ' +
-            sheets + ' image sheets' + (own ? ', ' + own + ' own image layers' : '') + '), sheet limit ' +
-            (maxPx === Infinity ? 'unlimited' : maxPx + ' px') + ', whole-sheet writes ' + bytes + ' bytes');
-        if (plan.length > LAYER_BUDGET) this.log.warn('layout "' + layout.name + '" needs ' + plan.length + ' layers, cluster-render draws at most ' + LAYER_BUDGET + ' per connection');
+            sheets + ' image sheets' + (own ? ', ' + own + ' own image layers' : '') + ')' +
+            (counts.length > 1 ? ' on ' + counts.length + ' connections (' + counts.join(' + ') + ')' : '') + ', sheet limit ' +
+            (maxPx === Infinity ? 'unlimited' : maxPx + ' px') + ', whole-sheet writes ' + bytes + ' bytes, pixel memory ' + mib(px) + ' of 16 MiB');
+        counts.forEach((k, ci) => {
+            if (k > LAYER_BUDGET) this.log.warn('layout "' + layout.name + '" needs ' + k + ' layers on connection ' + (ci + 1) + ', cluster-render draws at most ' + LAYER_BUDGET + ' per connection');
+        });
+        if (px > PIXEL_BYTES) this.log.warn('layout "' + layout.name + '" needs ' + mib(px) + ' of pixel memory; cluster-render has 16 MiB for every app together (each image counts twice)');
         this.statusAskT = setTimeout(() => { this.statusAskT = null; this._guard('status request', () => this.client.status()); }, STATUS_ASK_MS);
     }
 
@@ -706,21 +803,21 @@ class HudApp {
             return { x, y, w: Math.max(s.x + s.w, w.x + w.w) - x, h: Math.max(s.y + s.h, w.y + w.h) - y };
         };
         widgets.forEach((w) => {
-            const klass = w.class || 'content', z = w.z || 0;
-            if (!IMAGE_TYPES[w.type] || w.own === true) { plan.push({ kind: 'layer', w, klass, z }); return; }
+            const klass = w.class || 'content', z = w.z || 0, conn = this._connOf(w);
+            if (!IMAGE_TYPES[w.type] || w.own === true) { plan.push({ kind: 'layer', w, klass, z, conn }); return; }
             let after = -1;
             plan.forEach((e, i) => {
-                if (e.klass !== klass || e.z !== z) return;
+                if (e.klass !== klass || e.z !== z || e.conn !== conn) return;
                 if (e.kind === 'layer' ? hit(e.w, w) : e.members.some((m) => hit(m, w))) after = i;
             });
             let sheet = null, box = null;
             for (let i = after + 1; i < plan.length && !sheet; i++) {
                 const s = plan[i];
-                if (s.kind !== 'sheet' || s.klass !== klass || s.z !== z) continue;
+                if (s.kind !== 'sheet' || s.klass !== klass || s.z !== z || s.conn !== conn) continue;
                 const u = union(s, w);
                 if (u.w * u.h <= maxPx) { sheet = s; box = u; }
             }
-            if (!sheet) { sheet = { kind: 'sheet', klass, z, x: w.x, y: w.y, w: w.w, h: w.h, members: [], ref: 0, buf: null }; plan.push(sheet); }
+            if (!sheet) { sheet = { kind: 'sheet', klass, z, conn, x: w.x, y: w.y, w: w.w, h: w.h, members: [], ref: 0, c: null, ci: conn, buf: null }; plan.push(sheet); }
             else { sheet.x = box.x; sheet.y = box.y; sheet.w = box.w; sheet.h = box.h; }
             sheet.members.push(w);
         });
@@ -729,15 +826,16 @@ class HudApp {
 
     /** One image layer for a sheet: every member painted into a local buffer, then sent whole once. */
     _createSheet(s) {
-        const ref = this.client.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h });
+        const c = this._clientAt(s.conn);
+        const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h });
         if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
-        s.ref = ref;
+        s.ref = ref; s.c = c; s.ci = s.conn;
         s.buf = Buffer.alloc(s.w * s.h * 4, 0);
         this.sheets.push(s);
         s.members.forEach((w) => this._guard('widget ' + w.id, () => this._create(w, s)));
         const buf = s.buf;
         s.buf = null;                    // from here on _blit sends dirty rects
-        this.client.pixels(ref, null, buf);
+        c.pixels(ref, null, buf);
     }
 
     /**
@@ -747,11 +845,11 @@ class HudApp {
      */
     _blit(x, rects, buf) {
         const w = x.w, s = x.sheet;
-        if (!s) { this.client.pixels(x.ref, rects, buf); return; }
+        if (!s) { x.c.pixels(x.ref, rects, buf); return; }
         const rs = rects && rects.length ? rects : [{ x: 0, y: 0, w: w.w, h: w.h }];
         const dx = w.x - s.x, dy = w.y - s.y;
         const moved = rs.map((r) => ({ x: r.x + dx, y: r.y + dy, w: r.w, h: r.h }));
-        if (!s.buf) { this.client.pixels(s.ref, moved, buf); return; }
+        if (!s.buf) { s.c.pixels(s.ref, moved, buf); return; }
         let off = 0;
         moved.forEach((r) => {
             for (let y = 0; y < r.h; y++) {
@@ -759,6 +857,18 @@ class HudApp {
                 off += r.w * 4;
             }
         });
+    }
+
+    /**
+     * A whole repaint of an image widget: the first time (or while its sheet is being filled) the whole widget
+     * goes up; after that only the one rectangle around the pixels that changed, or nothing at all.
+     */
+    _blitDiff(x, buf) {
+        const w = x.w, was = x.px;
+        x.px = buf;
+        if (!was || (x.sheet && x.sheet.buf)) { this._blit(x, null, buf); return; }
+        const c = changes(was, buf, w.w, w.h);
+        if (c) this._blit(x, [c.rect], c.px);
     }
 
     /** "key" is on while that bool setting is on; "!key" while it is off. */
@@ -771,143 +881,144 @@ class HudApp {
 
     /** A widget: on its own layer (sheet null: an effect, or an image widget with "own": true), or a member of a sheet. */
     _create(w, sheet) {
-        let ref;
-        if (sheet) ref = sheet.ref;
+        let ref, c;
+        if (sheet) { ref = sheet.ref; c = sheet.c; }
         else {
+            c = this._clientAt(this._connOf(w));
             const base = { target: this.target, klass: w.class || 'content', z: w.z || 0, x: w.x, y: w.y, w: w.w, h: w.h };
-            if (IMAGE_TYPES[w.type]) ref = this.client.image(Object.assign({ iw: w.w, ih: w.h }, base));
-            else ref = this.client.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
+            if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
+            else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
             if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
         }
-        const x = { w, ref, sheet: sheet || null, last: null, lastPaint: 0 };
+        const x = { w, ref, c, ci: sheet ? sheet.ci : this._connOf(w), sheet: sheet || null, last: null, lastPaint: 0, px: null };
         this.widgets.set(w.id, x);
         const t = this.theme;
         if (w.type === 'gridlabels') this._paintGridLabels(x);
         else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
         else if (w.type === 'sdash') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_geo', w.geo);
-            this.client.uniform(ref, 'u_k', w.k);
-            this.client.uniform(ref, 'u_w', [w.band]);
-            this.client.uniform(ref, 'u_inner', [w.inner || w.band + 18]);
-            this.client.uniform(ref, 'u_scale', w.scale || [w.geo[2], w.geo[0]]);
-            this.client.uniform(ref, 'u_ticks', w.ticks);
-            this.client.uniform(ref, 'u_redFrom', [this.setting('redline') / (w.rpmMax || 8000)]);
-            this.client.uniform(ref, 'u_orange', [(this.setting('redline') - 700) / (w.rpmMax || 8000)]);
-            this.client.uniform(ref, 'u_fuelSeg', w.fuelSeg);
-            this.client.uniform(ref, 'u_oilSeg', w.oilSeg);
-            this.client.uniform(ref, 'u_hole', this._hole(w));
-            this.client.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
-            this.client.uniform(ref, 'u_strip', w.strip);
-            this.client.uniform(ref, 'u_topEnd', [w.topEnd]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_geo', w.geo);
+            c.uniform(ref, 'u_k', w.k);
+            c.uniform(ref, 'u_w', [w.band]);
+            c.uniform(ref, 'u_inner', [w.inner || w.band + 18]);
+            c.uniform(ref, 'u_scale', w.scale || [w.geo[2], w.geo[0]]);
+            c.uniform(ref, 'u_ticks', w.ticks);
+            c.uniform(ref, 'u_redFrom', [this.setting('redline') / (w.rpmMax || 8000)]);
+            c.uniform(ref, 'u_orange', [(this.setting('redline') - 700) / (w.rpmMax || 8000)]);
+            c.uniform(ref, 'u_fuelSeg', w.fuelSeg);
+            c.uniform(ref, 'u_oilSeg', w.oilSeg);
+            c.uniform(ref, 'u_hole', this._hole(w));
+            c.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
+            c.uniform(ref, 'u_strip', w.strip);
+            c.uniform(ref, 'u_topEnd', [w.topEnd]);
         } else if (w.type === 'mdash') {
             const g = w.gmeter || [0, 0, 0], L = w.gaugeL || {}, R = w.gaugeR || {}, b = w.blade || {};
             const bars = Array.isArray(w.segbars) ? w.segbars.slice(0, 4) : [];
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_card', w.card || [0, 0, 0, 0]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_card', w.card || [0, 0, 0, 0]);
             // no chamfer / no blade: a line far off to the left, so nothing is cut
-            this.client.uniform(ref, 'u_cardCut', w.cardCut || [-99999, 0, -99999, -1]);
-            this.client.uniform(ref, 'u_cardFill', [isNum(w.cardFill) ? w.cardFill : 0]);
-            this.client.uniform(ref, 'u_blade', [isNum(b.xm) ? b.xm - w.x : 99999, (b.ym || 0) - w.y, b.kTop || 0, b.kBot || 0]);
-            this.client.uniform(ref, 'u_bladeB', [b.round || 40, isNum(w.bladeGap) ? w.bladeGap : 14]);
-            this.client.uniform(ref, 'u_line', w.line || [0, -99, 0, 1]);
-            this.client.uniform(ref, 'u_gm', [g[0] - w.x, g[1] - w.y, g[2]]);
-            this.client.uniform(ref, 'u_maxG', [w.maxG || 1.2]);
-            this.client.uniform(ref, 'u_mark', w.mark || [0, 0, 0]);
-            this.client.uniform(ref, 'u_red', rgb(t.hot));
+            c.uniform(ref, 'u_cardCut', w.cardCut || [-99999, 0, -99999, -1]);
+            c.uniform(ref, 'u_cardFill', [isNum(w.cardFill) ? w.cardFill : 0]);
+            c.uniform(ref, 'u_blade', [isNum(b.xm) ? b.xm - w.x : 99999, (b.ym || 0) - w.y, b.kTop || 0, b.kBot || 0]);
+            c.uniform(ref, 'u_bladeB', [b.round || 40, isNum(w.bladeGap) ? w.bladeGap : 14]);
+            c.uniform(ref, 'u_line', w.line || [0, -99, 0, 1]);
+            c.uniform(ref, 'u_gm', [g[0] - w.x, g[1] - w.y, g[2]]);
+            c.uniform(ref, 'u_maxG', [w.maxG || 1.2]);
+            c.uniform(ref, 'u_mark', w.mark || [0, 0, 0]);
+            c.uniform(ref, 'u_red', rgb(t.hot));
             [0, 1, 2, 3].forEach((i) => {
                 const s = bars[i];
-                this.client.uniform(ref, 'u_seg' + i, s ? [s.x - w.x, s.y - w.y, s.w, s.h] : [0, 0, 0, 0]);
+                c.uniform(ref, 'u_seg' + i, s ? [s.x - w.x, s.y - w.y, s.w, s.h] : [0, 0, 0, 0]);
             });
-            this.client.uniform(ref, 'u_segMax', [0, 1, 2, 3].map((i) => (bars[i] && bars[i].max) || 1));
-            this.client.uniform(ref, 'u_segSlant', [isNum(w.segSlant) ? w.segSlant : 9]);
+            c.uniform(ref, 'u_segMax', [0, 1, 2, 3].map((i) => (bars[i] && bars[i].max) || 1));
+            c.uniform(ref, 'u_segSlant', [isNum(w.segSlant) ? w.segSlant : 9]);
             x.gauges = [['u_gaugeL', L], ['u_gaugeR', R]];
             x.bars = bars;
         } else if (w.type === 'mtach') {
             const max = w.max || 8000, red = this.setting('redline');
             const right = w.side === 'right';
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_side', [right ? 1 : -1]);
-            this.client.uniform(ref, 'u_geoA', [w.y0 - w.y, w.y8 - w.y, w.ym - w.y, right ? w.x + w.w - w.xm : w.xm - w.x]);
-            this.client.uniform(ref, 'u_geoB', [w.kTop, w.kBot, w.round || 40]);
-            this.client.uniform(ref, 'u_wid', [w.wBot, w.wTop, w.wBend || 0]);
-            this.client.uniform(ref, 'u_ticks', [max / 1000]);
-            this.client.uniform(ref, 'u_orange', [(red - 700) / max]);
-            this.client.uniform(ref, 'u_redFrom', [red / max]);
-            this.client.uniform(ref, 'u_red', rgb(t.hot));
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_side', [right ? 1 : -1]);
+            c.uniform(ref, 'u_geoA', [w.y0 - w.y, w.y8 - w.y, w.ym - w.y, right ? w.x + w.w - w.xm : w.xm - w.x]);
+            c.uniform(ref, 'u_geoB', [w.kTop, w.kBot, w.round || 40]);
+            c.uniform(ref, 'u_wid', [w.wBot, w.wTop, w.wBend || 0]);
+            c.uniform(ref, 'u_ticks', [max / 1000]);
+            c.uniform(ref, 'u_orange', [(red - 700) / max]);
+            c.uniform(ref, 'u_redFrom', [red / max]);
+            c.uniform(ref, 'u_red', rgb(t.hot));
         }
         else if (w.type === 'grid') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_step', [w.step || 50]);
-            this.client.uniform(ref, 'u_major', [w.major || 2]);
-            this.client.uniform(ref, 'u_minor', rgba([255, 255, 255, 90]));
-            this.client.uniform(ref, 'u_majorC', rgba([0, 255, 140, 255]));
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_step', [w.step || 50]);
+            c.uniform(ref, 'u_major', [w.major || 2]);
+            c.uniform(ref, 'u_minor', rgba([255, 255, 255, 90]));
+            c.uniform(ref, 'u_majorC', rgba([0, 255, 140, 255]));
         } else if (w.type === 'stripe') this._paintStripe(x);
         else if (w.type === 'scale') this._paintScale(x);
         else if (w.type === 'shiftbar') {
             const max = this._barMax(), red = this.setting('redline');
             const midAt = t.bar.midAt === 'shift' ? (red - 1500) / max : t.bar.midAt;
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_segs', [w.segments || 40]);
-            this.client.uniform(ref, 'u_low', rgb(t.bar.low));
-            this.client.uniform(ref, 'u_mid', rgb(t.bar.mid));
-            this.client.uniform(ref, 'u_high', rgb(t.bar.high));
-            this.client.uniform(ref, 'u_midAt', [midAt]);
-            this.client.uniform(ref, 'u_highAt', [(red - 500) / max]);
-            this.client.uniform(ref, 'u_track', rgba(t.track));
-            this.client.uniform(ref, 'u_flash', [0]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_segs', [w.segments || 40]);
+            c.uniform(ref, 'u_low', rgb(t.bar.low));
+            c.uniform(ref, 'u_mid', rgb(t.bar.mid));
+            c.uniform(ref, 'u_high', rgb(t.bar.high));
+            c.uniform(ref, 'u_midAt', [midAt]);
+            c.uniform(ref, 'u_highAt', [(red - 500) / max]);
+            c.uniform(ref, 'u_track', rgba(t.track));
+            c.uniform(ref, 'u_flash', [0]);
         } else if (w.type === 'arc') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_color', rgb(color(t, w.color || 'arc')));
-            this.client.uniform(ref, 'u_track', rgba(t.track));
-            this.client.uniform(ref, 'u_width', [w.width || 7]);
-            this.client.uniform(ref, 'u_start', [(w.start === undefined ? 225 : w.start) * Math.PI / 180]);
-            this.client.uniform(ref, 'u_sweep', [(w.sweep === undefined ? 270 : w.sweep) * Math.PI / 180]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_color', rgb(color(t, w.color || 'arc')));
+            c.uniform(ref, 'u_track', rgba(t.track));
+            c.uniform(ref, 'u_width', [w.width || 7]);
+            c.uniform(ref, 'u_start', [(w.start === undefined ? 225 : w.start) * Math.PI / 180]);
+            c.uniform(ref, 'u_sweep', [(w.sweep === undefined ? 270 : w.sweep) * Math.PI / 180]);
         } else if (w.type === 'segbar') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_segs', [w.max]);
-            this.client.uniform(ref, 'u_on', rgba(color(t, w.color || 'hot')));
-            this.client.uniform(ref, 'u_offC', rgba(color(t, 'track')));
-            this.client.uniform(ref, 'u_slant', [w.slant || 0]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_segs', [w.max]);
+            c.uniform(ref, 'u_on', rgba(color(t, w.color || 'hot')));
+            c.uniform(ref, 'u_offC', rgba(color(t, 'track')));
+            c.uniform(ref, 'u_slant', [w.slant || 0]);
         } else if (w.type === 'revbar') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_top', [w.top || 8]);
-            this.client.uniform(ref, 'u_barH', [w.barH]);
-            this.client.uniform(ref, 'u_slant', [w.slant || 12]);
-            this.client.uniform(ref, 'u_max', [this._barMax(w)]);
-            this.client.uniform(ref, 'u_red', [this.setting('redline')]);
-            this.client.uniform(ref, 'u_from', rgb(t.rev.from));
-            this.client.uniform(ref, 'u_to', rgb(t.rev.to));
-            this.client.uniform(ref, 'u_hot', rgb(t.hot));
-            this.client.uniform(ref, 'u_track', rgba(t.track));
-            this.client.uniform(ref, 'u_tick', rgba(t.dim));
-            this.client.uniform(ref, 'u_fg', rgba(t.fg));
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_top', [w.top || 8]);
+            c.uniform(ref, 'u_barH', [w.barH]);
+            c.uniform(ref, 'u_slant', [w.slant || 12]);
+            c.uniform(ref, 'u_max', [this._barMax(w)]);
+            c.uniform(ref, 'u_red', [this.setting('redline')]);
+            c.uniform(ref, 'u_from', rgb(t.rev.from));
+            c.uniform(ref, 'u_to', rgb(t.rev.to));
+            c.uniform(ref, 'u_hot', rgb(t.hot));
+            c.uniform(ref, 'u_track', rgba(t.track));
+            c.uniform(ref, 'u_tick', rgba(t.dim));
+            c.uniform(ref, 'u_fg', rgba(t.fg));
         } else if (w.type === 'lights') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_n', [w.count || 12]);
-            this.client.uniform(ref, 'u_tail', [w.tail || 0]);
-            this.client.uniform(ref, 'u_round', [w.round ? 1 : 0]);
-            this.client.uniform(ref, 'u_green', rgb(LIGHTS.green));
-            this.client.uniform(ref, 'u_yellow', rgb(LIGHTS.yellow));
-            this.client.uniform(ref, 'u_red', rgb(LIGHTS.red));
-            this.client.uniform(ref, 'u_blue', rgb(LIGHTS.blue));
-            this.client.uniform(ref, 'u_off', [w.off === undefined ? 0.14 : w.off]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_n', [w.count || 12]);
+            c.uniform(ref, 'u_tail', [w.tail || 0]);
+            c.uniform(ref, 'u_round', [w.round ? 1 : 0]);
+            c.uniform(ref, 'u_green', rgb(LIGHTS.green));
+            c.uniform(ref, 'u_yellow', rgb(LIGHTS.yellow));
+            c.uniform(ref, 'u_red', rgb(LIGHTS.red));
+            c.uniform(ref, 'u_blue', rgb(LIGHTS.blue));
+            c.uniform(ref, 'u_off', [w.off === undefined ? 0.14 : w.off]);
         } else if (w.type === 'fill') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_color', rgba(color(t, w.color || 'bg')));
-            this.client.uniform(ref, 'u_hole', this._hole(w));
-            this.client.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_color', rgba(color(t, w.color || 'bg')));
+            c.uniform(ref, 'u_hole', this._hole(w));
+            c.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
         } else if (w.type === 'box') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
-            this.client.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
-            this.client.uniform(ref, 'u_head', rgba(color(t, w.headColor || 'head')));
-            this.client.uniform(ref, 'u_headH', [w.head || 0]);
-            this.client.uniform(ref, 'u_border', [w.border === undefined ? 2 : w.border]);
-            this.client.uniform(ref, 'u_radius', [w.radius || 0]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
+            c.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
+            c.uniform(ref, 'u_head', rgba(color(t, w.headColor || 'head')));
+            c.uniform(ref, 'u_headH', [w.head || 0]);
+            c.uniform(ref, 'u_border', [w.border === undefined ? 2 : w.border]);
+            c.uniform(ref, 'u_radius', [w.radius || 0]);
         } else if (w.type === 'swatch') {
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_n', [w.steps || 11]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_n', [w.steps || 11]);
         } else if (w.type === 'swatchimg') this._blit(x, null, calibration.swatchImage(w.w, w.h, w.steps || 11));
         else if (w.type === 'boxes') {
             // the box list goes up as two vec4 arrays (x, y, w, h and headH, border, radius, headKind), 12 slots
@@ -919,17 +1030,17 @@ class HudApp {
                 rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
                 styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.headColor === 'accent' ? 1 : 0);
             }
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_bg', rgba(color(t, w.color || 'bg')));
-            this.client.uniform(ref, 'u_hole', this._hole(w));
-            this.client.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
-            this.client.uniform(ref, 'u_n', [list.length]);
-            this.client.uniform(ref, 'u_box', rects, { type: 'vec4' });
-            this.client.uniform(ref, 'u_boxStyle', styles, { type: 'vec4' });
-            this.client.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
-            this.client.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
-            this.client.uniform(ref, 'u_head', rgba(color(t, w.head || 'head')));
-            this.client.uniform(ref, 'u_accent', rgba(color(t, w.accent || 'accent')));
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_bg', rgba(color(t, w.color || 'bg')));
+            c.uniform(ref, 'u_hole', this._hole(w));
+            c.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
+            c.uniform(ref, 'u_n', [list.length]);
+            c.uniform(ref, 'u_box', rects, { type: 'vec4' });
+            c.uniform(ref, 'u_boxStyle', styles, { type: 'vec4' });
+            c.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
+            c.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
+            c.uniform(ref, 'u_head', rgba(color(t, w.head || 'head')));
+            c.uniform(ref, 'u_accent', rgba(color(t, w.accent || 'accent')));
         }
         this._update(x, Date.now(), true);
     }
@@ -986,7 +1097,7 @@ class HudApp {
                 color2: w.color2 && role !== 'hot' ? color(this.theme, w.color2) : null,
                 glow: w.glow ? this.theme.glow : 0,
             });
-            this._blit(x, null, buf);
+            this._blitDiff(x, buf);
         } else if (w.type === 'badge') {
             if (!force && now - x.lastPaint < TEXT_MS) return;
             const s = this._resolve(w.text);
@@ -998,7 +1109,7 @@ class HudApp {
             const key = s + '|' + tone + '|' + fresh;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
-            this._blit(x, null, this._paintBadge(w, s, tone, fresh));
+            this._blitDiff(x, this._paintBadge(w, s, tone, fresh));
         } else if (w.type === 'shiftbar') {
             const rpm = this._raw('rpm');
             const segs = w.segments || 40;
@@ -1007,15 +1118,15 @@ class HudApp {
             const key = q + (this.flash ? 'f' : '');
             if (!force && key === x.last) return;
             x.last = key;
-            this.client.uniform(x.ref, 'u_value', [q]);
-            this.client.uniform(x.ref, 'u_flash', [this.flash ? 1 : 0]);
+            x.c.uniform(x.ref, 'u_value', [q]);
+            x.c.uniform(x.ref, 'u_flash', [this.flash ? 1 : 0]);
         } else if (w.type === 'arc') {
             const raw = this._raw(w.signal);
             const v = isNum(raw) ? Math.min(1, Math.max(0, (raw - w.min) / (w.max - w.min))) : 0;
             const q = Math.round(v * 200) / 200;
             if (!force && q === x.last) return;
             x.last = q;
-            this.client.uniform(x.ref, 'u_value', [q]);
+            x.c.uniform(x.ref, 'u_value', [q]);
         } else if (w.type === 'sdash') {
             const us = this.setting('units') === 'us';
             const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
@@ -1029,10 +1140,10 @@ class HudApp {
             const key = vals.join('|');
             if (!force && key === x.last) return;
             x.last = key;
-            this.client.uniform(x.ref, 'u_speed', [vals[0]]);
-            this.client.uniform(x.ref, 'u_rpm', [vals[1]]);
-            this.client.uniform(x.ref, 'u_fuel', [vals[2]]);
-            this.client.uniform(x.ref, 'u_oil', [vals[3]]);
+            x.c.uniform(x.ref, 'u_speed', [vals[0]]);
+            x.c.uniform(x.ref, 'u_rpm', [vals[1]]);
+            x.c.uniform(x.ref, 'u_fuel', [vals[2]]);
+            x.c.uniform(x.ref, 'u_oil', [vals[3]]);
         } else if (w.type === 'mdash') {
             const lat = this._raw('gLat'), lon = this._raw('gLong');
             const g = [isNum(lat) ? Math.round(lat * 100) / 100 : 0, isNum(lon) ? -Math.round(lon * 100) / 100 : 0];
@@ -1048,23 +1159,23 @@ class HudApp {
             const key = g.join('|') + '|' + vals.map((v) => v[2]).join('|') + '|' + lit.join('|');
             if (!force && key === x.last) return;
             x.last = key;
-            this.client.uniform(x.ref, 'u_g', g);
-            vals.forEach(([u, G, v]) => this.client.uniform(x.ref, u, [G.cx || 0, G.cy || 0, G.r || 0, v]));
-            this.client.uniform(x.ref, 'u_segLit', lit);
+            x.c.uniform(x.ref, 'u_g', g);
+            vals.forEach(([u, G, v]) => x.c.uniform(x.ref, u, [G.cx || 0, G.cy || 0, G.r || 0, v]));
+            x.c.uniform(x.ref, 'u_segLit', lit);
         } else if (w.type === 'mtach') {
             const rpm = this._raw('rpm'), sp = this._shift();
             const v = isNum(rpm) ? Math.min(1, Math.max(0, rpm / (w.max || 8000))) : 0;
             const key = Math.round(v * 600) + '|' + sp.now;
             if (!force && key === x.last) return;
             x.last = key;
-            this.client.uniform(x.ref, 'u_value', [v]);
-            this.client.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
+            x.c.uniform(x.ref, 'u_value', [v]);
+            x.c.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
         } else if (w.type === 'segbar') {
             const v = this._raw(w.signal);
             const lit = isNum(v) ? Math.max(0, Math.min(w.max, Math.round(v))) : 0;
             if (!force && lit === x.last) return;
             x.last = lit;
-            this.client.uniform(x.ref, 'u_lit', [lit]);
+            x.c.uniform(x.ref, 'u_lit', [lit]);
         } else if (w.type === 'revbar') {
             const rpm = this._raw('rpm'), sp = this._shift();
             const v = isNum(rpm) ? Math.round(Math.max(0, rpm) / 10) * 10 : 0;
@@ -1072,10 +1183,10 @@ class HudApp {
             const key = v + '|' + sp.rpm + '|' + peak + '|' + sp.now;
             if (!force && key === x.last) return;
             x.last = key;
-            this.client.uniform(x.ref, 'u_value', [v]);
-            this.client.uniform(x.ref, 'u_shift', [sp.rpm]);
-            this.client.uniform(x.ref, 'u_peak', [peak]);
-            this.client.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
+            x.c.uniform(x.ref, 'u_value', [v]);
+            x.c.uniform(x.ref, 'u_shift', [sp.rpm]);
+            x.c.uniform(x.ref, 'u_peak', [peak]);
+            x.c.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
         } else if (w.type === 'lights') {
             const rpm = this._raw('rpm'), sp = this._shift(), n = w.count || 12;
             // the lights fill from "from" rpm (3000) up to the shift point; a "from" at or past it means the last 500 rpm
@@ -1084,8 +1195,8 @@ class HudApp {
             const key = lit + '|' + sp.now;
             if (!force && key === x.last) return;
             x.last = key;
-            this.client.uniform(x.ref, 'u_lit', [lit]);
-            this.client.uniform(x.ref, 'u_strobe', [sp.now ? 1 : 0]);
+            x.c.uniform(x.ref, 'u_lit', [lit]);
+            x.c.uniform(x.ref, 'u_strobe', [sp.now ? 1 : 0]);
         }
     }
 
@@ -1168,5 +1279,6 @@ class HudApp {
 }
 
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
+function mib(bytes) { return (bytes / 1048576).toFixed(1) + ' MiB'; }
 
 module.exports = HudApp;

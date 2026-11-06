@@ -17,6 +17,10 @@ Besides its own code, the app ships with:
 3. The Barlow typeface (hud.pack, fonts/*): pre-rendered glyphs of Barlow and Barlow Semi
    Condensed, Copyright 2017 The Barlow Project Authors, under the SIL Open Font License 1.1, reproduced below.
 
+4. The pixel-diff text update in hud.js (changes(): only the rectangle that changed goes up the link) is
+   adapted from PenguinDukeYDAuto/idrive7-EVAHUD (shared/eva_canvas.js): MIT, Copyright (c) 2026 DukeAPenguin.
+   https://github.com/PenguinDukeYDAuto/idrive7-EVAHUD
+
 ----------------------------------------------------------------------------------------------
 Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
 
