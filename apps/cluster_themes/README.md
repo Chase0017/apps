@@ -33,20 +33,6 @@ Redraws the whole instrument cluster with your own themes. Open **Cluster Themes
 
 <img src="../../docs/images/cluster-sport.png" width="840" alt="Sport theme">
 
-**Dials:** a big round tach in the middle with gauges either side.
-
-- **Middle:** a round tach with a grey band, a red zone from your redline, and an orange needle that turns red at the shift point. The speed, gear and drive mode sit inside it.
-- **Sides:** boost and oil stacked on the left, power and torque (as % of the engine's peak) stacked on the right.
-- **Gauge style:** pick round dials, bars, or big digital numbers for the four side gauges.
-- **Top:** the clock, outside temperature and range, either side of the tach. **Bottom:** coolant and fuel bars (the fuel bar turns orange when low).
-- "Leave room for the map" doesn't apply to this theme.
-
-<img src="../../docs/images/cluster-dials.png" width="840" alt="Dials theme, round gauges">
-
-| Bars | Digital, at the shift point |
-| --- | --- |
-| <img src="../../docs/images/cluster-dials-bars.png" width="420" alt="Dials theme, bar gauges"> | <img src="../../docs/images/cluster-dials-digital.png" width="420" alt="Dials theme, digital gauges at the shift point"> |
-
 More themes are on the way.
 
 | At the shift point | With room for the map |
@@ -63,7 +49,6 @@ More themes are on the way.
 
 - **Theme**, and one per drive mode
 - **Leave room for the map:** cuts a window out of the dash so the map can show through (a rounded window, inset a few pixels so the stock cluster's corners don't peek out; `holeInset` and `holeRadius` in the layout), moves the gear and temperatures to the sides, and slims the rev bar.
-- **Gauge style (Dials theme):** round dials, bars or digital
 - **Calibration grid:** a theme that draws lines every 50 px with x/y labels, for checking where things sit on the real screen.
 - **Units:** mph, °F, psi or km/h, °C, bar
 - **Clock:** 12-hour or 24-hour
@@ -81,10 +66,9 @@ More themes are on the way.
 
 ## Status
 
-Version 0.5.1 (0.5.0 added the Dials theme; 0.5.1 matches the M and Sport themes to BMW's own clusters). First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Second car test (Nov 5 2026): the car drew only the first few layers (every theme now uses at most 3 effect layers: the GT3 frame is one layer, the M setup bars are part of the backdrop), dark tints came out light (every backdrop is now pure black, pending a measured curve), and the hood and BMW's own black gear box hid the top corners and x 1406..1597, y 342..419 (everything moved clear of both). Still to be checked on a car:
+Version 0.7.0 (0.7.0 removes the Dials theme at Max's request after the Nov 5 car test; 0.6.0 is the fix build below; 0.5.1 matched the M and Sport themes to BMW's own clusters). First car test done on 0.1.0 (Nov 2026): the shapes drew upside down (fixed), only part of the dash drew (the status row now says what's missing and why), and the map cut-out was in the wrong place (moved to where the map sits on an X3). Second car test (Nov 5 2026): the car drew only the first 8 layers (cluster-render's limit per connection; every theme now fits in 8: text is packed into a few image layers, the GT3 frame is one shader, the M setup bars are part of the backdrop), dark tints are plainly visible on the panel (every backdrop is now pure black; a measured grey swatch showed the shader and image paths draw identical colours), and the hood and BMW's own black gear box hid the top corners and x 1406..1597, y 342..419 (everything moved clear of both). Third test the same evening: GT3 drew complete. Still to be checked on a car:
 
-- **Whether the whole dash draws.** If it doesn't, the first row of the app's page says how many parts are drawn and why the rest aren't.
+- **Whether M and Sport draw complete** (GT3 does). If one doesn't, the first row of the app's page says how many parts are drawn and why the rest aren't.
 - **Whether BMW's warning lights still show over the dash.** The GT3 theme is solid black and covers whatever is under it. Test it parked: start the car with a seat belt off and look for the warning.
 - The drive mode switching, and the map cut-out's new position.
-- Whether Power % and Torque % in the Dials theme read sensibly. They come from the car's crankshaft torque signal and count from 500 Nm and 285 kW, an M40i's peak.
 - How the colours and edges look on the real screen.

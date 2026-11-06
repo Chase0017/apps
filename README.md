@@ -8,15 +8,13 @@ Apps for BMW iDrive 7 head units (MGU), installed through the community MGU Stor
 
 ### Cluster Themes
 
-Redraws the whole instrument cluster with your own themes, picked on the center screen. Four themes so far: a GT3 race dash (shift lights, a rev bar, boost, temperatures, and a grade on every upshift), an M-style cluster (glass rev blades, a G-meter, and the drive setup), a Sport view (blue speed and red rev brackets round the map), and Dials (a big round tach with boost, oil, power and torque gauges as round dials, bars or digital). [More](apps/cluster_themes/README.md)
+Redraws the whole instrument cluster with your own themes, picked on the center screen. Three themes so far: a GT3 race dash (shift lights, a rev bar, boost, temperatures, and a grade on every upshift), an M-style cluster (glass rev blades, a G-meter, and the drive setup), and a Sport view (blue speed and red rev brackets round the map). [More](apps/cluster_themes/README.md)
 
 <img src="docs/images/cluster-gt3-shift.png" width="640" alt="GT3 theme at the shift point">
 
 <img src="docs/images/cluster-m.png" width="640" alt="M theme">
 
 <img src="docs/images/cluster-sport.png" width="640" alt="Sport theme">
-
-<img src="docs/images/cluster-dials.png" width="640" alt="Dials theme">
 
 ### HUD Widgets
 

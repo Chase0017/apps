@@ -20,9 +20,9 @@
  * Effect shaders: cluster-render's v_uv has (0,0) at the TOP-left (PROTOCOL.md; confirmed on the car,
  * Nov 4 2026, when a box's header strip drew at the bottom). The bench draws the same way.
  *
- * Layer packing (Nov 5 2026): on the car only the first 8 layers of a layout ever drew (two photos: a
- * theme's shaders plus the first few text widgets in file order; whether that is a hard cap or the upload
- * budget is unknown). So the image widgets (text, scale, stripe, badge, gridlabels, icon, swatchimg) are
+ * Layer packing (Nov 5 2026): cluster-render draws at most 8 layers per client connection (its
+ * CompositorLimits.per_client; 32 across all clients; a 9th is refused with "too many layers"), which the car
+ * photos showed as a theme's shaders plus the first few text widgets. So the image widgets (text, scale, stripe, badge, gridlabels, icon, swatchimg) are
  * packed into SHEETS, one image layer per sheet, instead of one layer each. Widgets are grouped by
  * (class, z) and placed in file order: a widget goes into the first sheet of its group opened after every
  * earlier layer or widget its rect intersects (so an image widget never clobbers one it overlaps, and
@@ -77,10 +77,6 @@
  *             "ticks" [speed, rpm], "rpmMax" (speed follows SPEED_SCALE), "fuelSeg" / "oilSeg" [fullX, fullY,
  *             emptyX, emptyY], "strip" [left end x, y, h, slant], "topEnd" x; the middle is black, and the map
  *             window is cut see-through while "holeWhen" is on ("hole", "holeInset", "holeRadius" as fill)
- *   ddash     effect layer; the whole Dials theme (shaders.js ddash): "tach" [cx, cy, radius, band], "max" rpm,
- *             four side gauges "gauges" [{ signal, min, max }] drawn per the "styleFrom" choice setting
- *             (round | bar | digital): "dials" [[cx, cy, r] x4] (round dials, digital tiles), "bars"
- *             [[x0, y, x1, h] x4]; "low" [coolant, fuel] thin bars [x0, y, x1, h]; "head" [line y, x margin]
  *   segbar    effect layer; "max" segments, the first round(signal) lit (e.g. "setupLevel:engine"), "slant" px
  *   icon      image layer; a line icon from icons.js ("icon": gauge, shock, wheel, cog, stack, therm, oilcan, fuel)
  *   arc also takes "start" and "sweep" in degrees (clockwise from 12 o'clock; negative = anticlockwise)
@@ -147,7 +143,7 @@ const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header com
 // the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
 const IMAGE_TYPES = { text: true, scale: true, stripe: true, badge: true, gridlabels: true, icon: true, swatchimg: true };
 const STATUS_ASK_MS = 2000;      // after a rebuild: ask cluster-render for its own status text
-const LAYER_BUDGET = 8;          // layers per layout the car is believed to draw (two car photos, Nov 5 2026)
+const LAYER_BUDGET = 8;          // cluster-render's limit per client connection (CompositorLimits.per_client; confirmed on the car Nov 5 2026)
 const SHEET_AREA_FRAC = 4;       // the first sheet size limit: 1/4 of the target area (see the header)
 const TICK_MS = 50;              // 20 Hz: shift bar and gauges
 const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
@@ -689,7 +685,7 @@ class HudApp {
         this.log.info('layout "' + layout.name + '": ' + shown.length + ' widgets, ' + this._layerCount(n) + ' (' + effects + ' effects, ' +
             sheets + ' image sheets' + (own ? ', ' + own + ' own image layers' : '') + '), sheet limit ' +
             (maxPx === Infinity ? 'unlimited' : maxPx + ' px') + ', whole-sheet writes ' + bytes + ' bytes');
-        if (plan.length > LAYER_BUDGET) this.log.warn('layout "' + layout.name + '" needs ' + plan.length + ' layers, the car is believed to draw ' + LAYER_BUDGET);
+        if (plan.length > LAYER_BUDGET) this.log.warn('layout "' + layout.name + '" needs ' + plan.length + ' layers, cluster-render draws at most ' + LAYER_BUDGET + ' per connection');
         this.statusAskT = setTimeout(() => { this.statusAskT = null; this._guard('status request', () => this.client.status()); }, STATUS_ASK_MS);
     }
 
@@ -787,22 +783,7 @@ class HudApp {
         const t = this.theme;
         if (w.type === 'gridlabels') this._paintGridLabels(x);
         else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
-        else if (w.type === 'ddash') {
-            const G = w.gauges, n = (i) => (Array.isArray(w.dials[i]) ? w.dials[i] : [0, 0, 0]);
-            const b = (i) => (Array.isArray(w.bars[i]) ? w.bars[i] : [0, -99, 0, 1]);
-            const style = { round: 0, bar: 1, digital: 2 }[this.setting(w.styleFrom || 'gaugeStyle')] || 0;
-            const max = w.max || 8000;
-            this.client.uniform(ref, 'u_size', [w.w, w.h]);
-            this.client.uniform(ref, 'u_tach', w.tach);
-            this.client.uniform(ref, 'u_redFrom', [this.setting('redline') / max]);
-            this.client.uniform(ref, 'u_ticks', [max / 1000]);
-            this.client.uniform(ref, 'u_style', [style]);
-            [0, 1, 2, 3].forEach((i) => { this.client.uniform(ref, 'u_d' + i, n(i)); this.client.uniform(ref, 'u_b' + i, b(i)); });
-            this.client.uniform(ref, 'u_low0', (w.low && w.low[0]) || [0, -99, 0, 1]);
-            this.client.uniform(ref, 'u_low1', (w.low && w.low[1]) || [0, -99, 0, 1]);
-            this.client.uniform(ref, 'u_head', w.head || [-99, 0]);
-            x.gauges = G;
-        } else if (w.type === 'sdash') {
+        else if (w.type === 'sdash') {
             this.client.uniform(ref, 'u_size', [w.w, w.h]);
             this.client.uniform(ref, 'u_geo', w.geo);
             this.client.uniform(ref, 'u_k', w.k);
@@ -1051,20 +1032,6 @@ class HudApp {
             this.client.uniform(x.ref, 'u_rpm', [vals[1]]);
             this.client.uniform(x.ref, 'u_fuel', [vals[2]]);
             this.client.uniform(x.ref, 'u_oil', [vals[3]]);
-        } else if (w.type === 'ddash') {
-            const rpm = this._raw('rpm'), sp = this._shift();
-            const q = (v, n) => Math.round(Math.min(1, Math.max(0, v)) * n) / n;
-            const vals = x.gauges.map((G) => { const v = this._raw(G.signal); return isNum(v) ? q((v - G.min) / (G.max - G.min), 200) : 0; });
-            const fuel = this._raw('fuel'), cool = this._raw('coolant');
-            const lows = [isNum(cool) ? q((cool - 50) / 80, 200) : 0, isNum(fuel) ? q(fuel, 200) : 0];
-            const r = isNum(rpm) ? q(rpm / (w.max || 8000), 1000) : 0;
-            const key = r + '|' + sp.now + '|' + vals.join('|') + '|' + lows.join('|');
-            if (!force && key === x.last) return;
-            x.last = key;
-            this.client.uniform(x.ref, 'u_rpm', [r]);
-            this.client.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
-            this.client.uniform(x.ref, 'u_vals', vals);
-            this.client.uniform(x.ref, 'u_lowVals', lows);
         } else if (w.type === 'mdash') {
             const lat = this._raw('gLat'), lon = this._raw('gLong');
             const g = [isNum(lat) ? Math.round(lat * 100) / 100 : 0, isNum(lon) ? -Math.round(lon * 100) / 100 : 0];

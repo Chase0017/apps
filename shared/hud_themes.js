@@ -59,16 +59,6 @@ const THEMES = {
         ink: [12, 12, 14, 255], accent: [60, 215, 255, 255], well: [0, 0, 0, 255], faint: [96, 110, 135, 255],
         sblue: [120, 170, 245, 255], spink: [236, 140, 140, 255], sred: [235, 60, 70, 255],
     },
-    // Dials (layout dials.json): a round tach with side gauges, charcoal, white numbers, orange needles.
-    dials: {
-        name: 'Dials',
-        fg: [246, 246, 248, 255], dim: [160, 163, 170, 255], track: [70, 72, 78, 255], arc: [255, 107, 20, 255],
-        glow: 0, stripe: false,
-        bar: { low: [255, 107, 20], mid: [255, 107, 20], high: [255, 42, 42], midAt: 'shift' },
-        rev: { from: [255, 107, 20], to: [255, 107, 20] },
-        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [160, 163, 170, 255], head: [226, 228, 232, 255],
-        ink: [12, 12, 14, 255], accent: [255, 107, 20, 255], well: [0, 0, 0, 255], faint: [110, 113, 120, 255],
-    },
     // M cluster look (layout m.json, after design/photos/ref-m8-cluster.png): black, white numbers with a chrome
     // fade, M red needles and setup bars. Extra roles: redTrack, chrome (bottom of a chrome fade), grey / grey2
     // (the dim gear number's fade), faint.

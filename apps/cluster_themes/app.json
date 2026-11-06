@@ -1,8 +1,8 @@
 {
   "id": "cluster_themes",
   "title": "Cluster Themes",
-  "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport or Dials, with shift lights, boost, temps and shift scoring",
-  "version": "0.6.0",
+  "description": "Redraws the instrument cluster: GT3 race dash, M-style or Sport, with shift lights, boost, temps and shift scoring",
+  "version": "0.7.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -97,10 +97,6 @@
           "Sport"
         ],
         [
-          "dials",
-          "Dials"
-        ],
-        [
           "grid",
           "Calibration grid"
         ]
@@ -133,10 +129,6 @@
         [
           "sport",
           "Sport"
-        ],
-        [
-          "dials",
-          "Dials"
         ]
       ]
     },
@@ -161,10 +153,6 @@
         [
           "sport",
           "Sport"
-        ],
-        [
-          "dials",
-          "Dials"
         ]
       ]
     },
@@ -189,30 +177,6 @@
         [
           "sport",
           "Sport"
-        ],
-        [
-          "dials",
-          "Dials"
-        ]
-      ]
-    },
-    {
-      "key": "gaugeStyle",
-      "label": "Gauge style (Dials theme)",
-      "type": "choice",
-      "default": "round",
-      "options": [
-        [
-          "round",
-          "Round dials"
-        ],
-        [
-          "bar",
-          "Bars"
-        ],
-        [
-          "digital",
-          "Digital"
         ]
       ]
     },
@@ -326,7 +290,7 @@
       "lon": -80.8431
     },
     "utcOffsetMinutes": null,
-    "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. location and utcOffsetMinutes: as in HUD Widgets (the clock box). tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65). engine: the peak crank torque (Nm) and power (kW) the Dials theme's Power % and Torque % count from (an M40i: 500 Nm, 285 kW / 382 hp).",
+    "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. location and utcOffsetMinutes: as in HUD Widgets (the clock box). tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65). engine: the peak crank torque (Nm) and power (kW) the {{torquePct}} and {{powerPct}} tokens count from (an M40i: 500 Nm, 285 kW / 382 hp).",
     "dme": {
       "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT).",
       "ecu": 18,
