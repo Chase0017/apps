@@ -125,7 +125,8 @@
       "count": 18,
       "tail": 3,
       "round": true,
-      "off": 0.12
+      "off": 0.12,
+      "from": 3000
     },
     {
       "id": "shift_label",

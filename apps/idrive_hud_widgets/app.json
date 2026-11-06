@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "HUD Widgets",
   "description": "Speed, gear, shift bar, boost, oil and coolant on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",

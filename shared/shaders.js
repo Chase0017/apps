@@ -206,7 +206,7 @@ void main() {
 
 const LIGHTS = `// Shift lights for a cluster-render "effect" layer (GLSL ES 1.00), after cauliflowermossgrape's Redline
 // app (MIT): u_n rounded lights in a row, green -> yellow -> red from left to right. u_lit of them are
-// on (they fill over the last 2000 rpm before the shift point); u_strobe 1 = at the shift point: all red.
+// on (they fill from a start rpm up to the shift point); u_strobe 1 = at the shift point: all red.
 // The last u_tail lights are blue instead (the GT3 dash look; 0 = none). u_round 1 = round lights.
 //   u_size px, u_n count, u_lit count (0..u_n), u_tail count, u_strobe 0/1, u_green/u_yellow/u_red/u_blue rgb,
 //   u_off (alpha when off)

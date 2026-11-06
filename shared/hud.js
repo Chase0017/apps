@@ -52,7 +52,7 @@
  *   revbar    effect layer; shaders.js revbar, the G20-style slanted rev bar (Redline layout):
  *             "barH" bar height, "top" room for the marks above it, "slant" px, "over" rpm past the
  *             redline's thousand the scale runs to (1000: a 7000 redline gives 0..8)
- *   lights    effect layer; shaders.js lights, shift lights over the last 2000 rpm before the shift point
+ *   lights    effect layer; shaders.js lights, shift lights filling from "from" rpm (3000) up to the shift point
  *   badge     image layer; a rounded tag with text: "tone" verdict (the last shift's grade colour) or cold
  *   fill      effect layer; a solid colour (role "color", default "bg") over the whole widget, with an
  *             optional see-through "hole": [x, y, w, h] in target px, cut only while the bool setting
@@ -98,7 +98,8 @@
  * of the box (a top-to-bottom gradient, the chrome look). Text: "hotWhen": "now" turns it the shift red
  * at the shift point; "coldWhen": "cold" turns it blue while the cold guard lowers the shift point.
  * scale: "over" as revbar; "redFrom": true draws the numbers from the redline on in red.
- * lights: "count" (12), "tail" (0): the last "tail" lights are blue (the GT3 look); "round": true for dots;
+ * lights: "count" (12), "from" rpm (3000) where the first light comes on, "tail" (0): the last "tail" lights are blue
+ *   (the GT3 look); "round": true for dots;
  * "off" the alpha of an unlit light (0.14).
  * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
  * "nearColor" (fg) while scale label i is the one nearest the value (BMW lights up the label by the needle).
@@ -1077,7 +1078,9 @@ class HudApp {
             this.client.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
         } else if (w.type === 'lights') {
             const rpm = this._raw('rpm'), sp = this._shift(), n = w.count || 12;
-            const lit = isNum(rpm) ? Math.floor(Math.min(1, Math.max(0, (rpm - (sp.rpm - 2000)) / 2000)) * n) : 0;
+            // the lights fill from "from" rpm (3000) up to the shift point; a "from" at or past it means the last 500 rpm
+            const from = Math.min(isNum(w.from) ? w.from : 3000, sp.rpm - 500);
+            const lit = isNum(rpm) ? Math.floor(Math.min(1, Math.max(0, (rpm - from) / (sp.rpm - from))) * n) : 0;
             const key = lit + '|' + sp.now;
             if (!force && key === x.last) return;
             x.last = key;

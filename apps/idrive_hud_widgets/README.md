@@ -13,7 +13,7 @@ Your own widgets on the windshield HUD: speed, gear, a shift bar, boost, oil and
 - **Daily:** speed is the hero, with the gear, clock and oil.
 - **Sport:** a segmented shift bar, a big gear, speed, a boost gauge, oil and coolant.
 - **Redline:** a slanted G20-style rev bar with 12 shift lights, a big gear, and your shift point.
-  - **Shift lights:** they fill over the last 2000 rpm before the shift point. At the shift point, everything goes red and SHIFT shows.
+  - **Shift lights:** they come on from 3000 rpm and fill up to the shift point. At the shift point, everything goes red and SHIFT shows.
   - **Shift grades:** every upshift is graded on its peak rpm. EARLY means more than 250 under the shift point, LATE more than 200 over it, COLD REV the same while the cold guard is on, LIMITER within 60 rpm of the redline, and anything in between is SPOT ON.
   - **Cold-engine guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
 
@@ -53,7 +53,7 @@ The page's first row tells you what the HUD is doing, the drive mode it sees, an
 
 ## Status
 
-Version 0.4.0. First car test done on 0.3.1 (Nov 2026): it runs, rpm wobbled at idle (now smoothed), boost didn't show (now read from the engine computer as a backup), and the top and sides of the Redline layout fell outside the visible part of the HUD. The calibration grid was photographed on Nov 5 2026 and all three layouts were refitted to the visible window on the bench (deployed to the repo, not yet seen on the car). Still to be checked on a car:
+Version 0.5.1 (0.5.1: the shift lights come on from 3000 rpm; 0.5.0 refit every layout into the visible window). First car test done on 0.3.1 (Nov 2026): it runs, rpm wobbled at idle (now smoothed), boost didn't show (now read from the engine computer as a backup), and the top and sides of the Redline layout fell outside the visible part of the HUD. The calibration grid was photographed on Nov 5 2026 and all three layouts were refitted to the visible window on the bench (deployed to the repo, not yet seen on the car). Still to be checked on a car:
 
 - the refitted layouts on the glass: that nothing is cut off and nothing sits under BMW's speed and sign;
 - the drive mode switching and the engine computer boost;
