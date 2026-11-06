@@ -33,6 +33,23 @@ const gearOf = (x) => (typeof x === 'number' ? (x >= 3 && x <= 12 ? x - 2 : x ==
 // the gear field alone can't tell P from N (both N_OR_P)
 const STAGES = { P: 'P', R: 'R', N: 'N', D: 'D', 1: 'P', 2: 'R', 3: 'N', 4: 'D' };
 const stageOf = (x) => STAGES[x];
+/**
+ * The shifter programme (D / S / M) from the gearbox status, when the car puts one there: field names differ
+ * between cars, so every selector-like field is looked at, enum names or on/off flags (after
+ * cauliflowermossgrape's car_vitals, MIT). 'D' when nothing says S or M.
+ */
+function programOf(o) {
+    for (const k of Object.keys(o || {})) {
+        if (k === 'statusActualGearDrive' || /StageDrive/.test(k) || !/select|lever|position|program|mode|range|manual|sport|tip/i.test(k)) continue;
+        const v = o[k];
+        if (v === true || v === 1) { if (/manual|tip/i.test(k)) return 'M'; if (/sport/i.test(k)) return 'S'; continue; }
+        const x = String(v).toUpperCase();
+        if (/NOT|INACTIVE|INVALID|SIGNAL|UNKNOWN|OFF|NO_/.test(x)) continue;
+        if (/MANU|TIPP|^M$|^M_|_M$|^M\d/.test(x)) return 'M';
+        if (/SPORT|^S$|_S$|^DS$/.test(x)) return 'S';
+    }
+    return 'D';
+}
 // VehicleCondition.statusConditionVehicle (BMW's vehicle state): names or wire numbers -> number.
 // 5 = WOHNEN (living, no ignition), 7 = PRUEFEN_ANALYSE_DIAGNOSE (ignition on), 8 = drive
 // readiness starting, 10 = FAHREN (drive-ready / READY, also with the engine off on a hybrid),
@@ -118,6 +135,7 @@ class Car {
             add('de.bmw.infrastructure.VehicleInformation', 'statusGearboxDrive', (v) => {
                 const g = gearOf(v.statusActualGearDrive), s = stageOf(v.statusActualStageDrive);
                 if (s !== undefined) put('stage', s);
+                put('program', programOf(v));
                 if (g !== undefined) put('gear', g);
             });
             const selSeen = [];

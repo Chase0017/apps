@@ -47,9 +47,8 @@ CLUSTER_FONTS = [
     ('head', 'BarlowCondensed-SemiBold.ttf', 24, UPPER + DIGITS + '/°%>·.: -'),
     ('scale', 'BarlowCondensed-SemiBold.ttf', 30, DIGITS),
     # M: the wide squared numbers (Michroma, SIL OFL) and Barlow for the small print
-    ('m_num', 'Michroma-Regular.ttf', 40, DIGITS, 2),
-    ('m_stage', 'Michroma-Regular.ttf', 114, 'PRND-', 4),
-    ('m_gear', 'Michroma-Regular.ttf', 78, DIGITS, 3),
+    ('m_num', 'Michroma-Regular.ttf', 32, DIGITS, 2),
+    ('m_gear', 'Michroma-Regular.ttf', 100, 'PRNDSM-' + DIGITS, 3),
     ('m_speed', 'Michroma-Regular.ttf', 80, DIGITS + '-', 3),
     ('m_gl', 'Michroma-Regular.ttf', 26, DIGITS + '/.-', 1),
     ('m_val', 'Barlow-Medium.ttf', 54, DIGITS + ':+-.'),

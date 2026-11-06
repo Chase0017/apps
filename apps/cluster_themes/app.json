@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style or Sport, with shift lights, boost, temps and shift scoring",
-  "version": "0.7.5",
+  "version": "0.8.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -53,6 +53,14 @@
     },
     "de.bmw.infotainment.KombiIF": {
       "statusRangeTankStatus": "rs"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle": {
+      "statusNewCurrentUnitsStatusExt": "rs",
+      "_optional": "the car's pressure and temperature units, for the tyre block"
+    },
+    "de.bmw.infotainment.misc.MDrive": {
+      "dataDisplayGearbox": "rs",
+      "_optional": "S or M next to the gear"
     },
     "de.bmw.infotainment.vehicle.TPMS": {"statusTyrePressure": "rs", "statusTyreTemperature": "rs", "_optional": "tyre pressures and temperatures in the M theme"},
     "de.bmw.infrastructure.EnvironmentalInformation": {

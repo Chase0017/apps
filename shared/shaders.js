@@ -406,7 +406,7 @@ const MDASH = `// The M theme's whole backdrop in one cluster-render "effect" la
 // (design/photos/ref-m8-cluster.png): black, with a charcoal card either side whose inner edge follows the rev blade,
 // whose top outer corner is cut on the hood's slant and whose bottom outer corner is bitten by the side gauge; the
 // centre line with its bright end caps, the tyre block's car glyph and dividers (the eight values are text widgets),
-// the two side gauges (arc, ticks, colour zones, red needle), the tricolour mark and the four setup level bars
+// the two side dials (a 165-degree arc, ticks, colour zones, red needle), the tricolour mark and the four setup level bars
 // (slanted segments, the one at the level red, the rest grey, as the M8 draws them). Positions in target px from
 // the layout (hud.js). v_uv (0,0) is the top-left.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -467,14 +467,17 @@ float cardD(vec2 p, vec4 g) {
     d = max(d, (g.z + 10.0) - length(p - g.xy));
     return d;
 }
-// the card: charcoal, a shade lighter at the top, with a soft lighter rim
+// the card: near-black (the panel brightens every dark tint, so the fill stays tiny), a shade lighter at the top,
+// with a faint lighter rim
 vec4 card(vec2 p, vec4 g, vec4 c) {
     float d = cardD(p, g);
     if (d > 2.0) return c;
     float fy = clamp((p.y - u_card.y) / max(u_card.w, 1.0), 0.0, 1.0);
     float grey = u_cardFill * mix(1.25, 0.8, fy);
     c = over(vec4(vec3(grey, grey, grey * 1.08), cov(d)), c);
-    c = over(vec4(0.5, 0.53, 0.58, 0.7 * cov(abs(d + 1.2) - 0.9)), c);
+    // the rim stops where the dial bites the card (the dial's own arc is the edge there)
+    float bite = (g.z + 10.0) - length(p - g.xy);
+    c = over(vec4(0.5, 0.53, 0.58, 0.4 * cov(abs(d + 1.2) - 0.9) * (1.0 - cov(-bite - 2.0))), c);
     return c;
 }
 // the tyre block: the car seen from above (outline body, four wheels) between the four readouts,
@@ -529,7 +532,7 @@ vec4 gauge(vec2 p, vec4 g, float a0, float a1, float zones, vec4 c) {
     }
     float an = mix(a0, a1, clamp(g.w, 0.0, 1.0));
     vec2 dir = vec2(sin(an), -cos(an));
-    float nd = segD(p, g.xy + dir * (g.z - 3.0), g.xy + dir * (g.z - 50.0));
+    float nd = segD(p, g.xy + dir * (g.z - 3.0), g.xy + dir * (g.z - 34.0));
     c = over(vec4(u_red, cov(nd - 2.4)), c);
     c = over(vec4(1.0, 0.6, 0.6, 0.7 * cov(nd - 0.6)), c);
     return c;
@@ -554,8 +557,9 @@ void main() {
 
     c = tyreBlock(p, c);
 
-    c = gauge(p, u_gaugeL, radians(196.0), radians(300.0), 0.0, c);
-    c = gauge(p, u_gaugeR, radians(164.0), radians(60.0), 1.0, c);
+    // the round side dials as the M8 draws them: a 165-degree arc bulging outward, 0 at the bottom, full at the top
+    c = gauge(p, u_gaugeL, radians(160.0), radians(325.0), 0.0, c);
+    c = gauge(p, u_gaugeR, radians(200.0), radians(35.0), 1.0, c);
 
     c = segbar(p, u_seg0, vec2(u_segLit.x, u_segMax.x), c);
     c = segbar(p, u_seg1, vec2(u_segLit.y, u_segMax.y), c);

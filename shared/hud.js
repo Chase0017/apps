@@ -66,7 +66,7 @@
  *             outer corner under the hood), "cardFill" 0..1 (grey level, 0 = black: outline only), "blade" { xm, ym,
  *             kTop, kBot, round } (the left rev blade's outer edge, as mtach; the card ends "bladeGap" px before it),
  *             "line" [x0, y, x1, cap], "tyres" [cx, cy, scale] (the tyre block's car glyph and dividers; the eight
- *             readouts are text widgets with {{tyreP:FL}} .. {{tyreT:RR}} and {{u:pressure}}), "gaugeL" / "gaugeR" { cx, cy, r,
+ *             readouts are text widgets with {{tyreP:FL}} .. {{tyreT:RR}} and {{u:pressure}}), "gaugeL" / "gaugeR" { cx, cy, r, (a round dial: a 165-degree arc bulging outward, 0 at the bottom; the card is bitten round it)
  *             signal, min, max }, "mark" [x, y, scale], "segbars" [{ x, y, w, h, max, signal } x up to 4] (the
  *             setup level bars, "segSlant" px; the segment at round(signal) is red). Positions in target px.
  *   mtach     effect layer; the M rev bar: "side" left|right, "max" rpm, and in target px for the LEFT bar
@@ -129,9 +129,9 @@
  * read-only UDS, absolute pressure minus outside air pressure, as cauliflowermossgrape's car_vitals does.
  *
  * Text tokens: {{speed}} {{u:speed}} {{oil}} {{coolant}} {{boost}} {{u:boost}} {{rpm}}
- * {{gear}} (P / R / N, D3, or just 3 when the selector position is unknown), {{gearnum}} (3, or P / R / N)
+ * {{gear}} (P / R / N, D3 / S3 / M3 by the shifter programme, or just 3 when the selector position is unknown), {{gearnum}} (3, or P / R / N)
  * {{spd:<i>}} (speed scale label i of SPEED_SCALE: 0..200 mph, 0..320 km/h) {{range}} {{u:distLc}} (mi, km) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{torquePct}} {{powerPct}} (% of config.engine's peak) {{boostHi}} {{boostMid}}
- * (gauge labels for 1.4 / 0.7 bar in the display unit) {{stage}} (P R N D) {{gearInD}} (gear number while in D) {{mode}} (COMFORT, SPORT, SPORT PLUS, ECO PRO)
+ * (gauge labels for 1.4 / 0.7 bar in the display unit) {{stage}} (P R N, D / S / M by the shifter programme) {{gearInD}} (gear number while in D) {{mode}} (COMFORT, SPORT, SPORT PLUS, SPORT INDIVIDUAL, ECO PRO, ...)
  * {{temp:<deg C>}} (that temperature in the display unit, °F rounded to 10, for gauge labels) {{setup:engine|chassis|steering|gearbox}} (what that part is set to in the drive mode now)
  * {{time}} {{ampm}} {{u:temp}} (°F / °C) {{gLat}} {{gLong}} (g, 2 decimals) {{signal:<car.data() key>}} (raw, 1 decimal).
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
@@ -173,6 +173,12 @@ const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for 
 const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 const TYRE_CORNERS = ['FL', 'FR', 'RL', 'RR'];
+// the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
+const PRESS_UNITS = { 1: 'BAR', 2: 'KPA', 3: 'PSI' }, TEMP_UNITS = { 1: 'C', 2: 'F' };
+const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
+const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v : null);
+// MDrive dataDisplayGearbox.displayProgramGearbox: the programme the cluster shows next to the gear (car_vitals, MIT)
+const PROGRAMS = { S_MINUS_PROGRAMM: 'S', M_MINUS_PROGRAMM: 'M', 1: 'S', 2: 'M' };
 const MODE_NAME = { comfort: 'Comfort', sport: 'Sport', eco: 'Eco Pro' };
 const FRESH_MS = 3000;
 // BMW's speed scale: even steps to 120 mph (180 km/h), then wider ones to 200 mph (320 km/h)
@@ -189,11 +195,13 @@ function scaleFrac(v, marks) {
  * numbers (cauliflowermossgrape's live_data signals.js, MIT): 1 Sport, 2 Sport+, 3 Sport individual,
  * 4 Comfort, 5 Comfort+, 6 Comfort individual, 7 Eco Pro, 8 Eco Pro+, 9 Eco Pro individual, 10 Adaptive.
  */
-/** Sport+ / Comfort+ / Eco Pro+ (wire 2, 5, 8, or a name with PLUS or EXPERT in it). */
-function drivePlusOf(raw) {
+/** The mode's variant: 'plus' (Sport+ / Comfort+ / Eco Pro+: wire 2, 5, 8, or PLUS / EXPERT in the name), 'individual'
+ *  (wire 3, 6, 9, or INDIVID in the name), else null. */
+function driveVariantOf(raw) {
     const v = typeof raw === 'string' && /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : raw;
-    if (typeof v === 'number') return v === 2 || v === 5 || v === 8;
-    return typeof v === 'string' && /PLUS|EXPERT/i.test(v);
+    if (typeof v === 'number') return v === 2 || v === 5 || v === 8 ? 'plus' : v === 3 || v === 6 || v === 9 ? 'individual' : null;
+    if (typeof v !== 'string') return null;
+    return /PLUS|EXPERT/i.test(v) ? 'plus' : /INDIVID/i.test(v) ? 'individual' : null;
 }
 
 /** The M theme's setup rows: what each part is set to in a drive mode (they follow the mode buttons). */
@@ -202,8 +210,10 @@ const SETUP = {
     comfort:   { engine: 'COMFORT', chassis: 'COMFORT', steering: 'COMFORT', gearbox: 'COMFORT' },
     sport:     { engine: 'SPORT', chassis: 'SPORT', steering: 'SPORT', gearbox: 'SPORT' },
     sportplus: { engine: 'SPORT PLUS', chassis: 'SPORT', steering: 'SPORT', gearbox: 'SPORT PLUS' },
+    // the car reports only that an Individual setup is on, not what each part is set to (no signal found yet)
+    individual: { engine: 'INDIVIDUAL', chassis: 'INDIVIDUAL', steering: 'INDIVIDUAL', gearbox: 'INDIVIDUAL' },
 };
-const SETUP_LEVEL = { EFFICIENT: 1, COMFORT: 1, SPORT: 2, 'SPORT PLUS': 3 };
+const SETUP_LEVEL = { EFFICIENT: 1, COMFORT: 1, SPORT: 2, 'SPORT PLUS': 3, INDIVIDUAL: 0 };
 
 function driveModeOf(raw) {
     let v = raw;
@@ -276,7 +286,9 @@ class HudApp {
         this.boostDme = null; this.boostDmeAt = 0;    // bar, from the engine unit (fallback)
         this.needsBoost = false;         // a shown widget uses boost (the engine unit is only asked then)
         this.driveMode = null;           // 'comfort' | 'sport' | 'eco', once the car has said
-        this.drivePlus = false;          // Sport+ (or Comfort+ / Eco Pro+)
+        this.driveVariant = null;        // 'plus' (Sport+ / Comfort+ / Eco Pro+), 'individual', or null
+        this.carUnits = { press: null, temp: null, psiSeen: false };   // the car's display units, for the TPMS values
+        this.program = null;             // 'S' / 'M' from the MDrive gearbox display, else null (D)
         this.fuelL = null; this.rangeKm = null; this.ambient = null;   // KombiIF tank / range, outside temperature
         this.tyres = { p: {}, t: {} };                                  // TPMS pressure (bar) and temperature (C) per corner FL FR RL RR
         this.activeName = null;          // the layout shown now ('off' = nothing)
@@ -316,18 +328,26 @@ class HudApp {
                     this.rangeKm = isNum(r) && r >= 0 && r < 4095 ? r : null;
                 },
             },
-            // tyre pressure (0.1 bar, 65532 and up = none) and temperature (raw - 40 C, 65535 = none) per corner.
+            // tyre pressure and temperature per corner, in the car's own display units (_tyreBar / _tyreC).
             // The car never notifies these (BMW's own x_call only ever reads them), so they are polled.
             'de.bmw.infotainment.vehicle.TPMS': {
                 $pollMs: 10000,
-                statusTyrePressure: (v) => TYRE_CORNERS.forEach((k) => {
-                    const r = v && v['actualValuePressureTyre' + k + 'H'];
-                    this.tyres.p[k] = isNum(r) && r >= 0 && r < 65532 ? r / 10 : null;
-                }),
-                statusTyreTemperature: (v) => TYRE_CORNERS.forEach((k) => {
-                    const r = v && v['actualValueTemperatureTyre' + k + 'H'];
-                    this.tyres.t[k] = isNum(r) && r >= 0 && r < 65535 ? r - 40 : null;
-                }),
+                statusTyrePressure: (v) => TYRE_CORNERS.forEach((k) => { this.tyres.p[k] = this._tyreBar(v && v['actualValuePressureTyre' + k + 'H']); }),
+                statusTyreTemperature: (v) => TYRE_CORNERS.forEach((k) => { this.tyres.t[k] = this._tyreC(v && v['actualValueTemperatureTyre' + k + 'H']); }),
+            },
+            // the car's display units: the TPMS reports pressure as 0.1 x raw in the car's pressure unit and temperature
+            // as the car's degrees + 40 (car_vitals, MIT; a car set to psi / F showed 32 psi as 464 psi until this was read)
+            'de.bmw.infotainment.vehicle.Vehicle': {
+                statusNewCurrentUnitsStatusExt: (v) => {
+                    const press = unitName(PRESS_UNITS, v && v.unitOfMeasurementAirPressure), temp = unitName(TEMP_UNITS, v && v.unitOfMeasurementTemperature);
+                    if (press === this.carUnits.press && temp === this.carUnits.temp) return;
+                    this.carUnits.press = press; this.carUnits.temp = temp;
+                    this.log.info('car units: pressure ' + (press || '?') + ', temperature ' + (temp || '?'));
+                },
+            },
+            // S / M next to the gear: the gearbox status carries no programme on some cars, the M drive display does
+            'de.bmw.infotainment.misc.MDrive': {
+                dataDisplayGearbox: (v) => { this.program = PROGRAMS[v && v.displayProgramGearbox] || null; },
             },
             // outside temperature: raw * 0.5 - 40 deg C, 255 = none (car_vitals, MIT)
             'de.bmw.infrastructure.EnvironmentalInformation': {
@@ -351,11 +371,11 @@ class HudApp {
                     this.sportAt = Date.now();
                 },
                 statusFESVehicleDynamicSwitchHMI: (v) => {
-                    const m = driveModeOf(v && v.actualValueModeDrivingExperience);
-                    if (m) this.drivePlus = drivePlusOf(v.actualValueModeDrivingExperience);
-                    if (!m || m === this.driveMode) return;
-                    this.log.info('drive mode ' + MODE_NAME[m] + ' (' + (v && v.actualValueModeDrivingExperience) + ')');
-                    this.driveMode = m;
+                    const raw = v && v.actualValueModeDrivingExperience;
+                    const m = driveModeOf(raw), variant = m ? driveVariantOf(raw) : null;
+                    if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
+                    this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
+                    this.driveMode = m; this.driveVariant = variant;
                     if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
                 },
             },
@@ -669,6 +689,31 @@ class HudApp {
     }
 
     /** A tyre's pressure ('p', bar) or temperature ('t', C) at corner FL FR RL RR; steady made-up values on the demo drive. */
+    /** A TPMS pressure raw (0.1 x the car's unit, 65532 and up = none) in bar: by the car's unit when known, else by the
+     *  unit whose plausible tyre pressures the value falls in (bar 0.5-6, psi 7-60, kPa 60-600; psi also means F). */
+    _tyreBar(raw) {
+        if (!isNum(raw) || raw < 0 || raw >= 65532) return null;
+        const v = raw / 10, k = PRESS_TO_BAR[this.carUnits.press];
+        if (k) return v * k;
+        if (v >= 0.5 && v <= 6) return v;
+        if (v >= 7 && v < 60) { this.carUnits.psiSeen = true; return v / 14.5038; }
+        if (v >= 60 && v <= 600) return v / 100;
+        return v;
+    }
+
+    /** A TPMS temperature raw (the car's degrees + 40, 65535 = none) in C (the car sends F when set to F). */
+    _tyreC(raw) {
+        if (!isNum(raw) || raw < 0 || raw >= 65535) return null;
+        const v = raw - 40, f = this.carUnits.temp ? this.carUnits.temp === 'F' : this.carUnits.psiSeen;
+        return f ? (v - 32) * 5 / 9 : v;
+    }
+
+    /** The shifter programme letter next to the gear: S or M from the M drive display, else from the gearbox status, else D. */
+    _program(d) {
+        const p = this.program || d.program;
+        return p === 'S' || p === 'M' ? p : 'D';
+    }
+
     _tyre(kind, corner) {
         const v = this.tyres[kind][corner];
         if (isNum(v)) return v;
@@ -724,7 +769,8 @@ class HudApp {
     /** The setup rows for the drive mode now, or null before the car has said. */
     _setup() {
         if (!this.driveMode) return null;
-        return SETUP[this.driveMode === 'sport' && this.drivePlus ? 'sportplus' : this.driveMode];
+        if (this.driveVariant === 'individual') return SETUP.individual;
+        return SETUP[this.driveMode === 'sport' && this.driveVariant === 'plus' ? 'sportplus' : this.driveMode];
     }
 
     /** {{token}} -> display text. */
@@ -773,9 +819,9 @@ class HudApp {
                 if (d.stage === 'P' || d.stage === 'R' || d.stage === 'N') return d.stage;
                 return isNum(d.gear) && d.gear > 0 ? String(d.gear) : (d.gear === 0 ? 'N' : '-');
             }
-            case 'stage': {          // the selector letter alone: P R N D
+            case 'stage': {          // the selector letter alone: P R N, or D / S / M by the shifter programme
                 const d = this.car.data();
-                return d.stage || (isNum(d.gear) && d.gear > 0 ? 'D' : '-');
+                return d.stage === 'D' || (!d.stage && isNum(d.gear) && d.gear > 0) ? this._program(d) : (d.stage || '-');
             }
             case 'gearInD': {        // the gear number while driving, else nothing (the M "2D")
                 const d = this.car.data();
@@ -783,13 +829,14 @@ class HudApp {
             }
             case 'mode': {
                 if (!this.driveMode) return '';
-                return this.driveMode === 'sport' ? (this.drivePlus ? 'SPORT PLUS' : 'SPORT') : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
+                const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
+                return base + (this.driveVariant === 'plus' ? ' PLUS' : this.driveVariant === 'individual' ? ' INDIVIDUAL' : '');
             }
             case 'gear': {
                 const d = this.car.data();
                 if (d.stage === 'P' || d.stage === 'R' || d.stage === 'N') return d.stage;
                 const g = isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
-                return d.stage === 'D' ? 'D' + g : g;
+                return d.stage === 'D' ? this._program(d) + g : g;
             }
             case 'time': case 'ampm': {
                 const now = this._now();
