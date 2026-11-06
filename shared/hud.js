@@ -61,12 +61,14 @@
  *             Opaque fill hides BMW's gauges under it.
  *   box       effect layer; a framed box: "fill" and "line" roles, "border" px, "radius" px, and a
  *             header strip "head" px tall in role "headColor" (its label is a text widget on top)
- *   mdash     effect layer; the M theme's whole backdrop (shaders.js mdash): "card" [x, y, w, h] (the left card;
- *             the right one is its mirror), "cardCut" [x0, y0, x1, y1] (the chamfer line that cuts the card's top
- *             outer corner under the hood), "cardFill" 0..1 (grey level, 0 = black: outline only), "blade" { xm, ym,
+ *   mdash     effect layer; the M theme's whole backdrop (shaders.js mdash): "card" [x, yBottom, rBottom, rTop] (the
+ *             left card, traced off the M8 photo: outer edge x, bottom y, the big round at the bottom outer corner, the
+ *             rounding where the top curve meets the outer edge; the right card is its mirror), "cardTop" [a, b, c] (the
+ *             card's top edge, y = a x^2 + b x + c), "cardCutR" [cx, cy, r] (the right card's lower outer corner cut on
+ *             that circle, in the mirrored left frame), "cardFill" 0..1 (grey level, 0 = black: outline only), "blade" { xm, ym,
  *             kTop, kBot, round } (the left rev blade's outer edge, as mtach; the card ends "bladeGap" px before it),
  *             "line" [x0, y, x1, cap], "tyres" [cx, cy, scale] (the tyre block's car glyph and dividers; the eight
- *             readouts are text widgets with {{tyreP:FL}} .. {{tyreT:RR}} and {{u:pressure}}), "gaugeL" / "gaugeR" { cx, cy, r, (a round dial: a 165-degree arc bulging outward, 0 at the bottom; the card is bitten round it)
+ *             readouts are text widgets with {{tyreP:FL}} .. {{tyreT:RR}} and {{u:pressure}}), "gaugeL" / "gaugeR" { cx, cy, r, (a dial as the M8's: a thin glass bracket whose outer edge is the circle cx, cy, r, lit from the bottom up to the value, drawn over the card; the right one is the left one's mirror)
  *             signal, min, max }, "mark" [x, y, scale], "segbars" [{ x, y, w, h, max, signal } x up to 4] (the
  *             setup level bars, "segSlant" px; the segment at round(signal) is red). Positions in target px.
  *   mtach     effect layer; the M rev bar: "side" left|right, "max" rpm, and in target px for the LEFT bar
@@ -1078,8 +1080,8 @@ class HudApp {
             const bars = Array.isArray(w.segbars) ? w.segbars.slice(0, 4) : [];
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_card', w.card || [0, 0, 0, 0]);
-            // no chamfer / no blade: a line far off to the left, so nothing is cut
-            c.uniform(ref, 'u_cardCut', w.cardCut || [-99999, 0, -99999, -1]);
+            c.uniform(ref, 'u_cardTop', w.cardTop || [0, 0, -99999]);
+            c.uniform(ref, 'u_cardCutR', w.cardCutR || [0, 0, 0]);
             c.uniform(ref, 'u_cardFill', [isNum(w.cardFill) ? w.cardFill : 0]);
             c.uniform(ref, 'u_blade', [isNum(b.xm) ? b.xm - w.x : 99999, (b.ym || 0) - w.y, b.kTop || 0, b.kBot || 0]);
             c.uniform(ref, 'u_bladeB', [b.round || 40, isNum(w.bladeGap) ? w.bladeGap : 14]);

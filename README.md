@@ -43,7 +43,7 @@ The Store builds each app on the car from this repo. No BMW code is in it. Both 
 
 - [cauliflowermossgrape/idrive7-apps](https://github.com/cauliflowermossgrape/idrive7-apps): the MGU App Kit (MIT) these apps are built on, and the Redline app the shift scoring comes from.
 - [robertnisipeanu/idrive-apps](https://github.com/robertnisipeanu/idrive-apps): cluster-render, which draws on the HUD and the cluster.
-- Barlow and Michroma typefaces (SIL Open Font License).
+- Barlow, Michroma and Orbitron typefaces (SIL Open Font License).
 
 ## Licence
 

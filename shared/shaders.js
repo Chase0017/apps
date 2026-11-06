@@ -402,13 +402,13 @@ void main() {
 }
 `;
 
-const MDASH = `// The M theme's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00), after a current M8's cluster
-// (design/photos/ref-m8-cluster.png): black, with a charcoal card either side whose inner edge follows the rev blade,
-// whose top outer corner is cut on the hood's slant and whose bottom outer corner is bitten by the side gauge; the
-// centre line with its bright end caps, the tyre block's car glyph and dividers (the eight values are text widgets),
-// the two side dials (a 165-degree arc, ticks, colour zones, red needle), the tricolour mark and the four setup level bars
-// (slanted segments, the one at the level red, the rest grey, as the M8 draws them). Positions in target px from
-// the layout (hud.js). v_uv (0,0) is the top-left.
+const MDASH = `// The M theme's whole backdrop in one cluster-render "effect" layer (GLSL ES 1.00), traced off a photo of a current
+// M8's cluster (design/photos/ref-m8-cluster.png, warped to 1920x720): black, with a near-black card either side whose
+// inner edge follows the rev blade, whose top edge is the photo's curve and whose bottom outer corner is a big round;
+// the centre line with its bright end caps, the tyre block's car glyph and dividers (the eight values are text widgets),
+// the two side dials over the cards (the photo's thin glass bracket, hatched bezel, red streaks), the tricolour mark
+// and the four setup level bars (slanted segments, the one at the level red, the rest grey, as the M8 draws them).
+// Positions in target px from the layout (hud.js). v_uv (0,0) is the top-left.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -416,8 +416,10 @@ precision mediump float;
 #endif
 varying vec2 v_uv;
 uniform vec2 u_size;
-uniform vec4 u_card;      // left card x, y, w, h (the right one is its mirror)
-uniform vec4 u_cardCut;   // the left card's top-left chamfer: the line from (x0, y0) to (x1, y1), the corner above it cut
+uniform vec4 u_card;      // left card: outer edge x, bottom y, bottom-outer corner radius, top-outer corner rounding (the right card is its mirror)
+uniform vec3 u_cardCutR;  // the right card's lower outer corner, cut back on a circle (mirrored frame: cx, cy, r; r 0 = none): the M8's
+                          // right card is cut further than its left one, so the oil dial's numbers sit on black
+uniform vec3 u_cardTop;   // the left card's top edge, y = a x^2 + b x + c (traced off the M8 photo)
 uniform float u_cardFill; // the card's grey level 0..1 (0 = black, outline only)
 uniform vec4 u_blade;     // the left rev blade's outer edge: x at the bend, y of the bend, x per y px above / below it
 uniform vec2 u_bladeB;    // the bend's roundness px, the card's gap from the blade px
@@ -457,27 +459,36 @@ float bladeX(float y) {
     float k = dy < 0.0 ? u_blade.z : u_blade.w;
     return u_blade.x + k * (sqrt(dy * dy + u_bladeB.x * u_bladeB.x) - u_bladeB.x);
 }
-// the left card: a rounded box, its top-left corner cut on the chamfer line, its right side cut along the blade,
-// its bottom-left corner bitten by the gauge; < 0 inside
-float cardD(vec2 p, vec4 g) {
-    float d = sdRoundBox(p, u_card, 30.0);
-    vec2 a = u_cardCut.xy, e = u_cardCut.zw - u_cardCut.xy;
-    d = max(d, -(e.x * (p.y - a.y) - e.y * (p.x - a.x)) / length(e));
+// smooth intersection of two signed distances (rounds the corner where they meet)
+float smax(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (a - b) / k, 0.0, 1.0); return mix(b, a, h) + k * h * (1.0 - h); }
+// the left card as the M8 draws it: a wedge whose top edge is the traced curve, outer edge at u_card.x, bottom at
+// u_card.y, inner side along the blade; the bottom-outer corner is a big round (the fuel dial sits over it); < 0 inside
+float cardD(vec2 p, float right) {
+    float fx = u_cardTop.x * p.x * p.x + u_cardTop.y * p.x + u_cardTop.z;
+    float slope = 2.0 * u_cardTop.x * p.x + u_cardTop.y;
+    float dTop = (fx - p.y) / sqrt(1.0 + slope * slope);
+    float dLeft = u_card.x - p.x;
+    float dBot = p.y - u_card.y;
+    float d = smax(dTop, dLeft, u_card.w);
+    d = max(d, dBot);
+    vec2 cc = vec2(u_card.x + u_card.z, u_card.y - u_card.z);
+    if (p.x < cc.x && p.y > cc.y) d = max(d, length(p - cc) - u_card.z);
     d = max(d, p.x - (bladeX(p.y) - u_bladeB.y));
-    d = max(d, (g.z + 10.0) - length(p - g.xy));
+    if (right > 0.5 && u_cardCutR.z > 0.0) d = max(d, length(p - u_cardCutR.xy) - u_cardCutR.z);
     return d;
 }
-// the card: near-black (the panel brightens every dark tint, so the fill stays tiny), a shade lighter at the top,
-// with a faint lighter rim
-vec4 card(vec2 p, vec4 g, vec4 c) {
-    float d = cardD(p, g);
+// the card: near-black (the panel brightens every dark tint, so the fill stays tiny), a shade lighter and bluer at
+// the top, with a faint lighter rim
+vec4 card(vec2 p, vec2 dial, float right, vec4 c) {
+    float d = cardD(p, right);
     if (d > 2.0) return c;
-    float fy = clamp((p.y - u_card.y) / max(u_card.w, 1.0), 0.0, 1.0);
-    float grey = u_cardFill * mix(1.25, 0.8, fy);
-    c = over(vec4(vec3(grey, grey, grey * 1.08), cov(d)), c);
-    // the rim stops where the dial bites the card (the dial's own arc is the edge there)
-    float bite = (g.z + 10.0) - length(p - g.xy);
-    c = over(vec4(0.5, 0.53, 0.58, 0.4 * cov(abs(d + 1.2) - 0.9) * (1.0 - cov(-bite - 2.0))), c);
+    float top = u_cardTop.z - u_cardTop.y * u_cardTop.y / (4.0 * u_cardTop.x);   // the curve's lowest y (its vertex)
+    float fy = clamp((p.y - top) / max(u_card.y - top, 1.0), 0.0, 1.0);
+    float grey = u_cardFill * mix(1.3, 0.75, fy);
+    c = over(vec4(vec3(grey, grey, grey * 1.18), cov(d)), c);
+    // the rim stops inside the dial's area (as on the M8, where the dial covers the card's edge), so no label sits on it
+    float hide = 1.0 - smoothstep(118.0, 130.0, length(p - dial));
+    c = over(vec4(0.5, 0.53, 0.58, 0.3 * cov(abs(d + 1.2) - 0.9) * (1.0 - hide)), c);
     return c;
 }
 // the tyre block: the car seen from above (outline body, four wheels) between the four readouts,
@@ -511,30 +522,60 @@ vec4 segbar(vec2 p, vec4 b, vec2 s, vec4 c) {
     return over(vec4(col, (on ? 1.0 : 0.8) * a), c);
 }
 
-// a side gauge: arc from a0 (value 0) to a1 (value 1), clockwise angles from 12 o'clock
-vec4 gauge(vec2 p, vec4 g, float a0, float a1, float zones, vec4 c) {
-    vec2 d = p - g.xy;
-    float r = length(d);
-    if (r > g.z + 8.0 || r < g.z - 60.0) return c;
-    float a = angOf(d);
-    float t = (a - a0) / (a1 - a0);
-    if (t >= -0.01 && t <= 1.01) {
-        c = over(vec4(1.0, 1.0, 1.0, (r < g.z - 1.0 && r > g.z - 18.0) ? 0.06 : 0.0), c);   // glass band
-        vec3 col = vec3(0.86, 0.88, 0.92);
-        float s = cov(abs(r - g.z) - 1.1);
-        if (zones > 0.5 && t > 0.86) { col = u_red; s = cov(abs(r - g.z + 1.5) - 2.6); }
-        if (zones > 0.5 && t < 0.13) { col = vec3(0.16, 0.42, 0.95); s = cov(abs(r - g.z + 1.5) - 2.6); }
-        c = over(vec4(col, s), c);
-        float k = floor(t * 8.0 + 0.5) / 8.0;
-        float along = abs(a - mix(a0, a1, k)) * r;
-        float len = (k < 0.01 || k > 0.99 || abs(k - 0.5) < 0.01) ? 15.0 : 8.0;
-        if (k >= 0.0 && k <= 1.0 && r < g.z - 2.0 && r > g.z - 2.0 - len) c = over(vec4(0.82, 0.84, 0.88, 0.85 * cov(along - 0.9)), c);
+// a side dial as the M8 draws it, traced off the photo: not a round gauge but a tall thin bracket cut from big
+// circles. The glass lies inside a circle of radius 120 round the anchor g.xy and outside one of radius 180 round
+// (57, -68), so it is ~20 px wide at the top and widens to ~50 at the bottom; a hatched chrome bezel (an arc between
+// radii 113 and 124 round (-13, 11)) runs down its outer side. The level reads by height: the glass is lit from the
+// bottom up to the level, dark above it (a thin bright line along its outer edge), and a horizontal red streak runs in
+// from the outer edge at the level. Fixed streaks mark the end zones (zones 0, fuel: the reserve at the bottom; 1, oil:
+// blue at the cold bottom end, red at the hot top end). Units are the photo's px with g.z = 120 there.
+// Drawn in the left frame; the right dial comes through the mirror.
+vec4 streak(vec2 q, float py, float len, vec3 col, float k, vec4 c) {
+    float xo = -sqrt(max(14400.0 - py * py, 0.0)) - 3.0;                         // the glass's outer edge at that height
+    float dx = q.x - (xo + len * 0.5), dy = abs(q.y - py);
+    float taper = 1.0 - clamp(abs(dx) / (len * 0.5), 0.0, 1.0);
+    float sd = (max(abs(dx) - len * 0.5, dy - (1.2 + 2.3 * taper))) * k;
+    c = over(vec4(col, 0.3 * exp(-max(sd, 0.0) / (5.0 * k))), c);
+    return over(vec4(mix(col, vec3(1.0, 0.55, 0.5), 0.25 * taper), cov(sd)), c);
+}
+vec4 gauge(vec2 p, vec4 g, float zones, vec4 c) {
+    float k = g.z / 120.0;
+    vec2 q = (p - g.xy) / k;
+    if (q.x < -140.0 || q.x > 70.0 || q.y < -22.0 || q.y > 140.0) return c;
+    float v = clamp(g.w, 0.0, 1.0);
+    // the bezel: double-edged and hatched, from its top end down round to its bottom end
+    vec2 qb = q - vec2(-13.0, 11.0);
+    float rb = length(qb);
+    if (q.y > -16.0 && q.x < -30.0 && rb > 111.0 && rb < 126.0) {
+        float ab = atan(qb.y, qb.x);
+        float hatch = step(0.5, fract(ab * 30.0));
+        float edge = max(cov((abs(rb - 112.5)) * k - 0.8), cov((abs(rb - 124.0)) * k - 0.8));
+        float body = (rb > 112.5 && rb < 124.0) ? 0.4 + 0.35 * hatch : 0.0;
+        c = over(vec4(0.8, 0.82, 0.88, min(1.0, body + 0.7 * edge)), c);
     }
-    float an = mix(a0, a1, clamp(g.w, 0.0, 1.0));
-    vec2 dir = vec2(sin(an), -cos(an));
-    float nd = segD(p, g.xy + dir * (g.z - 3.0), g.xy + dir * (g.z - 34.0));
-    c = over(vec4(u_red, cov(nd - 2.4)), c);
-    c = over(vec4(1.0, 0.6, 0.6, 0.7 * cov(nd - 0.6)), c);
+    // the glass
+    float dOut = 120.0 - length(q);
+    float dIn = length(q - vec2(57.0, -68.0)) - 180.0;
+    float inside = min(min(dOut, dIn), min(q.y + 10.0, 14.0 - q.x));
+    if (zones > 0.5) inside = min(min(inside, 104.0 - q.y), -30.0 - q.x);       // the oil glass ends higher and shorter (photo: y 564, x 1686)
+    if (inside > -1.5) {
+        float f = clamp(dOut / max(dOut + max(dIn, 0.0), 1.0), 0.0, 1.0);        // 0 at the outer edge, 1 at the inner
+        float yv = zones > 0.5 ? mix(97.0, 7.0, v) : mix(100.0, 2.0, v);
+        float lit = smoothstep(yv - 2.0, yv + 4.0, q.y);
+        vec4 dark = vec4(0.85, 0.87, 0.92, 0.75 * (1.0 - smoothstep(0.0, 6.0, dOut)));
+        vec4 bright = vec4(mix(vec3(0.96, 0.97, 0.99), vec3(0.55, 0.57, 0.63), f), mix(1.0, 0.55, f));
+        vec4 glass = mix(dark, bright, lit);
+        c = over(vec4(glass.rgb, glass.a * cov(-inside * k)), c);
+        c = over(vec4(1.0, 1.0, 1.0, 0.7 * cov(abs(inside * k) - 0.6) * (1.0 - lit) * step(dOut, 3.0)), c);
+    }
+    float yv = zones > 0.5 ? mix(97.0, 7.0, v) : mix(100.0, 2.0, v);
+    if (zones > 0.5) {
+        c = streak(q, -8.0, 44.0, u_red, k, c);                                    // hot end, above the top label as the photo
+        c = streak(q, 101.0, 34.0, vec3(0.3, 0.55, 1.0), k, c);                    // cold end, along the glass's bottom
+    } else {
+        c = streak(q, 112.0, 50.0, u_red, k, c);                                   // reserve
+    }
+    c = streak(q, yv, 38.0, u_red, k, c);                                          // the level, across the glass only
     return c;
 }
 
@@ -544,22 +585,22 @@ void main() {
     vec4 c = vec4(0.0, 0.0, 0.0, 1.0);           // black, as the M8
 
     // the two cards: the left one as laid out, the right one its mirror
-    c = card(p, u_gaugeL, c);
-    c = card(pm, vec4(u_size.x - u_gaugeR.x, u_gaugeR.yzw), c);
+    c = card(p, u_gaugeL.xy, 0.0, c);
+    c = card(pm, vec2(u_size.x - u_gaugeR.x, u_gaugeR.y), 1.0, c);
 
     // centre line, bright caps at both ends
     if (abs(p.y - u_line.y) < 6.0) {
-        c = over(vec4(0.62, 0.66, 0.73, 0.8 * cov(segD(p, u_line.xy, u_line.zy) - 1.0)), c);
-        float l = segD(p, u_line.xy + vec2(6.0, 0.0), u_line.xy + vec2(u_line.w, 0.0)) - 1.6 - 0.9 * clamp((p.x - u_line.x) / u_line.w, 0.0, 1.0);
-        float r = segD(p, u_line.zy - vec2(u_line.w, 0.0), u_line.zy - vec2(6.0, 0.0)) - 1.6 - 0.9 * clamp((u_line.z - p.x) / u_line.w, 0.0, 1.0);
+        c = over(vec4(0.62, 0.66, 0.73, 0.8 * cov(segD(p, u_line.xy, u_line.zy) - 1.6)), c);
+        float l = segD(p, u_line.xy + vec2(6.0, 0.0), u_line.xy + vec2(u_line.w, 0.0)) - 2.0 - 1.2 * clamp((p.x - u_line.x) / u_line.w, 0.0, 1.0);
+        float r = segD(p, u_line.zy - vec2(u_line.w, 0.0), u_line.zy - vec2(6.0, 0.0)) - 2.0 - 1.2 * clamp((u_line.z - p.x) / u_line.w, 0.0, 1.0);
         c = over(vec4(0.95, 0.96, 0.98, cov(min(l, r))), c);
     }
 
     c = tyreBlock(p, c);
 
-    // the round side dials as the M8 draws them: a 165-degree arc bulging outward, 0 at the bottom, full at the top
-    c = gauge(p, u_gaugeL, radians(160.0), radians(325.0), 0.0, c);
-    c = gauge(p, u_gaugeR, radians(200.0), radians(35.0), 1.0, c);
+    // the side dials, traced off the M8 photo: the glass crescent, the fuel one as laid out, the oil one its mirror
+    c = gauge(p, u_gaugeL, 0.0, c);
+    c = gauge(pm, vec4(u_size.x - u_gaugeR.x, u_gaugeR.yzw), 1.0, c);
 
     c = segbar(p, u_seg0, vec2(u_segLit.x, u_segMax.x), c);
     c = segbar(p, u_seg1, vec2(u_segLit.y, u_segMax.y), c);
@@ -583,8 +624,8 @@ void main() {
 `;
 const MTACH = `// The M theme's rev bar (GLSL ES 1.00), after the M8's: a bowed glass blade (the curve bends at u_geoA.z with a
 // large roundness, so it reads as one arc), wide at 0 rpm and narrow at the top, with a bright silver outer
-// edge and tick notches pointing out every 1000 rpm. The part below the rpm is lit light grey, a glowing red
-// block rides the blade at the rpm (the M8's marker), a grey foot caps the bottom, orange dashes sit before
+// edge and bright ticks running in from it every 1000 rpm. The part below the rpm is lit dim grey, a glowing red
+// block rides the blade at the rpm (the M8's marker), an outlined grey foot block fills the bottom 20 px, orange dashes sit before
 // the redline and a solid red line past it. Drawn as the left bar; u_side 1 mirrors it. v_uv (0,0) is the top-left.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -629,10 +670,11 @@ void main() {
         float inBand = clamp(d + 0.5, 0.0, 1.0) * clamp(w - d + 0.5, 0.0, 1.0);
         float across = clamp(d / w, 0.0, 1.0);
         float yn = y0 - u_value * (y0 - y8);
-        vec4 g = vec4(0.62, 0.67, 0.74, mix(0.16, 0.04, across));          // empty glass
-        if (p.y > yn) g = u_shiftNow > 0.5 ? vec4(u_red * 0.8, 0.6) : vec4(mix(vec3(0.86, 0.88, 0.92), vec3(0.6, 0.63, 0.68), across), mix(0.5, 0.3, across));
-        if (p.y > y0 - 20.0) g = over(vec4(0.8, 0.82, 0.86, 0.35), g);        // the grey foot at 0 rpm
-        g = over(vec4(0.9, 0.92, 0.95, 0.6 * cov(abs(p.y - (y0 - 20.0)) - 0.7)), g);
+        vec4 g = vec4(0.62, 0.67, 0.74, mix(0.42, 0.06, across));          // empty glass (bright at the outer edge, as the M8's)
+        if (p.y > yn) g = u_shiftNow > 0.5 ? vec4(u_red * 0.8, 0.6) : vec4(mix(vec3(0.86, 0.88, 0.92), vec3(0.6, 0.63, 0.68), across), mix(0.34, 0.22, across));
+        // the foot: the bottom 20 px as an outlined grey block, as the M8 draws it
+        if (p.y > y0 - 20.0) g = over(vec4(0.7, 0.72, 0.78, 0.22), g);
+        g = over(vec4(0.9, 0.92, 0.95, 0.7 * cov(min(abs(p.y - (y0 - 19.0)), abs(p.y - (y0 - 1.5))) - 0.8)), g);
         // the marker: a red block at the rpm with a glow either side of it
         float dm = abs(p.y - yn);
         g = over(vec4(u_red, 0.5 * exp(-dm / 26.0)), g);
@@ -648,12 +690,12 @@ void main() {
             c = over(vec4(redM ? u_red : vec3(1.0, 0.6, 0.1), 0.95), c);
         }
     }
+    // ticks every 1000 rpm: bright, from the outer edge 24 px into the glass, as the M8 draws them
     float kk = floor(t * u_ticks + 0.5);
     float yk = y0 - kk / u_ticks * (y0 - y8);
-    if (kk >= 0.0 && kk <= u_ticks && d < 0.0) {
-        float len = 12.0;
-        float ty = abs(p.y - yk) - 1.2;
-        if (d > -len) c = over(vec4(0.93, 0.95, 0.98, cov(ty)), c);
+    if (kk >= 0.0 && kk <= u_ticks && d > -2.0 && d < 24.0) {
+        float ty = abs(p.y - yk) - 1.5;
+        c = over(vec4(0.93, 0.95, 0.98, cov(ty)), c);
     }
     gl_FragColor = c;
 }

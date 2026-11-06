@@ -47,16 +47,16 @@ CLUSTER_FONTS = [
     ('head', 'BarlowCondensed-SemiBold.ttf', 24, UPPER + DIGITS + '/°%>·.: -'),
     ('scale', 'BarlowCondensed-SemiBold.ttf', 30, DIGITS),
     # M: the wide squared numbers (Michroma, SIL OFL) and Barlow for the small print
-    ('m_num', 'Michroma-Regular.ttf', 32, DIGITS, 2),
-    ('m_gear', 'Michroma-Regular.ttf', 100, 'PRNDSM-' + DIGITS, 3),
-    ('m_speed', 'Michroma-Regular.ttf', 80, DIGITS + '-', 3),
-    ('m_gl', 'Michroma-Regular.ttf', 26, DIGITS + '/.-', 1),
+    ('m_num', 'Orbitron[wght].ttf', 30, DIGITS, 0, 'Black', {'0': 'O'}),
+    ('m_gear', 'Orbitron[wght].ttf', 96, 'PRNDSM-' + DIGITS, 2, 'Black', {'0': 'O'}),
+    ('m_speed', 'Orbitron[wght].ttf', 60, DIGITS + '-', 2, 'Black', {'0': 'O'}),
+    ('m_gl', 'Orbitron[wght].ttf', 21, DIGITS + '/.-', 0, 'Black', {'0': 'O'}),
     ('m_val', 'Barlow-Medium.ttf', 54, DIGITS + ':+-.'),
-    ('m_mid', 'Barlow-Medium.ttf', 38, DIGITS + ':+-.'),
-    ('m_tyre', 'BarlowSemiCondensed-SemiBold.ttf', 28, DIGITS + '.-'),
+    ('m_mid', 'Orbitron[wght].ttf', 28, DIGITS + ':+-.', 0, 'Bold', {'0': 'O'}),
+    ('m_tyre', 'Orbitron[wght].ttf', 21, DIGITS + '.-', 0, 'Bold', {'0': 'O'}),
     ('m_unit', 'Barlow-Medium.ttf', 30, LOWER + UPPER + '°/-.'),
-    ('m_label', 'BarlowSemiCondensed-SemiBold.ttf', 33, UPPER + ' '),
-    ('m_tiny', 'Barlow-Medium.ttf', 23, LOWER + DIGITS + 'CF./ -°'),
+    ('m_label', 'Orbitron[wght].ttf', 17, UPPER + ' ', 0, 'Bold'),
+    ('m_tiny', 'Barlow-Medium.ttf', 22, LOWER + DIGITS + 'CF./ -°'),
     # Sport: BMW Live Cockpit style, the wide numbers in Michroma like BMW's own
     ('s_scale', 'Michroma-Regular.ttf', 27, DIGITS, 1),
     ('s_speed', 'Michroma-Regular.ttf', 74, DIGITS + '-', 3),
@@ -71,26 +71,31 @@ PAD = 2
 ATLAS_W = 1024
 
 
-def bake(out, name, file, size, chars, stroke=0):
-    """stroke: px of extra weight round every glyph (Michroma has one weight; the M numbers are heavier)."""
+def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None):
+    """stroke: px of extra weight round every glyph (Michroma has one weight). weight: a named instance of a
+    variable font (Orbitron: Regular .. Black), for the M theme's squared BMW-style gear, speed and numbers.
+    subs: {char: glyph drawn for it} (Orbitron's zero is slashed; the M8's is plain, so its O stands in)."""
     font = ImageFont.truetype(os.path.join(SRC, file), size)
+    if weight: font.set_variation_by_name(weight)
+    subs = subs or {}
+    glyph = lambda c: subs.get(c, c)
     ink = [c for c in chars if c != ' ']
-    boxes = {c: font.getbbox(c, anchor='ls', stroke_width=stroke) for c in ink}
+    boxes = {c: font.getbbox(glyph(c), anchor='ls', stroke_width=stroke) for c in ink}
     top = min(b[1] for b in boxes.values())
     bottom = max(b[3] for b in boxes.values())
     height = bottom - top + 2 * PAD
-    tab = (max(font.getlength(d) for d in DIGITS if d in chars) + 2 * stroke) if any(d in chars for d in DIGITS) else 0
+    tab = (max(font.getlength(glyph(d)) for d in DIGITS if d in chars) + 2 * stroke) if any(d in chars for d in DIGITS) else 0
 
     cells = []
     for c in chars:
-        adv = font.getlength(c) + (2 * stroke if c != ' ' else 0)
+        adv = font.getlength(glyph(c)) + (2 * stroke if c != ' ' else 0)
         if c == ' ':
             cells.append((c, None, 0, round(adv if adv else size * 0.25)))
             continue
         l, _, r, _ = boxes[c]
         w = r - l + 2 * PAD
         img = Image.new('L', (w, height), 0)
-        ImageDraw.Draw(img).text((PAD - l, PAD - top), c, font=font, fill=255, anchor='ls', stroke_width=stroke, stroke_fill=255)
+        ImageDraw.Draw(img).text((PAD - l, PAD - top), glyph(c), font=font, fill=255, anchor='ls', stroke_width=stroke, stroke_fill=255)
         shift = (tab - adv) / 2 if c in DIGITS else 0
         cells.append((c, img, round(l - PAD + shift), round(tab if c in DIGITS else adv)))
 
