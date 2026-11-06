@@ -704,6 +704,14 @@ class HudApp {
         return Object.prototype.hasOwnProperty.call(d, name) ? d[name] : null;
     }
 
+    /** Where the red and orange marks start on a rev scale that ends at `max` rpm, as fractions 0..1: red from the
+     *  redline, but always covering at least the last 500 rpm (the M40i's scale ends right at its 7000 redline),
+     *  orange over the 700 rpm before the red. */
+    _redMarks(max) {
+        const redFrom = Math.min(this.setting('redline'), max - 500) / max;
+        return [redFrom, redFrom - 700 / max];
+    }
+
     /** The scale label nearest the value now: 'speed' (SPEED_SCALE index) or 'rpm' (thousands); null without data. */
     _nearMark(kind) {
         if (kind === 'rpm') { const r = this._raw('rpm'); return isNum(r) ? Math.round(r / 1000) : null; }
@@ -1009,8 +1017,9 @@ class HudApp {
             c.uniform(ref, 'u_inner', [w.inner || w.band + 18]);
             c.uniform(ref, 'u_scale', w.scale || [w.geo[2], w.geo[0]]);
             c.uniform(ref, 'u_ticks', w.ticks);
-            c.uniform(ref, 'u_redFrom', [this.setting('redline') / (w.rpmMax || 8000)]);
-            c.uniform(ref, 'u_orange', [(this.setting('redline') - 700) / (w.rpmMax || 8000)]);
+            const [redFrom, orange] = this._redMarks(w.rpmMax || 8000);
+            c.uniform(ref, 'u_redFrom', [redFrom]);
+            c.uniform(ref, 'u_orange', [orange]);
             c.uniform(ref, 'u_fuelSeg', w.fuelSeg);
             c.uniform(ref, 'u_oilSeg', w.oilSeg);
             c.uniform(ref, 'u_hole', this._hole(w));
@@ -1040,7 +1049,7 @@ class HudApp {
             x.gauges = [['u_gaugeL', L], ['u_gaugeR', R]];
             x.bars = bars;
         } else if (w.type === 'mtach') {
-            const max = w.max || 8000, red = this.setting('redline');
+            const max = w.max || 8000, [redFrom, orange] = this._redMarks(max);
             const right = w.side === 'right';
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_side', [right ? 1 : -1]);
@@ -1048,8 +1057,8 @@ class HudApp {
             c.uniform(ref, 'u_geoB', [w.kTop, w.kBot, w.round || 40]);
             c.uniform(ref, 'u_wid', [w.wBot, w.wTop, w.wBend || 0]);
             c.uniform(ref, 'u_ticks', [max / 1000]);
-            c.uniform(ref, 'u_orange', [(red - 700) / max]);
-            c.uniform(ref, 'u_redFrom', [red / max]);
+            c.uniform(ref, 'u_orange', [orange]);
+            c.uniform(ref, 'u_redFrom', [redFrom]);
             c.uniform(ref, 'u_red', rgb(t.hot));
         }
         else if (w.type === 'grid') {

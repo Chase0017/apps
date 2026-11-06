@@ -23,7 +23,7 @@ A race dash.
 
 The look of a current M8's cluster, on black.
 
-- **Middle:** two bowed glass rev blades either side of the gear and speed. A red marker rides each blade at the rpm, the blade lights up below it, and orange and red marks sit before and past your redline.
+- **Middle:** two bowed glass rev blades either side of the gear and speed, reading 0 to 7000 rpm like the M40i's own cluster. A red marker rides each blade at the rpm, the blade lights up below it, and orange and red marks sit before and past your redline.
 - **Left:** a charcoal card with the tyre block: pressure and temperature at each corner round a car glyph (from the car's tyre monitor, read every 10 seconds). The fuel gauge sits in the card's lower corner.
 - **Right:** what the engine, chassis, steering and gearbox are set to, as rows with a three-step bar, and the oil temperature gauge. The rows follow the drive mode buttons: Comfort, Sport, Sport Plus and Eco Pro. The car only reports the overall mode, so an Individual setup shows as its base mode.
 - **Bottom:** range, the clock, and the outside temperature.
@@ -35,7 +35,7 @@ The look of a current M8's cluster, on black.
 The look of BMW's newer Live Cockpit Sport view.
 
 - **Left:** speed as a blue bracket on BMW's 0 to 200 mph scale (0 to 320 km/h), with the digital speed and a fuel bar inside it.
-- **Right:** revs as a red bracket with yellow and red marks around your redline, with the gear and an oil temperature bar inside it.
+- **Right:** revs as a red bracket on the M40i's 0 to 7000 rpm scale, with yellow and red marks around your redline, with the gear and an oil temperature bar inside it.
 - **Middle:** black, or BMW's map with "Leave room for the map" on.
 - **Bottom:** boost and coolant in the blue and red strip, plus the clock, range and outside temperature.
 
@@ -55,7 +55,7 @@ More themes are on the way.
 - **Leave room for the map:** cuts a window out of the dash so BMW's map shows through, moves the gear and temperatures to the sides, and slims the rev bar. Works in GT3 and Sport.
 - **Units:** mph, °F, psi or km/h, °C, bar.
 - **Clock:** 12-hour or 24-hour.
-- **Redline.**
+- **Redline:** where the red marks start on the rev scales (they always cover at least the last 500 rpm, and the yellow marks sit in the 700 rpm before them).
 - **Shift point before redline:** how far below the redline the shift lights peak (300 rpm by default).
 - **Cold-engine rev guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
 - **Show boost.**
