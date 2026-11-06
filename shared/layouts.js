@@ -33,6 +33,7 @@ const TYPES = {
     swatch: [],
     swatchimg: [],
     boxes: ['boxes'],
+    atext: ['text', 'font'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 

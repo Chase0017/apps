@@ -132,6 +132,22 @@
     return entry;
   }
 
+  // asset key -> { tex, stamp }: the WebGL texture of an asset's pixels, uploaded again when the canvas changed
+  const textures = new Map();
+  function textureOf(key, c) {
+    let t = textures.get(key);
+    if (!t) { t = { tex: gl.createTexture(), stamp: -1 }; textures.set(key, t); }
+    gl.bindTexture(gl.TEXTURE_2D, t.tex);
+    if (t.stamp !== (c.stamp || 0)) {
+      t.stamp = c.stamp || 0;
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    return t.tex;
+  }
   const uniformNotes = new Set();
   function noteUniform(l, name, why) {
     const k = l.key + ':' + name + ':' + why;
@@ -152,8 +168,19 @@
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const n = gl.getProgramParameter(e.prog, gl.ACTIVE_UNIFORMS);
+    let unit = 0;
     for (let i = 0; i < n; i++) {
       const info = gl.getActiveUniform(e.prog, i);
+      if (info.type === gl.SAMPLER_2D) {
+        // a sampler reads the asset bound to it (the 'bind' op); its pixels came as an image, R in .r
+        const key = l.binds && l.binds[info.name], c = key && images.get(key);
+        const u = gl.getUniformLocation(e.prog, info.name);
+        if (!c || !u) { if (!c) noteUniform(l, info.name, 'no asset bound'); continue; }
+        gl.activeTexture(gl.TEXTURE0 + unit);
+        gl.bindTexture(gl.TEXTURE_2D, textureOf(key, c));
+        gl.uniform1i(u, unit++);
+        continue;
+      }
       // An array uniform is reported as "name[0]" with size > 1; the client sets it by its base name
       // (PROTOCOL.md "Uniforms": one 'uniform' message of type x size numbers). Either spelling is accepted.
       const base = info.name.replace(/\[0\]$/, '');
@@ -280,7 +307,7 @@
       ctx.clearRect(0, 0, VW, VH);
       if (document.getElementById('road').checked) (view === 'panel' ? drawStockCluster : drawRoad)();
       // a layer over the layer cap (state waiting) is never drawn, as on the car
-      const hud = scene.filter((l) => l.target === view && l.visible && l.state !== 'waiting')
+      const hud = scene.filter((l) => l.target === view && l.visible && l.state !== 'waiting' && l.kind !== 'asset')
         .sort((a, b) => (CLASS_ORDER[a.class] - CLASS_ORDER[b.class]) || (a.z - b.z));
       let start = 0;
       hud.forEach((l, i) => { if (l.exclusive) start = i; });
@@ -326,7 +353,8 @@
       const warns = l.warnings || [];
       const flag = warns.length ? '<td class="flag" title="' + esc(warns.join('\n')) + '">' + (warns.some((w) => /hood/.test(w)) ? 'hood ' : '') + (warns.some((w) => /gear box/.test(w)) ? 'box ' : '') + (warns.some((w) => /belt/.test(w)) ? 'belt ' : '') + (warns.some((w) => /HUD window/.test(w)) ? 'window' : '') + '</td>' : '<td></td>';
       const cls = l.state === 'waiting' ? ' class="waiting" title="' + esc(l.reason || 'waiting') + '"' : '';
-      return '<tr' + cls + '><td>' + (l.conn - firstConn + 1) + ':' + l.ref + (l.state === 'waiting' ? ' (waiting)' : '') + '</td><td>' + l.kind + '</td><td>' + l.class + ' / ' + l.z + '</td><td>' + l.x + ',' + l.y + ' ' + l.w + 'x' + l.h + '</td>' + flag + '</tr>';
+      const what = l.kind === 'asset' ? 'asset ' + l.format : l.kind, where = l.kind === 'asset' ? l.w + 'x' + l.h + ' (not drawn)' : l.x + ',' + l.y + ' ' + l.w + 'x' + l.h;
+      return '<tr' + cls + '><td>' + (l.conn - firstConn + 1) + ':' + l.ref + (l.state === 'waiting' ? ' (waiting)' : '') + '</td><td>' + what + '</td><td>' + (l.kind === 'asset' ? '' : l.class + ' / ' + l.z) + '</td><td>' + where + '</td>' + flag + '</tr>';
     }).join('');
   }
 
@@ -385,6 +413,7 @@
         .then((buf) => {
           if (!buf || images.get(m.key) !== c) return;
           c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buf), m.w, m.h), m.x, m.y);
+          c.stamp = (c.stamp || 0) + 1;
           dbgPx++; dirty = true;
         }).catch(() => {});
     } else if (m.t === 'settings') {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "name": "Calibration grid",
-  "_about": "Calibration: lines every 50 px with x/y labels, a grey swatch drawn by a shader and the same one as pixels (do the two strips photograph alike?), and a probe row L1..L16 of own image layers: with the grid, labels and two swatches, L1..L4 fill the app's own connection's 8 layers; L5..L12 are on a second connection, L13..L16 on a third. A photo showing L1..L16 means a second socket gets its own 8 layers (what DukeAPenguin saw on his car); L1..L4 only means the cap is per app, not per connection.",
+  "_about": "Calibration: lines every 50 px with x/y labels, a grey swatch drawn by a shader and the same one as pixels (do the two strips photograph alike?), a probe row L1..L16 of own image layers, and an atlas-text probe. The app's own connection carries the grid, the labels, the two swatches, L1..L3 and the atlas text (8 layers); L4..L11 are on connection 2 and L12..L16 on connection 3. A photo showing all sixteen means each socket gets its own 8 layers. The atlas text (ATLAS, the clock, the rpm) is one shader layer reading an R8 glyph asset: if it shows, text can be drawn with no pixel writes at all.",
   "widgets": [
     {
       "id": "grid",
@@ -94,7 +94,8 @@
       "h": 34,
       "text": "L4",
       "font": "head",
-      "color": "fg"
+      "color": "fg",
+      "conn": 1
     },
     {
       "id": "L5",
@@ -206,7 +207,7 @@
       "text": "L12",
       "font": "head",
       "color": "fg",
-      "conn": 1
+      "conn": 2
     },
     {
       "id": "L13",
@@ -263,6 +264,21 @@
       "font": "head",
       "color": "fg",
       "conn": 2
+    },
+    {
+      "id": "atlas",
+      "type": "atext",
+      "z": 10,
+      "x": 700,
+      "y": 345,
+      "w": 448,
+      "h": 37,
+      "cells": 16,
+      "text": "ATLAS {{time}} {{rpm}}",
+      "font": "unit",
+      "color": "fg",
+      "align": "left",
+      "conn": 0
     }
   ],
   "theme": "gt3"

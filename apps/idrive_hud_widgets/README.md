@@ -37,7 +37,7 @@ All three layouts were refitted to the window on Nov 5 2026: everything sits ins
 
 ## Calibration grid
 
-Pick **Calibration grid** as the layout to see lines every 50 px with x/y labels on the real glass. It also carries a probe row L1..L16: L1..L4 are on the app's own connection to cluster-render (its 8 layers, with the grid, labels and swatches), L5..L8, L9..L12 and L13..L16 on three more. A photo with all sixteen means each connection gets its own 8 layers. A photo of it shows exactly which part of the HUD is visible, so layouts can be fitted to it. That is how the window above was measured; take a new photo if the HUD height or the seat changes a lot.
+Pick **Calibration grid** as the layout to see lines every 50 px with x/y labels on the real glass. It also carries a probe row L1..L16: L1..L3 are on the app's own connection to cluster-render (its 8 layers, with the grid, labels, swatches and the atlas text), L4..L8, L9..L12 and L13..L16 on three more. A photo with all sixteen means each connection gets its own 8 layers. Above the swatches, "ATLAS", the clock and the rpm are drawn by one shader layer reading a glyph atlas uploaded once as a one-byte-per-pixel asset (0.5.3): if that line shows, text can be drawn with no pixel writes at all. A photo of it shows exactly which part of the HUD is visible, so layouts can be fitted to it. That is how the window above was measured; take a new photo if the HUD height or the seat changes a lot.
 
 ## Settings
 
@@ -53,7 +53,7 @@ The page's first row tells you what the HUD is doing, the drive mode it sees, an
 
 ## Status
 
-Version 0.5.2 (0.5.2: the engine can draw over several connections to cluster-render, 8 layers each, which the calibration grid's L5..L16 probe on the glass; pixel memory is counted; text sends only the pixels that changed; 0.5.1: the shift lights come on from 3000 rpm; 0.5.0 refit every layout into the visible window). First car test done on 0.3.1 (Nov 2026): it runs, rpm wobbled at idle (now smoothed), boost didn't show (now read from the engine computer as a backup), and the top and sides of the Redline layout fell outside the visible part of the HUD. The calibration grid was photographed on Nov 5 2026 and all three layouts were refitted to the visible window on the bench (deployed to the repo, not yet seen on the car). Still to be checked on a car:
+Version 0.5.3 (0.5.3: the calibration grid carries an atlas-text probe, text drawn by a shader from a glyph atlas asset, no pixel writes per value; 0.5.2: the engine can draw over several connections to cluster-render, 8 layers each, which the calibration grid's L5..L16 probe on the glass; pixel memory is counted; text sends only the pixels that changed; 0.5.1: the shift lights come on from 3000 rpm; 0.5.0 refit every layout into the visible window). First car test done on 0.3.1 (Nov 2026): it runs, rpm wobbled at idle (now smoothed), boost didn't show (now read from the engine computer as a backup), and the top and sides of the Redline layout fell outside the visible part of the HUD. The calibration grid was photographed on Nov 5 2026 and all three layouts were refitted to the visible window on the bench (deployed to the repo, not yet seen on the car). Still to be checked on a car:
 
 - the refitted layouts on the glass: that nothing is cut off and nothing sits under BMW's speed and sign;
 - the drive mode switching and the engine computer boost;

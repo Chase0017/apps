@@ -86,6 +86,13 @@
  *             half, four dark test colours over the bottom half
  *   swatchimg calibration: image layer, the identical picture painted into pixels (calibration.js
  *             swatchImage), so a photo of the two strips shows how the effect and image paths differ
+ *   atext     effect layer (shaders.js atext): text drawn by the GPU from a glyph atlas, the probe for the path
+ *             that needs no pixel writes. The font's glyphs go up once per connection as an R8 asset (one byte a
+ *             pixel, not a layer, shared by every atext widget on that font); the widget is "cells" equal cells
+ *             across its width ("w" / cells wide each; the glyphs keep their shape when w = cells x the font's
+ *             widest advance and h = its cell height, logged at creation), and a new value is one uniform
+ *             message of glyph codes. "text" tokens as text, "font", "color" role, "align" left | right | center.
+ *             Up to 32 cells; only the characters the font has.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
  * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
  *   is per connection, so a second socket from the same app gets another 8 (DukeAPenguin saw 28 layers over four
@@ -270,7 +277,8 @@ class HudApp {
         this.drivePlus = false;          // Sport+ (or Comfort+ / Eco Pro+)
         this.fuelL = null; this.rangeKm = null; this.ambient = null;   // KombiIF tank / range, outside temperature
         this.activeName = null;          // the layout shown now ('off' = nothing)
-        this.pixelBytes = 0;             // what the layout's image layers cost of cluster-render's pixel memory
+        this.pixelBytes = 0;             // what the layout's image layers and glyph atlases cost of cluster-render's pixel memory
+        this.atlases = new Map();        // "<conn>:<font>" -> { ref, c, ci, cols, rows, cellW, cellH, chars, bytes }: R8 assets, kept across rebuilds
         this.targetState = null;         // { state, holder, reason } of our target
         this.rpmF = null; this.rpmShown = null; this.lastTickT = 0;
         this.themeName = null;
@@ -440,6 +448,60 @@ class HudApp {
         clearInterval(this.dmeTimer);
         clearTimeout(this.statusAskT);
         this.clients.forEach((c) => c.close());
+        this.atlases.clear();
+    }
+
+    /**
+     * The glyph atlas of a font on a connection: an R8 asset of the font's characters in equal cells (cols x
+     * rows), made on first use and kept while the connection lives (the client re-sends it by itself after a
+     * reconnect). A widget's effect layer samples it; nothing is drawn by the asset itself.
+     */
+    _atlas(fontName, ci) {
+        const key = ci + ':' + fontName;
+        if (this.atlases.has(key)) return this.atlases.get(key);
+        const font = textRaster.loadFont(fontName), glyphs = font.metrics.glyphs;
+        const chars = Object.keys(glyphs).filter((ch) => ch.length === 1 && ch >= ' ' && ch <= '~').sort().slice(0, 64);
+        if (!chars.length) throw new Error('font "' + fontName + '" has no printable glyphs for an atlas');
+        const cellW = Math.max(1, Math.ceil(Math.max.apply(null, chars.map((ch) => glyphs[ch].advance)))) + 2;
+        const cellH = font.metrics.cellHeight;
+        const cols = Math.max(1, Math.min(16, Math.floor(2048 / cellW))), rows = Math.ceil(chars.length / cols);
+        const w = cols * cellW, h = rows * cellH;
+        const buf = Buffer.alloc(w * h, 0);
+        chars.forEach((ch, i) => {
+            const cell = textRaster.mask(cellW, cellH, ch, { font: fontName, align: 'center' });
+            const cx = (i % cols) * cellW, cy = Math.floor(i / cols) * cellH;
+            for (let y = 0; y < cellH; y++) cell.copy(buf, (cy + y) * w + cx, y * cellW, (y + 1) * cellW);
+        });
+        const c = this._clientAt(ci);
+        const ref = c.asset({ target: this.target, format: 'r8', w, h, sampling: 'bilinear' });
+        if (!ref) throw new Error('font "' + fontName + '": atlas asset refused (' + w + 'x' + h + ')');
+        c.pixels(ref, null, buf);
+        const a = { ref, c, ci, cols, rows, cellW, cellH, chars, bytes: w * h * 2 };
+        this.atlases.set(key, a);
+        this.log.info('glyph atlas "' + fontName + '"' + (ci ? ' on connection ' + (ci + 1) : '') + ': ' + chars.length + ' glyphs in ' +
+            cellW + 'x' + cellH + ' cells, ' + w + 'x' + h + ' R8 asset, ' + mib(a.bytes) + ' of pixel memory');
+        return a;
+    }
+
+    _atlasBytes() {
+        let n = 0;
+        this.atlases.forEach((a) => { n += a.bytes; });
+        return n;
+    }
+
+    /** The glyph codes of a text in an atlas widget's cells, aligned; -1 is an empty cell. */
+    _atlasCodes(x, s) {
+        const a = x.atlas, n = x.cells, text = String(s).slice(0, n);
+        const pad = n - text.length, w = x.w;
+        const lead = w.align === 'right' ? pad : w.align === 'center' ? Math.floor(pad / 2) : 0;
+        const codes = [];
+        for (let i = 0; i < 32; i++) {
+            const j = i - lead;
+            const ch = j >= 0 && j < text.length ? text[j] : null;
+            const k = ch === null ? -1 : a.chars.indexOf(ch);
+            codes.push(i < n && ch !== null ? (k < 0 ? a.chars.indexOf(' ') : k) : -1);
+        }
+        return codes;
     }
 
     _guard(what, fn) {
@@ -774,12 +836,15 @@ class HudApp {
                 this._guard('widget ' + e.w.id, () => this._create(e.w, null));
             }
         });
+        const atlasBytes = this._atlasBytes();
+        px += atlasBytes;
         this.pixelBytes = px;
         const n = this._layerRefs().length, counts = this._connCounts(plan);
         this.log.info('layout "' + layout.name + '": ' + shown.length + ' widgets, ' + this._layerCount(n) + ' (' + effects + ' effects, ' +
             sheets + ' image sheets' + (own ? ', ' + own + ' own image layers' : '') + ')' +
             (counts.length > 1 ? ' on ' + counts.length + ' connections (' + counts.join(' + ') + ')' : '') + ', sheet limit ' +
-            (maxPx === Infinity ? 'unlimited' : maxPx + ' px') + ', whole-sheet writes ' + bytes + ' bytes, pixel memory ' + mib(px) + ' of 16 MiB');
+            (maxPx === Infinity ? 'unlimited' : maxPx + ' px') + ', whole-sheet writes ' + bytes + ' bytes, pixel memory ' + mib(px) + ' of 16 MiB' +
+            (atlasBytes ? ' (' + this.atlases.size + ' glyph atlas' + (this.atlases.size > 1 ? 'es' : '') + ' ' + mib(atlasBytes) + ')' : ''));
         counts.forEach((k, ci) => {
             if (k > LAYER_BUDGET) this.log.warn('layout "' + layout.name + '" needs ' + k + ' layers on connection ' + (ci + 1) + ', cluster-render draws at most ' + LAYER_BUDGET + ' per connection');
         });
@@ -893,7 +958,20 @@ class HudApp {
         const x = { w, ref, c, ci: sheet ? sheet.ci : this._connOf(w), sheet: sheet || null, last: null, lastPaint: 0, px: null };
         this.widgets.set(w.id, x);
         const t = this.theme;
-        if (w.type === 'gridlabels') this._paintGridLabels(x);
+        if (w.type === 'atext') {
+            const a = this._atlas(w.font, x.ci);
+            x.atlas = a;
+            x.cells = Math.max(1, Math.min(32, isNum(w.cells) ? Math.floor(w.cells) : Math.floor(w.w / a.cellW)));
+            c.bind(ref, 'u_font', a.ref);
+            c.uniform(ref, 'u_cells', [x.cells]);
+            c.uniform(ref, 'u_grid', [a.cols, a.rows]);
+            c.uniform(ref, 'u_color', rgba(color(t, w.color || 'fg')));
+            c.uniform(ref, 'u_text', this._atlasCodes(x, ''), { type: 'vec4' });
+            if (w.w !== x.cells * a.cellW || w.h !== a.cellH) {
+                this.log.info('widget "' + w.id + '": ' + x.cells + ' cells of ' + (w.w / x.cells).toFixed(1) + 'x' + w.h +
+                    ' px; the glyphs keep their shape at w ' + x.cells * a.cellW + ', h ' + a.cellH);
+            }
+        } else if (w.type === 'gridlabels') this._paintGridLabels(x);
         else if (w.type === 'icon') this._blit(x, null, paintIcon(w.icon, w.w, w.h, color(t, w.color || 'fg')));
         else if (w.type === 'sdash') {
             c.uniform(ref, 'u_size', [w.w, w.h]);
@@ -1078,7 +1156,13 @@ class HudApp {
 
     _update(x, now, force) {
         const w = x.w;
-        if (w.type === 'text') {
+        if (w.type === 'atext') {
+            if (!force && now - x.lastPaint < (w.rate || TEXT_MS)) return;
+            const s = this._resolve(w.text);
+            if (!force && s === x.last) return;
+            x.last = s; x.lastPaint = now;
+            x.c.uniform(x.ref, 'u_text', this._atlasCodes(x, s), { type: 'vec4' });
+        } else if (w.type === 'text') {
             if (!force && now - x.lastPaint < (w.rate || TEXT_MS)) return;
             const s = this._resolve(w.text);
             let role = w.color || 'fg';

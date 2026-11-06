@@ -25,6 +25,10 @@ Besides its own code, the app ships with:
    adapted from PenguinDukeYDAuto/idrive7-EVAHUD (shared/eva_canvas.js): MIT, Copyright (c) 2026 DukeAPenguin.
    https://github.com/PenguinDukeYDAuto/idrive7-EVAHUD
 
+6. The atlas-text shader in shaders.js (atext: glyph codes in a uniform array picking cells of a glyph atlas
+   asset) is after js/showcase.js (TEXT_FS) of https://github.com/robertnisipeanu/idrive-apps (native/cluster-render):
+   Mozilla Public License 2.0, Copyright (C) 2026 Robert Nisipeanu.
+
 ----------------------------------------------------------------------------------------------
 Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
 Copyright 2011 The Michroma Project Authors (https://github.com/googlefonts/Michroma-font)
