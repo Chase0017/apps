@@ -56,7 +56,7 @@
  *   badge     image layer; a rounded tag with text: "tone" verdict (the last shift's grade colour) or cold
  *   fill      effect layer; a solid colour (role "color", default "bg") over the whole widget, with an
  *             optional see-through "hole": [x, y, w, h] in target px, cut only while the bool setting
- *             "holeWhen" is on (the cluster's map window), shrunk by "holeInset" px on every side (6) with
+ *             "holeWhen" is on (true: always; the cluster's map window), shrunk by "holeInset" px on every side (6) with
  *             "holeRadius" px corners (28), so BMW's own cluster doesn't peek out at the window's corners.
  *             Opaque fill hides BMW's gauges under it.
  *   box       effect layer; a framed box: "fill" and "line" roles, "border" px, "radius" px, and a
@@ -1210,7 +1210,8 @@ class HudApp {
 
     /** A widget's map hole in layer px, inset by "holeInset" (6) a side, while "holeWhen" is on; else no hole. */
     _hole(w) {
-        const h = w.hole && w.holeWhen && this.setting(w.holeWhen) === true ? w.hole : null;
+        const on = w.holeWhen === true || (w.holeWhen && this.setting(w.holeWhen) === true);   // true: always cut
+        const h = w.hole && on ? w.hole : null;
         if (!h) return [0, 0, 0, 0];
         const inset = isNum(w.holeInset) ? w.holeInset : 6;
         return [h[0] + inset - w.x, h[1] + inset - w.y, Math.max(0, h[2] - 2 * inset), Math.max(0, h[3] - 2 * inset)];

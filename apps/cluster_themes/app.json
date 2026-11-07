@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style or Sport, with shift lights, boost, temps and shift scoring",
-  "version": "0.8.2",
+  "version": "0.8.4",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -108,6 +108,10 @@
         [
           "grid",
           "Calibration grid"
+        ],
+        [
+          "mapcal",
+          "Map calibration"
         ]
       ]
     },

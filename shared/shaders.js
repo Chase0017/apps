@@ -486,8 +486,10 @@ vec4 card(vec2 p, vec2 dial, float right, vec4 c) {
     float fy = clamp((p.y - top) / max(u_card.y - top, 1.0), 0.0, 1.0);
     float grey = u_cardFill * mix(1.3, 0.75, fy);
     c = over(vec4(vec3(grey, grey, grey * 1.18), cov(d)), c);
-    // the rim stops inside the dial's area (as on the M8, where the dial covers the card's edge), so no label sits on it
-    float hide = 1.0 - smoothstep(118.0, 130.0, length(p - dial));
+    // the rim stops inside the dial's area (as on the M8, where the dial covers the card's edge), so no label sits on it;
+    // 118..130 px at the photo's dial size (r 120), scaled with the layout's
+    float kd = u_gaugeL.z / 120.0;
+    float hide = 1.0 - smoothstep(118.0 * kd, 130.0 * kd, length(p - dial));
     c = over(vec4(0.5, 0.53, 0.58, 0.3 * cov(abs(d + 1.2) - 0.9) * (1.0 - hide)), c);
     return c;
 }
