@@ -19,9 +19,32 @@ Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and 
   </tr>
 </table>
 
+<table align="center">
+  <tr>
+    <th align="center">Minimal</th>
+    <th align="center">Shift only</th>
+  </tr>
+  <tr>
+    <td><img src="../../docs/images/hud-minimal.png" width="300" alt="Minimal layout"></td>
+    <td><img src="../../docs/images/hud-shiftonly.png" width="300" alt="Shift only layout"></td>
+  </tr>
+  <tr>
+    <th align="center">Boost</th>
+    <th align="center">Warm-up</th>
+  </tr>
+  <tr>
+    <td><img src="../../docs/images/hud-boost.png" width="300" alt="Boost layout"></td>
+    <td><img src="../../docs/images/hud-warmup.png" width="300" alt="Warm-up layout"></td>
+  </tr>
+</table>
+
 - **Daily:** the gear, the clock and the oil temperature.
 - **Sport:** a segmented shift bar, a big gear, a boost gauge, oil and coolant.
 - **Redline:** a slanted rev bar with 12 shift lights, a big gear, your shift point and your last shift with its grade.
+- **Minimal:** built round BMW's own speed and speed-limit sign without covering them: a thin shift bar over them, the gear beside BMW's speed, and one readout.
+- **Shift only:** 12 shift lights and the gear, and SHIFT at the shift point.
+- **Boost:** a boost gauge with a dot that holds the peak for 4 seconds, the boost in figures, and the peak since your last 0 to 60 run.
+- **Warm-up:** oil, coolant and intake air temperature as bars with figures, and WARMING UP until the oil reaches 80°C. The intake temperature is read from the engine unit (read-only), like the boost fallback.
 - The clock, oil, coolant and shift point readouts can each show another sensor instead (page's Readouts tab).
   - **Shift lights:** they come on from 3000 rpm and fill up to the shift point. At the shift point everything goes red and SHIFT shows.
   - **Shift grades:** every upshift is graded on its peak rpm. EARLY means more than 250 rpm under the shift point, LATE more than 200 over it, COLD REV the same while the cold guard is on, LIMITER within 60 rpm of the redline, and anything in between is SPOT ON.

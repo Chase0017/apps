@@ -76,6 +76,47 @@ const THEMES = {
         ink: [12, 12, 14, 255], accent: [226, 36, 44, 255], well: [0, 0, 0, 255], redTrack: [90, 16, 20, 255],
         chrome: [182, 188, 198, 255], grey: [160, 166, 176, 255], grey2: [104, 110, 122, 255], faint: [96, 104, 118, 255],
     },
+    // Minimal (layout minimal.json): white on black, nothing but the speed, the gear and a fuel line.
+    minimal: {
+        name: 'Minimal',
+        fg: [240, 243, 248, 255], dim: [128, 134, 146, 255], track: [44, 48, 56, 255], arc: [240, 243, 248, 255],
+        glow: 0, stripe: false,
+        bar: { low: [240, 243, 248], mid: [240, 243, 248], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [240, 243, 248], to: [240, 243, 248] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [70, 74, 82, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [240, 243, 248, 255], well: [0, 0, 0, 255],
+    },
+    // Roadster (layout roadster.json): two classic round dials, ivory numbers, a chrome ring, an orange needle.
+    roadster: {
+        name: 'Roadster',
+        fg: [246, 238, 222, 255], dim: [150, 146, 138, 255], track: [52, 50, 48, 255], arc: [255, 120, 40, 255],
+        glow: 0, stripe: false,
+        bar: { low: [246, 238, 222], mid: [255, 170, 60], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [246, 238, 222], to: [246, 238, 222] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [222, 226, 232, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [255, 120, 40, 255], well: [0, 0, 0, 255],
+        chrome: [222, 226, 232, 255], chrome2: [96, 100, 108, 255], needle: [255, 96, 32, 255], face: [6, 6, 8, 255],
+    },
+    // Track (layout track.json): the race-dash frame of GT3 with amber headers, tyres and temps round a big gear.
+    track: {
+        name: 'Track',
+        fg: [244, 244, 244, 255], dim: [150, 154, 160, 255], track: [255, 255, 255, 30], arc: [244, 244, 244, 255],
+        glow: 0, stripe: false,
+        bar: { low: [57, 222, 72], mid: [255, 196, 0], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [57, 222, 72], to: [57, 222, 72] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [205, 208, 214, 255], head: [255, 176, 0, 255],
+        ink: [12, 12, 14, 255], accent: [226, 228, 232, 255], well: [0, 0, 0, 255],
+    },
+    // Drag (layout drag.json): a full-width shift bar, the 0-60 timer, green for go.
+    drag: {
+        name: 'Drag',
+        fg: [244, 246, 250, 255], dim: [140, 148, 160, 255], track: [255, 255, 255, 30], arc: [80, 230, 110, 255],
+        glow: 0, stripe: false,
+        bar: { low: [80, 230, 110], mid: [255, 205, 0], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [80, 230, 110], to: [80, 230, 110] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [190, 196, 206, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [80, 230, 110, 255], well: [0, 0, 0, 255], go: [80, 230, 110, 255],
+    },
 };
 // every theme: the shift-point red, used by "hot" (the gear and SHIFT at the shift point, the rev bar past it)
 Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });

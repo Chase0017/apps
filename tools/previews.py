@@ -44,10 +44,18 @@ def post(port, path, body):
 
 
 def shot(port, size, out):
-    subprocess.run([CHROME, '--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
-                    '--virtual-time-budget=20000', '--hide-scrollbars', '--window-size=%d,%d' % size,
-                    '--screenshot=' + out, 'http://localhost:%d/?only=1&backdrop=0&clean=1&car=0' % port],
-                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)   # headless Chrome can hang
+    # headless Chrome sometimes hangs on a cluster page (Nov 7 2026: twice in one run); three tries, 60 s each
+    for attempt in range(3):
+        try:
+            subprocess.run([CHROME, '--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+                            '--virtual-time-budget=20000', '--hide-scrollbars', '--window-size=%d,%d' % size,
+                            '--screenshot=' + out, 'http://localhost:%d/?only=1&backdrop=0&clean=1&car=0' % port],
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
+            return
+        except subprocess.TimeoutExpired:
+            subprocess.run(['pkill', '-f', '--screenshot=' + out], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print('  (Chrome hung, try %d of 3)' % (attempt + 1), flush=True)
+    raise SystemExit('headless Chrome hung three times on ' + out)
 
 
 def pack(img, size):

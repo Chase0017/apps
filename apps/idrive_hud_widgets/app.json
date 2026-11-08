@@ -1,8 +1,8 @@
 {
   "id": "idrive_hud_widgets",
   "title": "HUD Widgets",
-  "description": "Speed, gear, shift bar, boost, oil and coolant on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.7.0",
+  "description": "Gear, shift lights, boost, oil, coolant and intake temperatures on the windshield HUD, in Classic, M or Night themes",
+  "version": "0.8.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -24,7 +24,8 @@
     "sensors.js",
     "waze.js",
     "badges.js",
-    "screen.js"
+    "screen.js",
+    "runs.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -100,6 +101,22 @@
           "Redline"
         ],
         [
+          "minimal",
+          "Minimal"
+        ],
+        [
+          "shiftonly",
+          "Shift only"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "warmup",
+          "Warm-up"
+        ],
+        [
           "grid",
           "Calibration grid"
         ],
@@ -136,6 +153,22 @@
         [
           "redline",
           "Redline"
+        ],
+        [
+          "minimal",
+          "Minimal"
+        ],
+        [
+          "shiftonly",
+          "Shift only"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "warmup",
+          "Warm-up"
         ]
       ]
     },
@@ -160,6 +193,22 @@
         [
           "redline",
           "Redline"
+        ],
+        [
+          "minimal",
+          "Minimal"
+        ],
+        [
+          "shiftonly",
+          "Shift only"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "warmup",
+          "Warm-up"
         ]
       ]
     },
@@ -184,6 +233,22 @@
         [
           "redline",
           "Redline"
+        ],
+        [
+          "minimal",
+          "Minimal"
+        ],
+        [
+          "shiftonly",
+          "Shift only"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "warmup",
+          "Warm-up"
         ]
       ]
     },
@@ -514,7 +579,7 @@
     "utcOffsetMinutes": null,
     "_comment": "socketPath: cluster-render's documented default. location: where the Auto theme works out sunrise and sunset (Charlotte, NC). utcOffsetMinutes: leave null to use the head unit's own time zone; set it (e.g. -300 for EST) only if the HUD clock shows the wrong hour on the car. tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65).",
     "dme": {
-      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT).",
+      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car.",
       "ecu": 18,
       "boost": [
         {
@@ -578,6 +643,38 @@
           "min": 50,
           "max": 115,
           "note": "OBD service 01 PID 0x33 (same as F433)"
+        }
+      ],
+      "intake": [
+        {
+          "did": "F40F",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": -40,
+          "min": -35,
+          "max": 150,
+          "note": "OBD PID 0x0F intake air temperature, C + 40"
+        },
+        {
+          "did": "F477",
+          "bytes": 1,
+          "at": 1,
+          "factor": 1,
+          "offset": -40,
+          "min": -35,
+          "max": 150,
+          "note": "OBD PID 0x77 charge air cooler temperature, bank 1 sensor 1 (byte after the support byte), C + 40"
+        },
+        {
+          "obd": "0F",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": -40,
+          "min": -35,
+          "max": 150,
+          "note": "OBD service 01 PID 0x0F (same as F40F)"
         }
       ]
     },

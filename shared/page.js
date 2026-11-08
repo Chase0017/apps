@@ -192,71 +192,77 @@ class Page {
         else this.lookCards(cv, bottom);
     }
 
-    /** Cluster: the theme showing now, big; what each drive mode shows beside it; every theme below. */
+    /** Cluster: the theme showing now, the drive modes beside it; every theme below in two rows. */
     lookHero(cv, bottom) {
         const shown = this.shownName();
         label(cv, CX, 70, 'Now showing');
-        const pw = 762, ph = 286, px = CX, py = 82;
+        const pw = 523, ph = 196, px = CX, py = 82;
         this.picture(cv, shown, 'big', px, py, pw, ph);
-        // right: name, tag line, the drive modes
-        const rx = px + pw + 36, rw = CR - rx;
-        cv.text(this.layoutName(shown), rx, py + 38, 38, '#ffffff', { font: 'bold', literal: true });
-        cv.text(this.yieldNote() || this.tag(shown), rx, py + 68, 17, this.yieldNote() ? '#e0a340' : C.dim, { literal: true });
-        // compact rows, ending level with the picture
-        let y = py + 82;
-        y = this.toggleRow(cv, rx, y, rw, 'Change with the drive mode', 'byMode', 46);
+        // right: name, tag line, the drive modes side by side
+        const rx = px + pw + 28, rw = CR - rx;
+        cv.text(this.layoutName(shown), rx, py + 32, 34, '#ffffff', { font: 'bold', literal: true });
+        cv.text(this.yieldNote() || this.tag(shown), rx, py + 58, 17, this.yieldNote() ? '#e0a340' : C.dim, { literal: true });
+        const y = this.toggleRow(cv, rx, py + 72, rw, 'Change with the drive mode', 'byMode', 46);
         if (this.get('byMode') === true) {
-            const now = MODE_KEY[this.hud.driveMode];
-            MODES.forEach((m) => { y = this.pickRow(cv, rx, y, rw, m[1] + (m[0] === now ? '  ·  now' : ''), m[0], (v) => this.layoutName(v), 46); });
-        } else y = this.pickRow(cv, rx, y, rw, 'Theme', 'hudLayout', (v) => this.layoutName(v), 46);
-        // the gallery: a tap shows that theme (in the drive mode the car is in, when it changes with it)
-        const looks = this.looks(), gap = 16, gy = py + ph + 18;
-        const gw = (CW - gap * (looks.length - 1)) / looks.length, gh = Math.min(150, bottom - gy - 4);
+            const now = MODE_KEY[this.hud.driveMode], cw = (rw - 24) / 3;
+            MODES.forEach((m, i) => this.modeCell(cv, rx + i * (cw + 12), y, cw, m[1] + (m[0] === now ? '  ·  now' : ''), m[0]));
+        } else this.pickRow(cv, rx, y, rw, 'Theme', 'hudLayout', (v) => this.layoutName(v), 52);
+        // the gallery, two rows: a tap shows that theme (in the drive mode the car is in, when it changes with it)
+        const looks = this.looks(), cols = Math.max(5, Math.ceil(looks.length / 2)), gap = 12, gy = py + ph + 16;
+        const gw = (CW - gap * (cols - 1)) / cols, gh = (bottom - gy - 4 - gap) / 2;
         looks.forEach((v, i) => {
-            const x = CX + i * (gw + gap), sel = v === shown;
-            glass(cv, x, gy, gw, gh, sel);
-            const iw = gw - 20, ih = Math.min(gh - 50, iw * 0.375);
-            this.picture(cv, v, 'small', x + 10, gy + 10, iw, ih);
-            cv.text(this.layoutName(v), x + 14, gy + gh - 14, 19, '#ffffff', { font: 'bold', literal: true });
-            cv.text(this.tag(v), x + gw - 14, gy + gh - 14, 15, C.dim, { align: 'right', literal: true });
-            cv.target(x, gy, gw, gh, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
+            const x = CX + (i % cols) * (gw + gap), yy = gy + Math.floor(i / cols) * (gh + gap), sel = v === shown;
+            glass(cv, x, yy, gw, gh, sel);
+            const ih = Math.min(gh - 34, (gw - 16) * 0.375), iw = ih / 0.375;
+            this.picture(cv, v, 'small', x + (gw - iw) / 2, yy + 8, iw, ih);
+            cv.text(this.layoutName(v), x + 12, yy + gh - 10, 16, '#ffffff', { font: 'bold', literal: true });
+            cv.text(this.tag(v), x + gw - 12, yy + gh - 10, 13, C.dim, { align: 'right', literal: true });
+            cv.target(x, yy, gw, gh, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
         });
     }
 
-    /** HUD: a card per layout with its picture and the drive modes that show it. */
+    /** A drive mode's theme as a small two-line cell (name over value), a tap opens the list. */
+    modeCell(cv, x, y, w, name, key) {
+        const h = 52;
+        glass(cv, x, y, w, h, false);
+        cv.text(name, x + 14, y + 20, 14, C.dim, { literal: true });
+        cv.text(this.layoutName(this.get(key)), x + 14, y + 42, 18, C.blueHi, { font: 'bold', literal: true });
+        chevron(cv, x + w - 18, y + h / 2, C.dim);
+        cv.target(x, y, w, h, () => { this.picker = { key, title: name, fmt: (v) => this.layoutName(v) }; this.kick(); }, 'set:' + key, 14);
+    }
+
+    /** HUD: a card per layout with its picture and the drive modes that show it, in two rows. */
     lookCards(cv, bottom) {
         const shown = this.shownName();
         label(cv, CX, 70, this.yieldNote() || this.cfg.look.name + ' · tap a drive mode to give it that layout');
-        const looks = this.looks(), gap = 20, y = 84;
-        const cw = (CW - gap * (looks.length - 1)) / looks.length, ch = Math.min(380, bottom - y - 70);
+        const looks = this.looks(), cols = Math.max(5, Math.ceil(looks.length / 2)), gap = 12, y0 = 84;
+        const cw = (CW - gap * (cols - 1)) / cols, ch = (bottom - y0 - 56 - 12 - gap) / 2;
         looks.forEach((v, i) => {
-            const x = CX + i * (cw + gap), sel = v === shown;
+            const x = CX + (i % cols) * (cw + gap), y = y0 + Math.floor(i / cols) * (ch + gap), sel = v === shown;
             glass(cv, x, y, cw, ch, sel);
-            const iw = cw - 24, ih = Math.min(ch - 116, iw * 0.624);
-            this.picture(cv, v, 'big', x + 12, y + 12, iw, ih);
-            const ty = y + 12 + ih + 36;
+            const ih = Math.min(ch - 82, (cw - 20) * 0.624), iw = ih / 0.624;
+            this.picture(cv, v, 'big', x + (cw - iw) / 2, y + 10, iw, ih);
+            const ty = y + 10 + ih + 22;
+            cv.text(v === 'off' ? 'Off' : this.layoutName(v), x + 12, ty, 17, '#ffffff', { font: 'bold', literal: true });
+            cv.text(this.tag(v), x + cw - 12, ty, 12, C.dim, { align: 'right', literal: true });
             if (v === 'off') {
                 // the off switch: BMW's own HUD in every drive mode
                 cv.target(x, y, cw, ch, () => { this.set('byMode', false); this.chooseLayout('hudLayout', 'off'); }, 'look:off', 16);
-                cv.text('Off', x + 16, ty, 24, '#ffffff', { font: 'bold', literal: true });
-                cv.text(this.tag(v), x + cw - 16, ty, 15, C.dim, { align: 'right', literal: true });
-                cv.text(sel ? 'HUD is off' : 'Tap to turn the HUD off', x + 16, ty + 40, 16, sel ? C.blueHi : C.dim, { literal: true });
+                cv.text(sel ? 'HUD is off' : 'Tap to turn the HUD off', x + 12, ty + 30, 14, sel ? C.blueHi : C.dim, { literal: true });
                 return;
             }
-            cv.target(x, y, cw, ih + 24, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
-            cv.text(this.layoutName(v), x + 16, ty, 24, '#ffffff', { font: 'bold', literal: true });
-            cv.text(this.tag(v), x + cw - 16, ty, 15, C.dim, { align: 'right', literal: true });
-            let cx = x + 16;
+            cv.target(x, y, cw, ih + 20, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
+            let cx = x + 12;
             MODES.forEach((m) => {
                 const lit = this.get(m[0]) === v;
-                cx += chip(cv, cx, ty + 16, m[1], lit, () => this.chooseLayout(m[0], lit ? 'off' : v), 'mode:' + v + ':' + m[0]) + 8;
+                cx += miniChip(cv, cx, ty + 12, m[1], lit, () => this.chooseLayout(m[0], lit ? 'off' : v), 'mode:' + v + ':' + m[0]) + 6;
             });
         });
         // under the cards: switching with the drive mode, and what shows when it doesn't
-        const by = y + ch + 16;
+        const by = y0 + 2 * ch + gap + 12;
         const half = (CW - 20) / 2;
-        this.toggleRow(cv, CX, by, half, 'Change with the drive mode', 'byMode');
-        this.pickRow(cv, CX + half + 20, by, half, this.get('byMode') ? 'Otherwise' : 'Layout', 'hudLayout', (v) => this.layoutName(v));
+        this.toggleRow(cv, CX, by, half, 'Change with the drive mode', 'byMode', 50);
+        this.pickRow(cv, CX + half + 20, by, half, this.get('byMode') ? 'Otherwise' : 'Layout', 'hudLayout', (v) => this.layoutName(v), 50);
     }
 
     tag(v) { return v === 'off' ? 'stock ' + this.cfg.what : (this.cfg.look.tags || {})[v] || ''; }
@@ -588,6 +594,14 @@ function chip(cv, x, y, text, on, run, key) {
     const w = cv.textWidth(text, 16, { font: 'bold', literal: true }) + 30, h = 36;
     cv.roundRect(x, y, w, h, h / 2, on ? C.blue : '#ffffff12');
     cv.text(text, x + w / 2, y + 24, 16, on ? '#ffffff' : C.off, { align: 'center', font: 'bold', literal: true });
+    cv.target(x, y, w, h, run, key, h / 2);
+    return w;
+}
+/** A small chip (the HUD cards' drive modes). */
+function miniChip(cv, x, y, text, on, run, key) {
+    const w = cv.textWidth(text, 13, { font: 'bold', literal: true }) + 18, h = 28;
+    cv.roundRect(x, y, w, h, h / 2, on ? C.blue : '#ffffff12');
+    cv.text(text, x + w / 2, y + 19, 13, on ? '#ffffff' : C.off, { align: 'center', font: 'bold', literal: true });
     cv.target(x, y, w, h, run, key, h / 2);
     return w;
 }

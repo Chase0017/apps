@@ -32,7 +32,7 @@ LOWER = 'abcdefghijklmnopqrstuvwxyz'
 HUD_FONTS = [
     # name, file, px size, characters
     ('hero', 'BarlowSemiCondensed-SemiBold.ttf', 96, DIGITS + 'PRND-'),
-    ('big', 'BarlowSemiCondensed-Medium.ttf', 34, DIGITS + ':.-° PRND'),
+    ('big', 'BarlowSemiCondensed-Medium.ttf', 34, DIGITS + ':.-° PRNDSM'),
     ('mid', 'BarlowSemiCondensed-Medium.ttf', 24, DIGITS + ':.-° ' + UPPER),
     ('label', 'Barlow-Medium.ttf', 15, UPPER + DIGITS + '/.:-°%>· '),
     ('small', 'Barlow-Medium.ttf', 13, UPPER + DIGITS + '/.:-°%>· '),
@@ -67,6 +67,17 @@ CLUSTER_FONTS = [
     ('s_unit', 'Barlow-Medium.ttf', 24, LOWER + UPPER + DIGITS + '°/-. '),
     ('s_label', 'BarlowSemiCondensed-SemiBold.ttf', 30, UPPER + DIGITS + ' .'),
     ('s_gl', 'Michroma-Regular.ttf', 21, DIGITS + '/', 1),
+    # Minimal: one huge speed, the gear, small print
+    ('n_speed', 'BarlowSemiCondensed-Medium.ttf', 260, DIGITS + '-'),
+    ('n_gear', 'BarlowSemiCondensed-SemiBold.ttf', 110, DIGITS + 'PRNDSM-'),
+    ('n_unit', 'Barlow-Medium.ttf', 34, LOWER + UPPER + '/'),
+    # Roadster: dial numbers, readouts, the chrome gear
+    ('r_num', 'BarlowSemiCondensed-SemiBold.ttf', 36, DIGITS),
+    ('r_val', 'BarlowSemiCondensed-Medium.ttf', 58, DIGITS + '.:-+°'),
+    ('r_gear', 'BarlowCondensed-Bold.ttf', 170, DIGITS + 'PRNDSM-'),
+    ('r_label', 'BarlowSemiCondensed-SemiBold.ttf', 24, UPPER + LOWER + DIGITS + '/°%.: -'),
+    # Drag: the 0-60 clock
+    ('timer', 'BarlowCondensed-Bold.ttf', 220, DIGITS + '.-'),
 ]
 FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2

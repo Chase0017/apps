@@ -41,6 +41,32 @@ The look of BMW's newer Live Cockpit Sport view.
 
 <p align="center"><img src="../../docs/images/cluster-sport.png" width="900" alt="Sport theme"></p>
 
+### Minimal
+
+Just the speed, big, with the gear beside it and a thin fuel line under it (the reserve end is red). Nothing else.
+
+<p align="center"><img src="../../docs/images/cluster-minimal.png" width="900" alt="Minimal theme"></p>
+
+### Roadster
+
+Two classic round dials with chrome rings and an orange needle: speed on the left (0 to 160 mph, or 0 to 240 km/h), revs on the right (0 to 7000 rpm, a red band before the redline, and the ring turns red at your shift point). The speed also shows in figures inside its dial, and the gear sits between the dials in chrome. Six readouts left and right: oil, coolant and range, then boost, the clock and the outside temperature, each one changeable on the Readouts tab.
+
+<p align="center"><img src="../../docs/images/cluster-roadster.png" width="900" alt="Roadster theme"></p>
+
+### Track
+
+A race dash for track days: a shift bar across the top, a big gear with the speed under it, all four tyres (pressure and temperature, from the car's tyre monitor) on the left, and oil, coolant and boost on the right (changeable).
+
+<p align="center"><img src="../../docs/images/cluster-track.png" width="900" alt="Track theme"></p>
+
+### Drag
+
+A full-width shift bar and a 0 to 60 mph timer (0 to 100 km/h in metric). Stop for half a second and it reads READY; the clock starts the moment the car moves and stops at 60. Your best time is kept. Also the speed, the gear, the peak boost of the run, and one readout you pick. The timer runs off the car's speed signal, which reads a little under BMW's speedometer, so treat it as a good guide rather than a timing gear.
+
+<p align="center"><img src="../../docs/images/cluster-drag.png" width="900" alt="Drag theme"></p>
+
+Minimal, Roadster, Track and Drag have no map window yet; with "Show Waze map inside the theme" on, Waze stays in its usual place while they show.
+
 More themes are on the way.
 
 ## Off and drive modes
@@ -52,7 +78,7 @@ More themes are on the way.
 ## Settings
 
 - **Theme**, and one per drive mode.
-- **Readouts:** pick which car sensor each GT3 box shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
+- **Readouts:** pick which car sensor each GT3, Roadster, Track or Drag readout shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
 - **Show Waze map inside the theme:** GT3, Sport and M open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
 - **Badge:** the model name, like "BMW X3 M40i", as text in the theme's font (GT3 top left, Sport and M bottom centre). Off by default.
 - **Warnings:** oil, coolant and boost limits. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off).

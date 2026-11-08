@@ -98,6 +98,15 @@
  *             widest advance and h = its cell height, logged at creation), and a new value is one uniform
  *             message of glyph codes. "text" tokens as text, "font", "color" role, "align" left | right | center.
  *             Up to 32 cells; only the characters the font has.
+ *   dial      effect layer (shaders.js dial): a classic round gauge, the Roadster's: "measure" speed | rpm | signal ("signal",
+ *             "max", "ticks"); speed reads 0..160 mph / 0..240 km/h (DIAL_SPEED, labels {{dial:speed:<i>}}), rpm 0.."max"
+ *             (8000) with the red band from the redline (_redMarks) and the ring in the shift red at the shift point;
+ *             "start" / "sweep" degrees (225 / 270), "minor" ticks per step (4), "ringW" px (14), roles "ring" (line)
+ *             fading to "ring2" (dim), "tick" (fg), "needle" (hot), "face" (bg). The numbers are text widgets.
+ *   meter     effect layer (shaders.js meter): a segmented bar, "signal" between "min" and "max" (raw units: km/h, C,
+ *             bar, rpm), "segments" (20), "gap" px (4), "vertical": true fills upward; "colors" [3 roles] lit below
+ *             "at"[0] / up to "at"[1] / past it (fractions of the bar), "trackColor" (track); "peak": ms (true = 3 s)
+ *             holds the highest segment lit in "peakColor" (fg). arc takes "peak" too: a dot on the stroke.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
  * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
  *   is per connection, so a second socket from the same app gets another 8 (DukeAPenguin saw 28 layers over four
@@ -143,6 +152,9 @@
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
  * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
+ * {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
+ * 0-60 run started) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
+ * {{runLabel}} (0-60 MPH, 0-100 KM/H): runs.js. {{warm}}: WARMING UP while the oil is under 80 C, then ENGINE WARM.
  * {{badge}}: the model picked on the Badge tab (badges.js), "BMW X3 M40i" with the lettering on, '' for none.
  * Warnings: a text showing oil, coolant or boost (a {{oil}} / {{coolant}} / {{boost}} token, or a readout slot with that
  * sensor) flashes in the shift red while the value is over "warnOil" / "warnCoolant" (C) / "warnBoost" (bar); 0 = off.
@@ -176,6 +188,7 @@ const Car = require('./kit/car');
 const Waze = require('./waze');
 const Screen = require('./screen');
 const badges = require('./badges');
+const Runs = require('./runs');
 
 const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
 // the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
@@ -191,6 +204,8 @@ const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for 
 const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 const TYRE_CORNERS = ['FL', 'FR', 'RL', 'RR'];
+// the Roadster's speed dial: 0..160 mph or 0..240 km/h in 8 steps (labels {{dial:speed:<i>}})
+const DIAL_SPEED = { us: { max: 160, ticks: 8 }, metric: { max: 240, ticks: 8 } };
 // the HUD's place (the page's Position tab): settings that move / scale the layers already there, no rebuild
 const PLACE_KEYS = ['hudX', 'hudY', 'hudScale'];
 // settings that only change what a text shows (the next tick paints it), no rebuild
@@ -314,6 +329,11 @@ class HudApp {
         this.boostFes = null; this.boostFesAt = 0;    // bar, from the sport display signal
         this.boostDme = null; this.boostDmeAt = 0;    // bar, from the engine unit (fallback)
         this.needsBoost = false;         // a shown widget uses boost (the engine unit is only asked then)
+        this.intakeDme = null; this.intakeDmeAt = 0;  // C, intake air from the engine unit (config.dme.intake)
+        this.needsIntake = false;        // a shown widget uses the intake temperature
+        this.boostPeak = null;           // bar, the highest boost since the last 0-60 run started ({{boostPeak}})
+        this.runs = new Runs(ctx.dataDir, this.log);   // the 0-60 timer (runs.js)
+        this.runs.onStart = () => { this.boostPeak = null; };
         this.driveMode = null;           // 'comfort' | 'sport' | 'eco', once the car has said
         this.driveVariant = null;        // 'plus' (Sport+ / Comfort+ / Eco Pro+), 'individual', or null
         this.carUnits = { press: null, temp: null, psiSeen: false };   // the car's display units, for the TPMS values
@@ -586,8 +606,10 @@ class HudApp {
     /** Boost from the engine unit when the sport display's value isn't there (config.dme, read-only UDS). */
     _startDme() {
         const dme = this.config.dme;
-        if (!dme || !Array.isArray(dme.boost) || !dme.boost.length) return;
-        let rd = null, busy = false, baro = 101.3, baroAt = 0;
+        const hasBoost = !!(dme && Array.isArray(dme.boost) && dme.boost.length);
+        const hasIntake = !!(dme && Array.isArray(dme.intake) && dme.intake.length);
+        if (!hasBoost && !hasIntake) return;
+        let rd = null, busy = false, baro = 101.3, baroAt = 0, intakeAsk = 0;
         try {
             const { Diag } = require('./kit/diag');
             const { DidReader } = require('./kit/dids');
@@ -598,9 +620,17 @@ class HudApp {
         } catch (e) { this.log.info('engine unit boost off: ' + (e && e.message || e)); return; }
         this.dmeTimer = setInterval(() => this._guard('engine unit boost', () => {
             const now = Date.now();
-            if (busy || !this.needsBoost || this.car.data().demo || now - this.boostFesAt < FRESH_MS) return;
+            const wantBoost = hasBoost && this.needsBoost && now - this.boostFesAt >= FRESH_MS;
+            const wantIntake = hasIntake && this.needsIntake && now - intakeAsk >= 2000;   // a temperature: every 2 s is plenty
+            if (busy || this.car.data().demo || (!wantBoost && !wantIntake)) return;
             busy = true;
             (async () => {
+                if (wantIntake) {
+                    intakeAsk = now;
+                    const t = await rd.value('intake', dme.intake);
+                    if (isNum(t)) { this.intakeDme = t; this.intakeDmeAt = Date.now(); }
+                }
+                if (!wantBoost) return;
                 if (now - baroAt > 60000 && Array.isArray(dme.baro)) {
                     baroAt = now;
                     const b = await rd.value('baro', dme.baro);
@@ -902,8 +932,26 @@ class HudApp {
         return kind === 'p' ? (rear ? 2.5 : 2.3) : (rear ? 27 : 24);
     }
 
+    /** A dial's scale: { max, ticks } in display units (speed: DIAL_SPEED by the units setting; rpm: "max", 8000). */
+    _dialScale(w) {
+        if (w.measure === 'speed') return DIAL_SPEED[this.setting('units') === 'us' ? 'us' : 'metric'];
+        if (w.measure === 'rpm') { const max = w.max || 8000; return { max, ticks: max / 1000 }; }
+        return { max: w.max || 1, ticks: w.ticks || 8 };
+    }
+
+    /** Peak hold for a gauge: the highest value of the last `hold` ms (true: 3 s), as 0..1. */
+    _peakHold(x, v, now, hold) {
+        const ms = hold === true ? 3000 : hold;
+        if (!isNum(x.peakV) || v >= x.peakV || now - x.peakAt > ms) { x.peakV = v; x.peakAt = now; }
+        return x.peakV;
+    }
+
     _raw(name) {
         if (name === 'boost') return this._boost();
+        if (name === 'intake') {
+            if (isNum(this.intakeDme) && Date.now() - this.intakeDmeAt < 10000) return this.intakeDme;
+            return this.car.data().demo ? 31 : null;
+        }
         if (name === 'rpm' && isNum(this.rpmF)) return this.rpmF;
         if (name === 'fuel' || name === 'range' || name === 'ambient') {
             // the kit's demo drive has none of these: made-up but steady values while it runs
@@ -968,8 +1016,19 @@ class HudApp {
         }
         if (tok.indexOf('tyreP:') === 0) { const v = this._tyre('p', tok.slice(6)); return isNum(v) ? (us ? fix(v * 14.5038, 0) : fix(v, 1)) : '--'; }
         if (tok.indexOf('tyreT:') === 0) { const v = this._tyre('t', tok.slice(6)); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
+        if (tok.indexOf('dial:speed:') === 0) {     // a speed dial's label i ({{dial:speed:<i>}}): DIAL_SPEED's steps
+            const D = DIAL_SPEED[us ? 'us' : 'metric'];
+            return String(Math.round(D.max / D.ticks * Number(tok.slice(11))));
+        }
         switch (tok) {
             case 'u:pressure': return us ? 'psi' : 'bar';
+            case 'intake': { const v = this._raw('intake'); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
+            case 'boostPeak': { const v = this.boostPeak; return us ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
+            case 'run': { const v = this.runs.shown(Date.now()); return isNum(v) ? v.toFixed(this.runs.state === 'run' ? 1 : 2) : '0.00'; }
+            case 'runBest': { const v = this.runs.best[us ? 'us' : 'metric']; return v > 0 ? v.toFixed(2) : '-.--'; }
+            case 'runState': return this.runs.word();
+            case 'runLabel': return us ? '0-60 MPH' : '0-100 KM/H';
+            case 'warm': { const o = this._raw('oil'); return isNum(o) ? (o < 80 ? 'WARMING UP' : 'ENGINE WARM') : ''; }
             case 'badge': return badges.text(this.setting('badge'), this.setting('badgeBMW') === true);
             case 'speed': { const v = this._raw('speed'); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
             case 'u:speed': return us ? 'MPH' : 'KM/H';
@@ -1086,7 +1145,7 @@ class HudApp {
         this.mapShown = this.setting('mapUp');
         if (name === 'off') {
             this._wazeWant();
-            this.problem = null; this.layoutTheme = null; this.needsBoost = false;
+            this.problem = null; this.layoutTheme = null; this.needsBoost = false; this.needsIntake = false;
             this.log.info('off: nothing drawn, BMW\'s own ' + (this.target === 'panel' ? 'cluster' : 'HUD') + ' shows');
             return;
         }
@@ -1109,15 +1168,21 @@ class HudApp {
         this.log.info('layout "' + layout.name + '", theme ' + this.theme.name + (this.layoutTheme ? '' : ' (' + this.setting('hudTheme') + ')'));
         const shown = layout.widgets.filter((w) => !(w.toggle && !this._toggleOn(w.toggle)) && !(w.themes && w.themes.indexOf(this.themeName) < 0));
         this.needsBoost = /boost/.test(JSON.stringify(shown));
+        this.needsIntake = /intake/.test(JSON.stringify(shown));
         // plan the layers first (a sheet's size is only known once every member is placed), then make them
         // in that order: within a class and z, cluster-render puts the newer layer on top. Small sheets
         // first; a bigger limit only when the layer budget needs it (see the header).
         const area = this.size[0] * this.size[1];
         const over = (p) => this._connCounts(p).some((k) => k > LAYER_BUDGET);
-        let maxPx = Math.floor(area / SHEET_AREA_FRAC), plan = this._plan(shown, maxPx);
-        while (over(plan) && maxPx !== Infinity) {
+        // a layout's "packWaste" (the Nov 7 2026 themes): a widget joins a sheet only while the sheet's box stays within
+        // that many times its members' own area, so far-apart readouts don't share one mostly empty sheet (pixel
+        // memory); relaxed along with the size limit when the layer budget needs it. Without it: the size limit only.
+        let waste = isNum(layout.packWaste) ? layout.packWaste : Infinity;
+        let maxPx = Math.floor(area / SHEET_AREA_FRAC), plan = this._plan(shown, maxPx, waste);
+        while (over(plan) && (maxPx !== Infinity || waste !== Infinity)) {
             maxPx = maxPx * 2 >= area ? Infinity : maxPx * 2;
-            plan = this._plan(shown, maxPx);
+            waste = waste * 2 > 64 ? Infinity : waste * 2;
+            plan = this._plan(shown, maxPx, waste);
         }
         let effects = 0, own = 0, sheets = 0, bytes = 0, px = 0;
         plan.forEach((e) => {
@@ -1152,7 +1217,8 @@ class HudApp {
      * file order says) and whose union box with it stays within maxPx pixels, else a new sheet is opened
      * at the end.
      */
-    _plan(widgets, maxPx) {
+    _plan(widgets, maxPx, waste) {
+        if (!isNum(waste)) waste = Infinity;
         const plan = [];
         const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
         const union = (s, w) => {
@@ -1172,7 +1238,8 @@ class HudApp {
                 const s = plan[i];
                 if (s.kind !== 'sheet' || s.klass !== klass || s.z !== z || s.conn !== conn) continue;
                 const u = union(s, w);
-                if (u.w * u.h <= maxPx) { sheet = s; box = u; }
+                const own = s.members.reduce((a, m) => a + m.w * m.h, 0) + w.w * w.h;
+                if (u.w * u.h <= maxPx && u.w * u.h <= waste * own) { sheet = s; box = u; }
             }
             if (!sheet) { sheet = { kind: 'sheet', klass, z, conn, x: w.x, y: w.y, w: w.w, h: w.h, members: [], ref: 0, c: null, ci: conn, buf: null }; plan.push(sheet); }
             else { sheet.x = box.x; sheet.y = box.y; sheet.w = box.w; sheet.h = box.h; }
@@ -1341,8 +1408,39 @@ class HudApp {
             c.uniform(ref, 'u_highAt', [(red - 500) / max]);
             c.uniform(ref, 'u_track', rgba(t.track));
             c.uniform(ref, 'u_flash', [0]);
+        } else if (w.type === 'dial') {
+            const D = this._dialScale(w);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_start', [(w.start === undefined ? 225 : w.start) * Math.PI / 180]);
+            c.uniform(ref, 'u_sweep', [(w.sweep === undefined ? 270 : w.sweep) * Math.PI / 180]);
+            c.uniform(ref, 'u_ticks', [D.ticks]);
+            c.uniform(ref, 'u_minor', [w.minor || 4]);
+            c.uniform(ref, 'u_redFrom', [w.measure === 'rpm' ? this._redMarks(D.max)[0] : (isNum(w.redFrom) ? w.redFrom : 2)]);
+            c.uniform(ref, 'u_ringW', [w.ringW || 14]);
+            c.uniform(ref, 'u_ring', rgb(color(t, w.ring || 'line')));
+            c.uniform(ref, 'u_ring2', rgb(color(t, w.ring2 || 'dim')));
+            c.uniform(ref, 'u_tick', rgb(color(t, w.tick || 'fg')));
+            c.uniform(ref, 'u_needle', rgb(color(t, w.needle || 'hot')));
+            c.uniform(ref, 'u_red', rgb(t.hot));
+            c.uniform(ref, 'u_face', rgb(color(t, w.face || 'bg')));
+            c.uniform(ref, 'u_hot', [0]);
+        } else if (w.type === 'meter') {
+            const cs = w.colors || ['fg', 'fg', 'hot'];
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_segs', [w.segments || 20]);
+            c.uniform(ref, 'u_gap', [isNum(w.gap) ? w.gap : 4]);
+            c.uniform(ref, 'u_vertical', [w.vertical ? 1 : 0]);
+            c.uniform(ref, 'u_c1', rgb(color(t, cs[0])));
+            c.uniform(ref, 'u_c2', rgb(color(t, cs[1] || cs[0])));
+            c.uniform(ref, 'u_c3', rgb(color(t, cs[2] || cs[1] || cs[0])));
+            c.uniform(ref, 'u_at', w.at || [1, 1]);
+            c.uniform(ref, 'u_track', rgba(color(t, w.trackColor || 'track')));
+            c.uniform(ref, 'u_peak', [-1]);
+            c.uniform(ref, 'u_peakC', rgb(color(t, w.peakColor || 'fg')));
         } else if (w.type === 'arc') {
             c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_peak', [-1]);
+            c.uniform(ref, 'u_peakC', rgb(color(t, w.peakColor || 'fg')));
             c.uniform(ref, 'u_color', rgb(color(t, w.color || 'arc')));
             c.uniform(ref, 'u_track', rgba(t.track));
             c.uniform(ref, 'u_width', [w.width || 7]);
@@ -1433,6 +1531,10 @@ class HudApp {
     _tick() {
         const now = Date.now();
         this._smoothRpm(now);
+        // the 0-60 timer only on the car's own data (the demo drive would set a best time)
+        if (!this.car.data().demo) this.runs.update(this.car.data().speed, now, this.setting('units') === 'us' ? 'us' : 'metric');
+        const b = this._boost();
+        if (isNum(b) && (!isNum(this.boostPeak) || b > this.boostPeak)) this.boostPeak = b;
         if (!this.client.ready) return;
         // shift light: blink the whole bar at 8 Hz once the rpm reaches the redline
         const rpm = this._raw('rpm');
@@ -1514,13 +1616,28 @@ class HudApp {
             x.last = key;
             x.c.uniform(x.ref, 'u_value', [q]);
             x.c.uniform(x.ref, 'u_flash', [this.flash ? 1 : 0]);
-        } else if (w.type === 'arc') {
+        } else if (w.type === 'arc' || w.type === 'meter') {
             const raw = this._raw(w.signal);
             const v = isNum(raw) ? Math.min(1, Math.max(0, (raw - w.min) / (w.max - w.min))) : 0;
             const q = Math.round(v * 200) / 200;
-            if (!force && q === x.last) return;
-            x.last = q;
+            const pk = w.peak ? this._peakHold(x, q, now, w.peak) : -1;
+            const key = q + '|' + pk;
+            if (!force && key === x.last) return;
+            x.last = key;
             x.c.uniform(x.ref, 'u_value', [q]);
+            if (w.peak) x.c.uniform(x.ref, 'u_peak', [pk > q ? pk : -1]);
+        } else if (w.type === 'dial') {
+            const D = this._dialScale(w), us = this.setting('units') === 'us';
+            let raw = this._raw(w.measure === 'rpm' ? 'rpm' : w.measure === 'speed' ? 'speed' : w.signal);
+            if (w.measure === 'speed' && isNum(raw) && us) raw *= 0.621371;
+            const v = isNum(raw) ? Math.min(1, Math.max(0, raw / D.max)) : 0;
+            const q = Math.round(v * 1000) / 1000;
+            const hot = w.measure === 'rpm' && this._shift().now ? 1 : 0;
+            const key = q + '|' + hot;
+            if (!force && key === x.last) return;
+            x.last = key;
+            x.c.uniform(x.ref, 'u_value', [q]);
+            x.c.uniform(x.ref, 'u_hot', [hot]);
         } else if (w.type === 'sdash') {
             const us = this.setting('units') === 'us';
             const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');

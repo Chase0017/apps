@@ -24,6 +24,7 @@ const LIST = [
     { id: 'powerPct', name: 'Power, % of max', cat: 'Engine', head: 'POWER', tok: 'powerPct', unit: () => '%' },
     { id: 'oil', name: 'Oil temperature', cat: 'Temps', head: 'OIL', tok: 'oil', unit: T, suffix: '°' },
     { id: 'coolant', name: 'Coolant temperature', cat: 'Temps', head: 'COOLANT', tok: 'coolant', unit: T, suffix: '°' },
+    { id: 'intake', name: 'Intake air temperature', cat: 'Temps', head: 'INTAKE', tok: 'intake', unit: T, suffix: '°' },
     { id: 'ambient', name: 'Outside temperature', cat: 'Temps', head: 'OUTSIDE', tok: 'ambientN', unit: T, suffix: '°' },
     { id: 'speed', name: 'Speed', cat: 'Chassis', head: 'SPEED', tok: 'speed', unit: (us) => (us ? 'MPH' : 'KM/H') },
     { id: 'gLat', name: 'Cornering g', cat: 'Chassis', head: 'LAT G', tok: 'gLat', unit: () => 'G' },
