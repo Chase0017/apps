@@ -37,6 +37,8 @@ const TYPES = {
     atext: ['text', 'font'],
     dial: ['measure'],
     meter: ['signal', 'min', 'max'],
+    gmeter: [],
+    revarc: ['center', 'r', 'start', 'sweep'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 

@@ -36,6 +36,22 @@ Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and 
     <td><img src="../../docs/images/hud-boost.png" width="300" alt="Boost layout"></td>
     <td><img src="../../docs/images/hud-warmup.png" width="300" alt="Warm-up layout"></td>
   </tr>
+  <tr>
+    <th align="center">Track</th>
+    <th align="center">Cruise</th>
+  </tr>
+  <tr>
+    <td><img src="../../docs/images/hud-track.png" width="300" alt="Track layout"></td>
+    <td><img src="../../docs/images/hud-cruise.png" width="300" alt="Cruise layout"></td>
+  </tr>
+  <tr>
+    <th align="center">Retro</th>
+    <th align="center"></th>
+  </tr>
+  <tr>
+    <td><img src="../../docs/images/hud-retro.png" width="300" alt="Retro layout"></td>
+    <td></td>
+  </tr>
 </table>
 
 - **Daily:** the gear, the clock and the oil temperature.
@@ -45,6 +61,9 @@ Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and 
 - **Shift only:** 12 shift lights and the gear, and SHIFT at the shift point.
 - **Boost:** a boost gauge with a dot that holds the peak for 4 seconds, the boost in figures, and the peak since your last 0 to 60 run.
 - **Warm-up:** oil, coolant and intake air temperature as bars with figures, and WARMING UP until the oil reaches 80°C. The intake temperature is read from the engine unit (read-only), like the boost fallback.
+- **Track:** 12 shift lights, the gear with SHIFT under it, and a G-meter: a dot shows the cornering and braking or accelerating force, with a ring that holds the peak of the last 3 seconds.
+- **Cruise:** four quiet figures in soft white: range, outside temperature, your average speed this drive (time moving only, after the first minute) and the time.
+- **Retro:** an 80s digital look in amber: a segmented rev bar, the gear in seven-segment digits, and boost, oil and water as figures with bar graphs.
 - The clock, oil, coolant and shift point readouts can each show another sensor instead (page's Readouts tab).
   - **Shift lights:** they come on from 3000 rpm and fill up to the shift point. At the shift point everything goes red and SHIFT shows.
   - **Shift grades:** every upshift is graded on its peak rpm. EARLY means more than 250 rpm under the shift point, LATE more than 200 over it, COLD REV the same while the cold guard is on, LIMITER within 60 rpm of the redline, and anything in between is SPOT ON.
@@ -52,7 +71,7 @@ Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and 
 
 ## Themes
 
-Classic, M and Night, plus Auto, which switches to Night at sunset. You choose which theme Auto uses in daytime.
+Classic, M and Night, plus Auto, which switches to Night at sunset. You choose which theme Auto uses in daytime. Cruise and Retro always keep their own colours (soft white and teal, amber and green).
 
 <table align="center">
   <tr>

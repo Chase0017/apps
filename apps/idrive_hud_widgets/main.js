@@ -25,7 +25,7 @@ mgu.run({
         hud.start();
         new Page(ctx, hud, {
             title: ctx.spec.title, what: 'HUD',
-            look: { name: 'Layouts', style: 'cards', tags: { daily: 'gear · clock · oil', sport: 'rev bar · temps · boost', redline: 'shift lights · shift score', minimal: 'round BMW speed', shiftonly: 'lights · gear', boost: 'boost · peak', warmup: 'oil · coolant · intake' } },
+            look: { name: 'Layouts', style: 'cards', tags: { daily: 'gear · clock · oil', sport: 'rev bar · temps · boost', redline: 'shift lights · shift score', minimal: 'round BMW speed', shiftonly: 'lights · gear', boost: 'boost · peak', warmup: 'oil · coolant · intake', track: 'lights · G-meter', cruise: 'range · trip', retro: 'amber digital' } },
             tabs: ['look', 'readouts', 'position', 'colours', 'alerts', 'settings'],
             settings: ['units', 'clock', 'redline', 'shiftBefore', 'coldGuard', 'showClock', 'showOil', 'showCoolant', 'showBoost', 'demo'],
         }).start();

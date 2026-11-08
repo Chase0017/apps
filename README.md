@@ -6,7 +6,7 @@
 
 ## Cluster Themes
 
-Redraws the whole instrument cluster in a theme of your choice: a GT3 race dash, an M-style cluster, a Sport view, Minimal, Roadster round dials, Track, or Drag with a 0 to 60 timer. Pick the theme on the center screen, or let it follow the SPORT / COMFORT / ECO PRO buttons. [Read more](apps/cluster_themes/README.md)
+Redraws the whole instrument cluster in a theme of your choice: a GT3 race dash, an M-style cluster, a Sport view, Minimal, Roadster round dials, Track, Drag with a 0 to 60 timer, Rally with a G-meter, Retro 80s, or Cruise. Pick the theme on the center screen, or let it follow the SPORT / COMFORT / ECO PRO buttons. [Read more](apps/cluster_themes/README.md)
 
 <p align="center"><img src="docs/images/cluster-gt3-shift.png" width="900" alt="GT3 theme at the shift point"></p>
 <p align="center"><img src="docs/images/cluster-m.png" width="900" alt="M theme"></p>
@@ -14,7 +14,7 @@ Redraws the whole instrument cluster in a theme of your choice: a GT3 race dash,
 
 ## HUD Widgets
 
-Puts your own readouts on the windshield HUD: gear, shift lights, boost, oil, coolant and intake temperatures. Seven layouts, each in Classic, M and Night colours. [Read more](apps/idrive_hud_widgets/README.md)
+Puts your own readouts on the windshield HUD: gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures. Ten layouts, in Classic, M and Night colours (Cruise and Retro bring their own). [Read more](apps/idrive_hud_widgets/README.md)
 
 <p align="center"><img src="docs/images/hud-redline.gif" width="520" alt="Redline layout on the HUD"></p>
 

@@ -1,8 +1,8 @@
 {
   "id": "idrive_hud_widgets",
   "title": "HUD Widgets",
-  "description": "Gear, shift lights, boost, oil, coolant and intake temperatures on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.8.0",
+  "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD, in Classic, M or Night themes",
+  "version": "0.9.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -117,6 +117,18 @@
           "Warm-up"
         ],
         [
+          "track",
+          "Track"
+        ],
+        [
+          "cruise",
+          "Cruise"
+        ],
+        [
+          "retro",
+          "Retro"
+        ],
+        [
           "grid",
           "Calibration grid"
         ],
@@ -169,6 +181,18 @@
         [
           "warmup",
           "Warm-up"
+        ],
+        [
+          "track",
+          "Track"
+        ],
+        [
+          "cruise",
+          "Cruise"
+        ],
+        [
+          "retro",
+          "Retro"
         ]
       ]
     },
@@ -209,6 +233,18 @@
         [
           "warmup",
           "Warm-up"
+        ],
+        [
+          "track",
+          "Track"
+        ],
+        [
+          "cruise",
+          "Cruise"
+        ],
+        [
+          "retro",
+          "Retro"
         ]
       ]
     },
@@ -249,6 +285,18 @@
         [
           "warmup",
           "Warm-up"
+        ],
+        [
+          "track",
+          "Track"
+        ],
+        [
+          "cruise",
+          "Cruise"
+        ],
+        [
+          "retro",
+          "Retro"
         ]
       ]
     },

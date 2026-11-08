@@ -21,6 +21,14 @@ Besides its own code, the app ships with:
    Copyright 2011 The Michroma Project Authors (https://github.com/googlefonts/Michroma-font),
    under the SIL Open Font License 1.1 (the same licence text as below).
 
+4a. The Orbitron typeface (hud.pack, fonts/m_*): pre-rendered glyphs of Orbitron,
+   Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron), with Reserved Font Name
+   "Orbitron", under the SIL Open Font License 1.1 (the same licence text as below).
+
+4b. The DSEG7 Classic typeface (hud.pack, fonts/d7_*): pre-rendered glyphs of DSEG7 Classic Bold,
+   Copyright (c) 2017, keshikan (http://www.keshikan.net), with Reserved Font Name "DSEG",
+   under the SIL Open Font License 1.1 (the same licence text as below).
+
 5. The pixel-diff text update in hud.js (changes(): only the rectangle that changed goes up the link) is
    adapted from PenguinDukeYDAuto/idrive7-EVAHUD (shared/eva_canvas.js): MIT, Copyright (c) 2026 DukeAPenguin.
    https://github.com/PenguinDukeYDAuto/idrive7-EVAHUD
@@ -32,6 +40,8 @@ Besides its own code, the app ships with:
 ----------------------------------------------------------------------------------------------
 Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
 Copyright 2011 The Michroma Project Authors (https://github.com/googlefonts/Michroma-font)
+Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron), with Reserved Font Name "Orbitron"
+Copyright (c) 2017, keshikan (http://www.keshikan.net), with Reserved Font Name "DSEG"
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

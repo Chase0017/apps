@@ -1037,4 +1037,101 @@ void main() {
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, dial: DIAL, meter: METER };
+const GMETER = `// A G-meter for a cluster-render "effect" layer (GLSL ES 1.00): a dot at the car's lateral (x) and
+// longitudinal (y, braking up) g inside rings at every 0.5 g out to u_max, a crosshair, and a faint ring at the
+// peak g of the last few seconds. u_g in g (x lateral, y longitudinal: + = accelerating, drawn down). The dial
+// fills the smaller side of the layer. v_uv (0,0) is the top-left.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec2 u_g;
+uniform float u_max;
+uniform float u_peak;
+uniform vec4 u_line;
+uniform vec3 u_dot;
+uniform vec3 u_peakC;
+
+void main() {
+    vec2 p = vec2(v_uv.x - 0.5, 0.5 - v_uv.y) * u_size;   // px from the centre, +y up
+    float R = min(u_size.x, u_size.y) * 0.5 - 2.0;
+    float d = length(p);
+    if (d > R + 1.0) { gl_FragColor = vec4(0.0); return; }
+    float k = R / u_max;                                   // px per g
+    vec4 col = vec4(0.0);
+    // rings every 0.5 g, the outer one brighter
+    for (int i = 1; i <= 6; i++) {
+        float g = float(i) * 0.5;
+        if (g > u_max + 0.01) break;
+        float rr = g * k, wdt = g > u_max - 0.01 ? 1.6 : 1.0;
+        float c = clamp(wdt + 0.5 - abs(d - rr), 0.0, 1.0);
+        col = max(col, vec4(u_line.rgb, u_line.a * c * (g > u_max - 0.01 ? 1.0 : 0.6)));
+    }
+    // crosshair
+    float cx = clamp(1.5 - abs(p.x), 0.0, 1.0), cy = clamp(1.5 - abs(p.y), 0.0, 1.0);
+    col = max(col, vec4(u_line.rgb, u_line.a * 0.45 * max(cx, cy)));
+    // the peak ring
+    if (u_peak > 0.05) {
+        float c = clamp(2.0 - abs(d - min(u_peak, u_max) * k), 0.0, 1.0);
+        if (c > 0.0) col = vec4(u_peakC, c * 0.8);
+    }
+    // the dot (with a soft glow)
+    vec2 g = clamp(u_g, vec2(-u_max), vec2(u_max));
+    vec2 dp = vec2(g.x, -g.y) * k;
+    float dd = length(p - dp);
+    float dt = clamp(9.5 - dd, 0.0, 1.0);
+    float glow = clamp(1.0 - (dd - 9.0) / 12.0, 0.0, 1.0) * 0.35;
+    if (dt > 0.0) col = vec4(u_dot, max(dt, col.a));
+    else if (glow > col.a) col = vec4(u_dot, glow);
+    gl_FragColor = col;
+}
+`;
+
+const REVARC = `// A segmented rev arc for a cluster-render "effect" layer (GLSL ES 1.00), the Rally theme's: a band from u_r - u_w
+// to u_r round u_center (layer px, y down), from u_start sweeping u_sweep (radians, clockwise from 12 o'clock), in
+// u_segs segments, the first u_value of it lit: u_low below u_midAt, u_mid up to u_highAt, u_high past it;
+// unlit u_track. u_flash 1: everything lit flashes white (at the redline). v_uv (0,0) is the top-left.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec2 u_center;
+uniform float u_r;
+uniform float u_w;
+uniform float u_start;
+uniform float u_sweep;
+uniform float u_segs;
+uniform float u_value;
+uniform vec3 u_low;
+uniform vec3 u_mid;
+uniform vec3 u_high;
+uniform float u_midAt;
+uniform float u_highAt;
+uniform vec4 u_track;
+uniform float u_flash;
+
+const float PI = 3.14159265359;
+
+void main() {
+    vec2 d = v_uv * u_size - u_center;
+    float rr = length(d);
+    float inner = u_r - u_w;
+    float edge = clamp(rr - inner + 0.5, 0.0, 1.0) * clamp(u_r - rr + 0.5, 0.0, 1.0);
+    if (edge <= 0.0) { gl_FragColor = vec4(0.0); return; }
+    float a = atan(d.x, -d.y);                      // clockwise from 12 o'clock
+    float rel = mod(a - u_start + 4.0 * PI, 2.0 * PI);
+    if (rel > u_sweep) { gl_FragColor = vec4(0.0); return; }
+    float f = rel / u_sweep;
+    float slot = u_sweep / u_segs;
+    float i = floor(rel / slot);
+    float gap = 5.0 / rr;                           // a 5 px gap between segments at this radius
+    float fx = rel - i * slot;
+    float a1 = clamp((fx) * rr + 0.5, 0.0, 1.0) * clamp((slot - gap - fx) * rr + 0.5, 0.0, 1.0);
+    float fc = (i + 0.5) / u_segs;
+    vec3 c = fc < u_midAt ? u_low : (fc < u_highAt ? u_mid : u_high);
+    bool lit = u_value > 0.0 && fc <= u_value + 0.5 / u_segs;
+    if (lit && u_flash > 0.5) c = vec3(1.0);
+    if (lit) gl_FragColor = vec4(c, edge * a1);
+    else gl_FragColor = vec4(u_track.rgb, u_track.a * edge * a1);
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, dial: DIAL, meter: METER, gmeter: GMETER, revarc: REVARC };

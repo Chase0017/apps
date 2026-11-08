@@ -36,12 +36,15 @@ HUD_FONTS = [
     ('mid', 'BarlowSemiCondensed-Medium.ttf', 24, DIGITS + ':.-° ' + UPPER),
     ('label', 'Barlow-Medium.ttf', 15, UPPER + DIGITS + '/.:-°%>· '),
     ('small', 'Barlow-Medium.ttf', 13, UPPER + DIGITS + '/.:-°%>· '),
+    # Retro: seven-segment digits (DSEG7 Classic, SIL OFL; the unlit 8s behind are the same font in "track")
+    ('d7_hero', 'DSEG7Classic-Bold.ttf', 76, DIGITS + 'PRN-', 0, None, {'R': 'r', 'N': 'n'}),   # r and n: seven segments can't draw R or N
+    ('d7_mid', 'DSEG7Classic-Bold.ttf', 26, DIGITS + '-.:'),
 ]
 # Cluster Themes, 1920x720 LCD. GT3: the race-dash look, Barlow Condensed.
 CLUSTER_FONTS = [
     ('gear', 'BarlowCondensed-Bold.ttf', 330, DIGITS + 'PRND-'),
     ('big', 'BarlowCondensed-Bold.ttf', 124, DIGITS + '.:-'),   # 124: "20.3 PSI" fits a 280 px box beside the hood; ':' for a clock in a readout slot
-    ('value', 'BarlowCondensed-Bold.ttf', 92, DIGITS + '.:- PRND'),
+    ('value', 'BarlowCondensed-Bold.ttf', 92, DIGITS + '.:- PRND°', 0, None, None, '°'),   # °: a readout slot showing a temperature (tucked: the cell keeps its height)
     ('small', 'BarlowCondensed-Bold.ttf', 50, DIGITS + '.:-° '),
     ('unit', 'BarlowCondensed-SemiBold.ttf', 34, UPPER + DIGITS + '/°%>·.: -'),
     ('head', 'BarlowCondensed-SemiBold.ttf', 24, UPPER + DIGITS + '/°%>·.: -'),
@@ -78,24 +81,38 @@ CLUSTER_FONTS = [
     ('r_label', 'BarlowSemiCondensed-SemiBold.ttf', 24, UPPER + LOWER + DIGITS + '/°%.: -'),
     # Drag: the 0-60 clock
     ('timer', 'BarlowCondensed-Bold.ttf', 220, DIGITS + '.-'),
+    # Rally: the huge gear and the readouts in the arc
+    ('y_gear', 'BarlowCondensed-Bold.ttf', 300, DIGITS + 'PRNDSM-'),
+    ('y_val', 'BarlowCondensed-Bold.ttf', 76, DIGITS + '.:-+°', 0, None, None, '°'),
+    # Retro 80s: seven-segment digits (DSEG7 Classic, SIL OFL; the unlit 8s behind are the same font in "track")
+    ('d7_big', 'DSEG7Classic-Bold.ttf', 170, DIGITS + '-'),
+    ('d7_val', 'DSEG7Classic-Bold.ttf', 60, DIGITS + '-.:'),
+    ('d7_sm', 'DSEG7Classic-Bold.ttf', 42, DIGITS + '-.:'),
+    ('d7_gear', 'DSEG7Classic-Bold.ttf', 190, DIGITS + 'PRN-', 0, None, {'R': 'r', 'N': 'n'}),   # r and n: seven segments can't draw R or N
+    # Cruise: calm, light numbers
+    ('c_speed', 'BarlowSemiCondensed-Medium.ttf', 150, DIGITS + '-'),
+    ('c_val', 'BarlowSemiCondensed-Medium.ttf', 62, DIGITS + '.:-+°'),
 ]
 FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2
 ATLAS_W = 1024
 
 
-def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None):
+def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck=''):
     """stroke: px of extra weight round every glyph (Michroma has one weight). weight: a named instance of a
     variable font (Orbitron: Regular .. Black), for the M theme's squared BMW-style gear, speed and numbers.
-    subs: {char: glyph drawn for it} (Orbitron's zero is slashed; the M8's is plain, so its O stands in)."""
+    subs: {char: glyph drawn for it} (Orbitron's zero is slashed; the M8's is plain, so its O stands in).
+    tuck: characters added to a font after layouts were built on its cell height (° on value / y_val, Nov 7 2026):
+    they don't count towards the cell, and one that rises above it is drawn lower so its top meets the cell's."""
     font = ImageFont.truetype(os.path.join(SRC, file), size)
     if weight: font.set_variation_by_name(weight)
     subs = subs or {}
     glyph = lambda c: subs.get(c, c)
     ink = [c for c in chars if c != ' ']
     boxes = {c: font.getbbox(glyph(c), anchor='ls', stroke_width=stroke) for c in ink}
-    top = min(b[1] for b in boxes.values())
-    bottom = max(b[3] for b in boxes.values())
+    top = min(b[1] for c, b in boxes.items() if c not in tuck)
+    bottom = max(b[3] for c, b in boxes.items() if c not in tuck)
+    drop = {c: max(0, top - boxes[c][1]) for c in tuck if c in boxes}
     height = bottom - top + 2 * PAD
     tab = (max(font.getlength(glyph(d)) for d in DIGITS if d in chars) + 2 * stroke) if any(d in chars for d in DIGITS) else 0
 
@@ -108,7 +125,7 @@ def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None):
         l, _, r, _ = boxes[c]
         w = r - l + 2 * PAD
         img = Image.new('L', (w, height), 0)
-        ImageDraw.Draw(img).text((PAD - l, PAD - top), glyph(c), font=font, fill=255, anchor='ls', stroke_width=stroke, stroke_fill=255)
+        ImageDraw.Draw(img).text((PAD - l, PAD - top + drop.get(c, 0)), glyph(c), font=font, fill=255, anchor='ls', stroke_width=stroke, stroke_fill=255)
         shift = (tab - adv) / 2 if c in DIGITS else 0
         cells.append((c, img, round(l - PAD + shift), round(tab if c in DIGITS else adv)))
 

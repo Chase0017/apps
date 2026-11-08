@@ -107,6 +107,12 @@
  *             bar, rpm), "segments" (20), "gap" px (4), "vertical": true fills upward; "colors" [3 roles] lit below
  *             "at"[0] / up to "at"[1] / past it (fractions of the bar), "trackColor" (track); "peak": ms (true = 3 s)
  *             holds the highest segment lit in "peakColor" (fg). arc takes "peak" too: a dot on the stroke.
+ *   gmeter    effect layer (shaders.js gmeter): a G-meter, a dot at {{gLat}} / {{gLong}} inside rings every 0.5 g to "max"
+ *             (1.5), with a ring at the peak g of the last "peak" ms (3000); roles "line" (dim), "dot" (hot), "peakColor"
+ *             (fg), "lineAlpha" 0-255 (150; 255 on the HUD, where see-through is faint). Lateral + is drawn right, accelerating down; "flipX" / "flipY": true if the car's signs run the other way.
+ *   revarc    effect layer (shaders.js revarc): a segmented rev arc, the Rally theme's: centre "center" [x, y] (layer px, may
+ *             sit below the layer), outer radius "r", "band" px (40), "start" / "sweep" degrees clockwise from 12 o'clock,
+ *             "segments" (30); colours, flash and scale as the shiftbar.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
  * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
  *   is per connection, so a second socket from the same app gets another 8 (DukeAPenguin saw 28 layers over four
@@ -145,7 +151,7 @@
  *
  * Text tokens: {{speed}} {{u:speed}} {{oil}} {{coolant}} {{boost}} {{u:boost}} {{rpm}}
  * {{gear}} (P / R / N, D3 / S3 / M3 by the shifter programme, or just 3 when the selector position is unknown), {{gearnum}} (3, or P / R / N)
- * {{spd:<i>}} (speed scale label i of SPEED_SCALE: 0..200 mph, 0..320 km/h) {{range}} {{u:distLc}} (mi, km) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{torquePct}} {{powerPct}} (% of config.engine's peak) {{boostHi}} {{boostMid}}
+ * {{spd:<i>}} (speed scale label i of SPEED_SCALE: 0..200 mph, 0..320 km/h) {{range}} {{u:distLc}} (mi, km) {{u:dist}} (MI, KM) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{torquePct}} {{powerPct}} (% of config.engine's peak) {{boostHi}} {{boostMid}}
  * (gauge labels for 1.4 / 0.7 bar in the display unit) {{stage}} (P R N, D / S / M by the shifter programme) {{gearInD}} (gear number while in D) {{mode}} (COMFORT, SPORT, SPORT PLUS, SPORT INDIVIDUAL, ECO PRO, ...)
  * {{temp:<deg C>}} (that temperature in the display unit, °F rounded to 10, for gauge labels) {{setup:engine|chassis|steering|gearbox}} (what that part is set to in the drive mode now)
  * {{time}} {{ampm}} {{u:temp}} (°F / °C) {{gLat}} {{gLong}} (g, 2 decimals) {{signal:<car.data() key>}} (raw, 1 decimal).
@@ -153,7 +159,7 @@
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
  * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
  * {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
- * 0-60 run started) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
+ * 0-60 run started) {{avgSpeed}} (average moving speed this drive, from its first minute) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
  * {{runLabel}} (0-60 MPH, 0-100 KM/H): runs.js. {{warm}}: WARMING UP while the oil is under 80 C, then ENGINE WARM.
  * {{badge}}: the model picked on the Badge tab (badges.js), "BMW X3 M40i" with the lettering on, '' for none.
  * Warnings: a text showing oil, coolant or boost (a {{oil}} / {{coolant}} / {{boost}} token, or a readout slot with that
@@ -334,6 +340,9 @@ class HudApp {
         this.boostPeak = null;           // bar, the highest boost since the last 0-60 run started ({{boostPeak}})
         this.runs = new Runs(ctx.dataDir, this.log);   // the 0-60 timer (runs.js)
         this.runs.onStart = () => { this.boostPeak = null; };
+        this.tripKm = 0;                 // this drive (since the app started with the car): km driven and
+        this.tripMs = 0;                 // ms moving, for {{avgSpeed}}
+        this.tripT = 0;
         this.driveMode = null;           // 'comfort' | 'sport' | 'eco', once the car has said
         this.driveVariant = null;        // 'plus' (Sport+ / Comfort+ / Eco Pro+), 'individual', or null
         this.carUnits = { press: null, temp: null, psiSeen: false };   // the car's display units, for the TPMS values
@@ -1038,6 +1047,8 @@ class HudApp {
             case 'u:temp': return us ? '°F' : '°C';
             case 'u:speedLc': return us ? 'mph' : 'km/h';
             case 'u:distLc': return us ? 'mi' : 'km';
+            case 'u:dist': return us ? 'MI' : 'KM';
+            case 'avgSpeed': { const v = this._avgSpeed(); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
             case 'range': { const v = this._raw('range'); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
             case 'ambient': {
                 const v = this._raw('ambient');
@@ -1424,6 +1435,33 @@ class HudApp {
             c.uniform(ref, 'u_red', rgb(t.hot));
             c.uniform(ref, 'u_face', rgb(color(t, w.face || 'bg')));
             c.uniform(ref, 'u_hot', [0]);
+        } else if (w.type === 'gmeter') {
+            const L = color(t, w.line || 'dim');
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_max', [w.max || 1.5]);
+            c.uniform(ref, 'u_line', rgba([L[0], L[1], L[2], isNum(w.lineAlpha) ? w.lineAlpha : 150]));
+            c.uniform(ref, 'u_dot', rgb(color(t, w.dot || 'hot')));
+            c.uniform(ref, 'u_peakC', rgb(color(t, w.peakColor || 'fg')));
+            c.uniform(ref, 'u_g', [0, 0]);
+            c.uniform(ref, 'u_peak', [0]);
+        } else if (w.type === 'revarc') {
+            const max = this._barMax(), red = this.setting('redline');
+            const midAt = t.bar.midAt === 'shift' ? (red - 1500) / max : t.bar.midAt;
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_center', w.center);
+            c.uniform(ref, 'u_r', [w.r]);
+            c.uniform(ref, 'u_w', [w.band || 40]);
+            c.uniform(ref, 'u_start', [w.start * Math.PI / 180]);
+            c.uniform(ref, 'u_sweep', [w.sweep * Math.PI / 180]);
+            c.uniform(ref, 'u_segs', [w.segments || 30]);
+            c.uniform(ref, 'u_low', rgb(t.bar.low));
+            c.uniform(ref, 'u_mid', rgb(t.bar.mid));
+            c.uniform(ref, 'u_high', rgb(t.bar.high));
+            c.uniform(ref, 'u_midAt', [midAt]);
+            c.uniform(ref, 'u_highAt', [(red - 500) / max]);
+            c.uniform(ref, 'u_track', rgba(t.track));
+            c.uniform(ref, 'u_flash', [0]);
+            c.uniform(ref, 'u_value', [0]);
         } else if (w.type === 'meter') {
             const cs = w.colors || ['fg', 'fg', 'hot'];
             c.uniform(ref, 'u_size', [w.w, w.h]);
@@ -1533,6 +1571,7 @@ class HudApp {
         this._smoothRpm(now);
         // the 0-60 timer only on the car's own data (the demo drive would set a best time)
         if (!this.car.data().demo) this.runs.update(this.car.data().speed, now, this.setting('units') === 'us' ? 'us' : 'metric');
+        this._trip(now);
         const b = this._boost();
         if (isNum(b) && (!isNum(this.boostPeak) || b > this.boostPeak)) this.boostPeak = b;
         if (!this.client.ready) return;
@@ -1541,6 +1580,21 @@ class HudApp {
         const flashing = isNum(rpm) && rpm >= this.setting('redline') - 150;
         this.flash = flashing ? Math.floor(now / 62.5) % 2 === 0 : false;
         this.widgets.forEach((x) => this._guard('widget ' + x.w.id, () => this._update(x, now, false)));
+    }
+
+    /** This drive's distance and moving time (the car's own data only; standing still doesn't count). */
+    _trip(now) {
+        const d = this.car.data(), dt = this.tripT ? Math.min(1000, now - this.tripT) : 0;
+        this.tripT = now;
+        if (d.demo || !isNum(d.speed) || d.speed < 2) return;
+        this.tripKm += d.speed * dt / 3600000;
+        this.tripMs += dt;
+    }
+
+    /** km/h: the average moving speed this drive, from the first minute on (null before it, 54 on the demo). */
+    _avgSpeed() {
+        if (this.car.data().demo) return 54;
+        return this.tripMs >= 60000 ? this.tripKm / (this.tripMs / 3600000) : null;
     }
 
     /** BMW-like tach: a 120 ms filter, and a readout that moves in 50 rpm steps, only by 40 rpm or more. */
@@ -1581,10 +1635,12 @@ class HudApp {
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
             // "fit": smaller fonts to fall back on when the text is wider than the box (a readout slot showing a
-            // longer value than its default), on the same baseline
+            // longer value than its default) or has a character the font lacks (Retro's seven-segment digits have no
+            // letters, + or °), on the same baseline
             let font = w.font, offsetY = 0;
-            if (w.fit && textRaster.measure(s, font, w.spacing) > w.w) {
-                const f = w.fit.find((n) => textRaster.measure(s, n, w.spacing) <= w.w) || w.fit[w.fit.length - 1];
+            const has = (n) => { const g = textRaster.loadFont(n).metrics.glyphs; return s.split('').every((ch) => ch === ' ' || g[ch]); };
+            if (w.fit && (textRaster.measure(s, font, w.spacing) > w.w || !has(font))) {
+                const f = w.fit.find((n) => has(n) && textRaster.measure(s, n, w.spacing) <= w.w) || w.fit[w.fit.length - 1];
                 offsetY = textRaster.loadFont(w.font).metrics.baseline - textRaster.loadFont(f).metrics.baseline;
                 font = f;
             }
@@ -1606,9 +1662,20 @@ class HudApp {
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
             this._blitDiff(x, this._paintBadge(w, s, tone, fresh));
-        } else if (w.type === 'shiftbar') {
+        } else if (w.type === 'gmeter') {
+            // lateral + to the right, longitudinal + accelerating (drawn down); "flipX" / "flipY" if the car's sign is the other way
+            const gx = this._raw('gLat'), gy = this._raw('gLong');
+            const X = isNum(gx) ? (w.flipX ? -gx : gx) : 0, Y = isNum(gy) ? (w.flipY ? -gy : gy) : 0;
+            const qx = Math.round(X * 50) / 50, qy = Math.round(Y * 50) / 50;
+            const pk = this._peakHold(x, Math.sqrt(qx * qx + qy * qy), now, w.peak || 3000);
+            const key = qx + '|' + qy + '|' + pk;
+            if (!force && key === x.last) return;
+            x.last = key;
+            x.c.uniform(x.ref, 'u_g', [qx, qy]);
+            x.c.uniform(x.ref, 'u_peak', [pk]);
+        } else if (w.type === 'shiftbar' || w.type === 'revarc') {
             const rpm = this._raw('rpm');
-            const segs = w.segments || 40;
+            const segs = w.segments || (w.type === 'revarc' ? 30 : 40);
             const v = isNum(rpm) ? Math.min(1, Math.max(0, rpm / this._barMax())) : 0;
             const q = Math.round(v * segs * 2) / (segs * 2);        // only resend on half-segment steps
             const key = q + (this.flash ? 'f' : '');

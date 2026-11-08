@@ -117,6 +117,38 @@ const THEMES = {
         bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [190, 196, 206, 255], head: [226, 228, 232, 255],
         ink: [12, 12, 14, 255], accent: [80, 230, 110, 255], well: [0, 0, 0, 255], go: [80, 230, 110, 255],
     },
+    // Rally (layout rally.json): a sweeping rev arc over a huge gear, a G-meter, rally yellow.
+    rally: {
+        name: 'Rally',
+        fg: [246, 246, 246, 255], dim: [160, 164, 170, 255], track: [255, 255, 255, 34], arc: [255, 210, 0, 255],
+        glow: 0, stripe: false,
+        bar: { low: [246, 246, 246], mid: [255, 210, 0], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [246, 246, 246], to: [255, 210, 0] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [205, 208, 214, 255], head: [255, 210, 0, 255],
+        ink: [12, 12, 14, 255], accent: [255, 210, 0, 255], well: [0, 0, 0, 255],
+    },
+    // Retro (layouts retro80s.json, HUD retro.json): an 80s digital dash, amber seven-segment digits over their
+    // unlit 8s, green-amber-red bar graphs. Kept bright enough for the HUD rule above.
+    retro: {
+        name: 'Retro',
+        fg: [255, 178, 36, 255], dim: [226, 156, 40, 255], track: [255, 170, 40, 100], arc: [80, 255, 120, 255],
+        glow: 0, stripe: false,
+        bar: { low: [80, 255, 120], mid: [255, 178, 36], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [80, 255, 120], to: [255, 178, 36] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [255, 178, 36, 255], head: [80, 255, 120, 255],
+        ink: [12, 12, 14, 255], accent: [80, 255, 120, 255], well: [0, 0, 0, 255],
+        green: [80, 255, 120, 255], ghost: [255, 170, 40, 40],
+    },
+    // Cruise (layouts cruise.json): calm and quiet for the highway, soft white and a cool teal, no reds until needed.
+    cruise: {
+        name: 'Cruise',
+        fg: [228, 234, 242, 255], dim: [176, 188, 204, 255], track: [255, 255, 255, 100], arc: [120, 212, 222, 255],
+        glow: 0, stripe: false,
+        bar: { low: [120, 212, 222], mid: [228, 234, 242], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [120, 212, 222], to: [120, 212, 222] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [96, 110, 126, 255], head: [120, 212, 222, 255],
+        ink: [12, 12, 14, 255], accent: [120, 212, 222, 255], well: [0, 0, 0, 255],
+    },
 };
 // every theme: the shift-point red, used by "hot" (the gear and SHIFT at the shift point, the rev bar past it)
 Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });

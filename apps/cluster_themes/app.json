@@ -1,8 +1,8 @@
 {
   "id": "cluster_themes",
   "title": "Cluster Themes",
-  "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track or Drag, with shift lights, boost, temps, tyres and a 0-60 timer",
-  "version": "0.11.0",
+  "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s or Cruise, with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
+  "version": "0.12.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -131,6 +131,18 @@
           "Drag"
         ],
         [
+          "rally",
+          "Rally"
+        ],
+        [
+          "retro80s",
+          "Retro 80s"
+        ],
+        [
+          "cruise",
+          "Cruise"
+        ],
+        [
           "grid",
           "Calibration grid"
         ],
@@ -183,6 +195,18 @@
         [
           "drag",
           "Drag"
+        ],
+        [
+          "rally",
+          "Rally"
+        ],
+        [
+          "retro80s",
+          "Retro 80s"
+        ],
+        [
+          "cruise",
+          "Cruise"
         ]
       ]
     },
@@ -223,6 +247,18 @@
         [
           "drag",
           "Drag"
+        ],
+        [
+          "rally",
+          "Rally"
+        ],
+        [
+          "retro80s",
+          "Retro 80s"
+        ],
+        [
+          "cruise",
+          "Cruise"
         ]
       ]
     },
@@ -263,6 +299,18 @@
         [
           "drag",
           "Drag"
+        ],
+        [
+          "rally",
+          "Rally"
+        ],
+        [
+          "retro80s",
+          "Retro 80s"
+        ],
+        [
+          "cruise",
+          "Cruise"
         ]
       ]
     },

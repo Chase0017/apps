@@ -65,7 +65,25 @@ A full-width shift bar and a 0 to 60 mph timer (0 to 100 km/h in metric). Stop f
 
 <p align="center"><img src="../../docs/images/cluster-drag.png" width="900" alt="Drag theme"></p>
 
-Minimal, Roadster, Track and Drag have no map window yet; with "Show Waze map inside the theme" on, Waze stays in its usual place while they show.
+### Rally
+
+A segmented rev arc sweeps across the top of the screen, white, then rally yellow from the shift zone, red and flashing at the redline. A huge gear sits in the middle with the speed under it. On the left a G-meter: a dot shows the cornering and braking or accelerating force, with rings every 0.5 g and a ring that holds the peak of the last 3 seconds. Boost with a peak-hold bar and two readouts on the right.
+
+<p align="center"><img src="../../docs/images/cluster-rally.png" width="900" alt="Rally theme"></p>
+
+### Retro 80s
+
+An 80s digital dash: amber seven-segment digits with their unlit 8s showing faintly behind, for the gear, the speed and the clock. A segmented rev bar runs across the top, bar graphs show oil, water and fuel on the left, and boost and two readouts sit on the right.
+
+<p align="center"><img src="../../docs/images/cluster-retro80s.png" width="900" alt="Retro 80s theme"></p>
+
+### Cruise
+
+Calm and quiet for the highway: the speed in soft white, the gear beside it, and one row of trip figures (range, fuel, outside temperature, your average speed this drive and the time). No rev bar, and nothing red until the fuel runs low. The average speed counts only time moving and shows after the first minute of the drive.
+
+<p align="center"><img src="../../docs/images/cluster-cruise.png" width="900" alt="Cruise theme"></p>
+
+Minimal, Roadster, Track, Drag, Rally, Retro 80s and Cruise have no map window yet; with "Show Waze map inside the theme" on, Waze stays in its usual place while they show.
 
 More themes are on the way.
 
@@ -78,7 +96,7 @@ More themes are on the way.
 ## Settings
 
 - **Theme**, and one per drive mode.
-- **Readouts:** pick which car sensor each GT3, Roadster, Track or Drag readout shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
+- **Readouts:** pick which car sensor each GT3, Roadster, Track, Drag, Rally or Retro 80s readout shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
 - **Show Waze map inside the theme:** GT3, Sport and M open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
 - **Badge:** the model name, like "BMW X3 M40i", as text in the theme's font (GT3 top left, Sport and M bottom centre). Off by default.
 - **Warnings:** oil, coolant and boost limits. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off).

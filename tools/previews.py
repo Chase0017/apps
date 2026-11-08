@@ -44,18 +44,24 @@ def post(port, path, body):
 
 
 def shot(port, size, out):
-    # headless Chrome sometimes hangs on a cluster page (Nov 7 2026: twice in one run); three tries, 60 s each
+    # headless Chrome sometimes hangs on a cluster page (Nov 7 2026: twice in one run), and once shot GT3 before
+    # anything had drawn (a black 1 KB picture); three tries, 60 s each, and a picture with almost nothing lit is a miss
     for attempt in range(3):
+        if os.path.exists(out):
+            os.remove(out)           # a stale file would look like success
         try:
             subprocess.run([CHROME, '--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
                             '--virtual-time-budget=20000', '--hide-scrollbars', '--window-size=%d,%d' % size,
                             '--screenshot=' + out, 'http://localhost:%d/?only=1&backdrop=0&clean=1&car=0' % port],
                            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
-            return
+            lit = sum(Image.open(out).convert('L').point(lambda v: 255 if v > 40 else 0).histogram()[255:])
+            if lit >= 400:
+                return
+            print('  (picture came out blank, try %d of 3)' % (attempt + 1), flush=True)
         except subprocess.TimeoutExpired:
             subprocess.run(['pkill', '-f', '--screenshot=' + out], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print('  (Chrome hung, try %d of 3)' % (attempt + 1), flush=True)
-    raise SystemExit('headless Chrome hung three times on ' + out)
+    raise SystemExit('no good picture in three tries: ' + out)
 
 
 def pack(img, size):
