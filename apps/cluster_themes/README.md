@@ -67,7 +67,7 @@ A full-width shift bar and a 0 to 60 mph timer (0 to 100 km/h in metric). Stop f
 
 ### Rally
 
-A segmented rev arc sweeps across the top of the screen, white, then rally yellow from the shift zone, red and flashing at the redline. A huge gear sits in the middle with the speed under it. On the left a G-meter: a dot shows the cornering and braking or accelerating force, with rings every 0.5 g and a ring that holds the peak of the last 3 seconds. Boost with a peak-hold bar and two readouts on the right.
+A segmented rev arc sweeps across the top of the screen, white, then rally yellow from the shift zone, red and flashing at the redline. A huge gear sits in the middle with the speed under it. On the left a G-meter: a dot shows the cornering and braking or accelerating force (it moves into the turn and up when you speed up; Settings can flip either way), with rings every 0.5 g and a ring that holds the peak of the last 3 seconds. Boost with a peak-hold bar and two readouts on the right.
 
 <p align="center"><img src="../../docs/images/cluster-rally.png" width="900" alt="Rally theme"></p>
 
@@ -83,7 +83,13 @@ Calm and quiet for the highway: the speed in soft white, the gear beside it, and
 
 <p align="center"><img src="../../docs/images/cluster-cruise.png" width="900" alt="Cruise theme"></p>
 
-Minimal, Roadster, Track, Drag, Rally, Retro 80s and Cruise have no map window yet; with "Show Waze map inside the theme" on, Waze stays in its usual place while they show.
+### Dyno
+
+A safety dash for hard pulls, in BMW M colours: twelve tiles in a grid (rpm, speed, boost, oil, coolant, intake air, cornering g, braking or accelerating g, the gear, fuel, range and outside temperature) and tall Power and Torque tiles on the right, each with a bar that runs light blue, dark blue, then red. A tile turns solid red while its oil, coolant or boost reading is over your warning limit. A rev bar runs across the top. Every tile but the gear can show another sensor (Readouts tab). The gap between Power and Torque is where BMW draws its black gear box, so nothing is hidden under it.
+
+<p align="center"><img src="../../docs/images/cluster-dyno.png" width="900" alt="Dyno theme"></p>
+
+Minimal, Roadster, Track, Drag, Rally, Retro 80s, Cruise and Dyno have no map window yet; with "Show Waze map inside the theme" on, Waze stays in its usual place while they show.
 
 More themes are on the way.
 
@@ -96,7 +102,7 @@ More themes are on the way.
 ## Settings
 
 - **Theme**, and one per drive mode.
-- **Readouts:** pick which car sensor each GT3, Roadster, Track, Drag, Rally or Retro 80s readout shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
+- **Readouts:** pick which car sensor each GT3, Roadster, Track, Drag, Rally, Retro 80s or Dyno readout shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
 - **Show Waze map inside the theme:** GT3, Sport and M open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
 - **Badge:** the model name, like "BMW X3 M40i", as text in the theme's font (GT3 top left, Sport and M bottom centre). Off by default.
 - **Warnings:** oil, coolant and boost limits. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off).
@@ -108,6 +114,7 @@ More themes are on the way.
 - **Shift point before redline:** how far below the redline the shift lights peak (300 rpm by default).
 - **Cold-engine rev guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
 - **Show boost.**
+- **G-meter: swap left / right** and **swap accel / brake:** the dot moves the way the car accelerates by default (into the turn, up when speeding up); these flip it, for example to show the push you feel instead.
 - **Demo data:** fake driving data for trying it out parked.
 - **Calibration grid:** a theme that draws lines every 50 px with labels, for checking on a photo where things land on the real screen. It also carries a few test marks used to measure cluster-render's limits on the car.
 - **Map calibration:** a theme that leaves BMW's whole map window open with a grid through it, for photographing exactly what shows through the map cut-out with a navigation map up.

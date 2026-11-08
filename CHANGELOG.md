@@ -2,6 +2,11 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 8 2026
+
+- **Cluster Themes 0.13.0:** a new Dyno theme in BMW M colours: twelve readout tiles (rpm, speed, boost, oil, coolant, intake, cornering and braking g, gear, fuel, range, outside temperature) and tall Power and Torque tiles, each with a bar, and a rev bar across the top. A tile turns red while its oil, coolant or boost reading is over the warning limit. Every tile but the gear can show another sensor (the Readouts tab now lists long slot lists in two columns). The G-meter now moves the way the car accelerates (into the turn, up when speeding up), and two new settings swap left and right or accelerating and braking. G readings are smoothed over 0.15 s and a reading over 3 g is ignored. A readout set to intake air or boost now asks the engine unit for it (before, only Warm-up and readouts that named it did).
+- **HUD Widgets 0.10.0:** the same G-meter changes and settings for the Track layout, and the same intake and boost fix for the readouts.
+
 ## Nov 7 2026
 
 - **Cluster Themes 0.12.0:** three more themes. Rally (a segmented rev arc sweeping across the top, a huge gear, a G-meter, boost with a peak-hold bar), Retro 80s (amber seven-segment digits over their unlit 8s, a segmented rev bar and bar graphs for oil, water and fuel) and Cruise (calm and quiet: the speed and a row of range, fuel, outside temperature, average speed and the time). Track's readouts show the ° after a temperature again (0.11.0 dropped it), and a readout whose font can't draw a character switches to one that can. Credits for the Orbitron and DSEG7 fonts are in NOTICE.

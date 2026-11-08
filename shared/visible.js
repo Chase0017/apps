@@ -46,7 +46,14 @@ function overlaps(w, box) {
 function check(widgets, target) {
     const out = [];
     if (!Array.isArray(widgets)) return out;
+    // a frame drawn in one layer (GT3's "boxes", Dyno's "tiles"): check each box, not the full-panel layer
+    const all = [];
     widgets.forEach((w) => {
+        const sub = w && (w.boxes || w.tiles);
+        if (Array.isArray(sub)) sub.forEach((b) => { if (b) all.push(Object.assign({}, b, { id: w.id + '.' + b.id })); });
+        else all.push(w);
+    });
+    all.forEach((w) => {
         if (!w || typeof w.x !== 'number' || typeof w.y !== 'number' || typeof w.w !== 'number' || typeof w.h !== 'number') return;
         const id = String(w.id);
         if (target === 'panel') {

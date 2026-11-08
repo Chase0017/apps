@@ -109,10 +109,20 @@
  *             holds the highest segment lit in "peakColor" (fg). arc takes "peak" too: a dot on the stroke.
  *   gmeter    effect layer (shaders.js gmeter): a G-meter, a dot at {{gLat}} / {{gLong}} inside rings every 0.5 g to "max"
  *             (1.5), with a ring at the peak g of the last "peak" ms (3000); roles "line" (dim), "dot" (hot), "peakColor"
- *             (fg), "lineAlpha" 0-255 (150; 255 on the HUD, where see-through is faint). Lateral + is drawn right, accelerating down; "flipX" / "flipY": true if the car's signs run the other way.
+ *             (fg), "lineAlpha" 0-255 (150; 255 on the HUD, where see-through is faint). The dot moves the way the car
+ *             accelerates (into the turn, up when speeding up), as cauliflowermossgrape's G-Force draws it; the settings
+ *             "gFlipLat" / "gFlipLong" swap left / right and accel / brake, a layout's "flipX" / "flipY" swap again.
+ *             g is averaged over 150 ms and a sample over 3 g is dropped (also for {{gLat}} / {{gLong}}).
  *   revarc    effect layer (shaders.js revarc): a segmented rev arc, the Rally theme's: centre "center" [x, y] (layer px, may
  *             sit below the layer), outer radius "r", "band" px (40), "start" / "sweep" degrees clockwise from 12 o'clock,
  *             "segments" (30); colours, flash and scale as the shiftbar.
+ *   tiles     effect layer (shaders.js tiles): the Dyno theme's readout tiles in ONE layer: the background (role "color",
+ *             bg) and up to 14 rounded tiles "tiles": [{ id, x, y, w, h (target px), slot, bar (false: none), toggle }],
+ *             each with a thin "accent" strip on top and a bar along the bottom for its slot's sensor (TILE_BAR; zoned
+ *             ones run "colors" [bar1, bar2, hot] split at "at" [0.6, 0.85], the rest all bar1). A tile turns role
+ *             "warn" while its oil / coolant / boost reading is over the warning limit (put "warnFlash": false on
+ *             its texts). Roles "fill" (panel), "line", "trackColor" (track); "radius" (8), "border" (1.5), "strip"
+ *             (3), "barH" (6) px. The labels and values are text widgets on top.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
  * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
  *   is per connection, so a second socket from the same app gets another 8 (DukeAPenguin saw 28 layers over four
@@ -141,6 +151,7 @@
  * lights: "count" (12), "from" rpm (3000) where the first light comes on, "tail" (0): the last "tail" lights are blue
  *   (the GT3 look); "round": true for dots;
  * "off" the alpha of an unlit light (0.14).
+ * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself).
  * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
  * "nearColor" (fg) while scale label i is the one nearest the value (BMW lights up the label by the needle).
  *
@@ -215,10 +226,27 @@ const DIAL_SPEED = { us: { max: 160, ticks: 8 }, metric: { max: 240, ticks: 8 } 
 // the HUD's place (the page's Position tab): settings that move / scale the layers already there, no rebuild
 const PLACE_KEYS = ['hudX', 'hudY', 'hudScale'];
 // settings that only change what a text shows (the next tick paints it), no rebuild
-const LIVE_KEYS = ['warnOil', 'warnCoolant', 'warnBoost', 'badge', 'badgeBMW'];
+const LIVE_KEYS = ['warnOil', 'warnCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong'];
+// g (after cauliflowermossgrape's G-Force, MIT, idea only): a sample over G_BAD is a bad reading, not a corner;
+// the rest are averaged over G_AVG_MS so kerbs and potholes don't throw the dot about
+const G_BAD = 3;
+const G_AVG_MS = 150;
 // warnings (page.js Alerts): a readout of oil / coolant / boost over its limit flashes in the shift red
 const WARN = { oil: 'warnOil', coolant: 'warnCoolant', boost: 'warnBoost' };
-const WARN_FLASH_MS = 300;       // half a flash: red, then the normal colour
+const WARN_FLASH_MS = 300;
+// a tile's bar (the Dyno theme's "tiles") per sensor (sensors.js id): the raw reading (hud _raw) between min and
+// max, "z" for a zoned bar (blue, dark blue, red past u_at); a sensor not here has no bar. rpm runs to the bar max.
+const TILE_BAR = {
+    rpm: { raw: 'rpm', min: 0, max: 'rpm', z: 1 }, speed: { raw: 'speed', min: 0, max: 260 },
+    boost: { raw: 'boost', min: 0, max: 1.6, z: 1 }, torque: { raw: 'torquePct', min: 0, max: 100, z: 1 },
+    power: { raw: 'powerPct', min: 0, max: 100, z: 1 }, torquePct: { raw: 'torquePct', min: 0, max: 100, z: 1 },
+    powerPct: { raw: 'powerPct', min: 0, max: 100, z: 1 }, oil: { raw: 'oil', min: 40, max: 150, z: 1 },
+    coolant: { raw: 'coolant', min: 40, max: 130, z: 1 }, intake: { raw: 'intake', min: 0, max: 80, z: 1 },
+    ambient: { raw: 'ambient', min: -20, max: 45 }, gLat: { raw: 'gLat', min: 0, max: 1.2, z: 1, abs: true },
+    gLong: { raw: 'gLong', min: 0, max: 1.2, z: 1, abs: true }, fuel: { raw: 'fuel', min: 0, max: 1 },
+    range: { raw: 'range', min: 0, max: 700 },
+};
+const TILE_MAX = 14;       // half a flash: red, then the normal colour
 // the shift-light test (page.js Alerts): rpm climbs from TEST_FROM to just past the shift point, then holds
 const TEST_FROM = 1500, TEST_CLIMB_MS = 2500, TEST_HOLD_MS = 1200;
 // night colours (Cluster Themes "nightDim"): after sunset the theme's whites and greys go to this brightness
@@ -409,6 +437,20 @@ class HudApp {
         if (!Object.keys(m).length) delete this.slotPicks[layout];
         try { fs.writeFileSync(this.slotsFile, JSON.stringify(this.slotPicks, null, 1)); } catch (e) { this.log.warn('slots: cannot save ' + this.slotsFile + ' (' + e.message + ')'); }
         this.widgets.forEach((x) => { x.last = null; });       // the slot texts paint again on the next tick
+        if (layout === this.activeName && this.shownW) this._setNeeds(this.shownW);
+    }
+    /** needsBoost / needsIntake from the widgets shown: their own text and the sensors their readout slots show
+     *  (before Nov 8 2026 only the text counted, so a slot picked to intake never asked the engine unit). */
+    _setNeeds(shown) {
+        this.shownW = shown;
+        const ids = [];
+        shown.forEach((w) => [w].concat(Array.isArray(w.tiles) ? w.tiles : []).forEach((b) => {
+            const sn = b && b.slot ? this.slotSensor(this.activeName, b.slot, this.layoutSlots) : null;
+            if (sn) ids.push(sn.id);
+        }));
+        const j = JSON.stringify(shown) + ' ' + ids.join(' ');
+        this.needsBoost = /boost/.test(j);
+        this.needsIntake = /intake/.test(j);
     }
     /** A sensor's value now, as its slot shows it ('--' without one). */
     sensorValue(sn) { return sn ? this._token(sn.tok) : '--'; }
@@ -539,6 +581,9 @@ class HudApp {
         };
         this.car = new Car(this.ctx, ['rpm', 'speed', 'temps', 'accel', 'gear', 'torque'], extra);
         this.car.setRedline(this.setting('redline'));
+        this.gBuf = [];                  // [t, lat, long] of the last G_AVG_MS
+        this.gSm = null;                 // { lat, long, at }: their average
+        this.car.onSample((d, t) => this._gSample(d, t), () => { this.gBuf = []; this.gSm = null; });
         this.score = new ShiftScore(this.car, () => ({
             redline: this.setting('redline'), shiftBefore: this.setting('shiftBefore'), coldGuard: this.setting('coldGuard'),
         }), this.log);
@@ -882,6 +927,10 @@ class HudApp {
         else if (t.indexOf('{{oil}}') >= 0) id = 'oil';
         else if (t.indexOf('{{coolant}}') >= 0) id = 'coolant';
         else if (t.indexOf('{{boost}}') >= 0) id = 'boost';
+        return this._overLimit(id);
+    }
+    /** `id` (oil / coolant / boost) if that reading is over its warning limit now, else null. */
+    _overLimit(id) {
         if (!WARN[id]) return null;
         const lim = this.setting(WARN[id]), v = this._raw(id);
         return isNum(lim) && lim > 0 && isNum(v) && v > lim ? id : null;
@@ -955,8 +1004,23 @@ class HudApp {
         return x.peakV;
     }
 
+    /** One car sample: the g average (G_BAD, G_AVG_MS). */
+    _gSample(d, t) {
+        if (!isNum(d.gLong) || Math.abs(d.gLong) > G_BAD || (isNum(d.gLat) && Math.abs(d.gLat) > G_BAD)) return;
+        this.gBuf.push([t, isNum(d.gLat) ? d.gLat : 0, d.gLong]);
+        while (this.gBuf.length && t - this.gBuf[0][0] > G_AVG_MS) this.gBuf.shift();
+        const n = this.gBuf.length;
+        this.gSm = { lat: this.gBuf.reduce((a, s) => a + s[1], 0) / n, long: this.gBuf.reduce((a, s) => a + s[2], 0) / n, at: Date.now() };
+    }
+
     _raw(name) {
         if (name === 'boost') return this._boost();
+        if (name === 'gLat' || name === 'gLong') {
+            // the 150 ms average while samples come in; else the car's last reading, unless it is a bad one
+            if (this.gSm && Date.now() - this.gSm.at < 1000) return name === 'gLat' ? this.gSm.lat : this.gSm.long;
+            const g = this.car.data()[name];
+            return isNum(g) && Math.abs(g) <= G_BAD ? g : null;
+        }
         if (name === 'intake') {
             if (isNum(this.intakeDme) && Date.now() - this.intakeDmeAt < 10000) return this.intakeDme;
             return this.car.data().demo ? 31 : null;
@@ -1178,8 +1242,7 @@ class HudApp {
         if (this.nightOn) this.theme = dimTheme(this.theme, NIGHT_DIM);
         this.log.info('layout "' + layout.name + '", theme ' + this.theme.name + (this.layoutTheme ? '' : ' (' + this.setting('hudTheme') + ')'));
         const shown = layout.widgets.filter((w) => !(w.toggle && !this._toggleOn(w.toggle)) && !(w.themes && w.themes.indexOf(this.themeName) < 0));
-        this.needsBoost = /boost/.test(JSON.stringify(shown));
-        this.needsIntake = /intake/.test(JSON.stringify(shown));
+        this._setNeeds(shown);
         // plan the layers first (a sheet's size is only known once every member is placed), then make them
         // in that order: within a class and z, cluster-render puts the newer layer on top. Small sheets
         // first; a bigger limit only when the layer budget needs it (see the header).
@@ -1551,8 +1614,35 @@ class HudApp {
             c.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
             c.uniform(ref, 'u_head', rgba(color(t, w.head || 'head')));
             c.uniform(ref, 'u_accent', rgba(color(t, w.accent || 'accent')));
+        } else if (w.type === 'tiles') {
+            const list = this._tiles(w), rects = [];
+            for (let i = 0; i < TILE_MAX; i++) {
+                const b = list[i];
+                rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
+            }
+            const zc = w.colors || ['bar1', 'bar2', 'hot'];
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_bg', rgba(color(t, w.color || 'bg')));
+            c.uniform(ref, 'u_n', [list.length]);
+            c.uniform(ref, 'u_tile', rects, { type: 'vec4' });
+            c.uniform(ref, 'u_geo', [isNum(w.radius) ? w.radius : 8, isNum(w.border) ? w.border : 1.5, isNum(w.strip) ? w.strip : 3, w.barH || 6]);
+            c.uniform(ref, 'u_fill', rgba(color(t, w.fill || 'panel')));
+            c.uniform(ref, 'u_warn', rgba(color(t, w.warn || 'warn')));
+            c.uniform(ref, 'u_line', rgba(color(t, w.line || 'line')));
+            c.uniform(ref, 'u_track', rgba(color(t, w.trackColor || 'track')));
+            c.uniform(ref, 'u_accent', rgb(color(t, w.accent || 'accent')));
+            c.uniform(ref, 'u_c1', rgb(color(t, zc[0])));
+            c.uniform(ref, 'u_c2', rgb(color(t, zc[1] || zc[0])));
+            c.uniform(ref, 'u_c3', rgb(color(t, zc[2] || zc[1] || zc[0])));
+            c.uniform(ref, 'u_at', w.at || [0.6, 0.85]);
         }
         this._update(x, Date.now(), true);
+    }
+
+    /** A tiles widget's tiles in use: [{ x, y, w, h, slot, bar }], the ones with a valid rect, toggles on, TILE_MAX at most. */
+    _tiles(w) {
+        return (Array.isArray(w.tiles) ? w.tiles : []).filter((b) => b && isNum(b.x) && isNum(b.y) && isNum(b.w) && isNum(b.h)
+            && !(b.toggle && !this._toggleOn(b.toggle))).slice(0, TILE_MAX);
     }
 
     /** A widget's map hole in layer px, inset by "holeInset" (6) a side, while "holeWhen" is on; else no hole. */
@@ -1630,7 +1720,8 @@ class HudApp {
                 if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
             }
             // over its warning limit: the value flashes in the shift red
-            if (this._warning(w) && Math.floor(now / WARN_FLASH_MS) % 2 === 0) role = 'hot';
+            // ("warnFlash": false: not on a tile that turns red itself, the Dyno theme's)
+            if (w.warnFlash !== false && this._warning(w) && Math.floor(now / WARN_FLASH_MS) % 2 === 0) role = 'hot';
             const key = s + '|' + role;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
@@ -1662,10 +1753,39 @@ class HudApp {
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
             this._blitDiff(x, this._paintBadge(w, s, tone, fresh));
+        } else if (w.type === 'tiles') {
+            // per tile: its bar (the slot's sensor, TILE_BAR) and whether that reading is over its warning limit
+            const list = this._tiles(w), vals = [];
+            let key = '';
+            for (let i = 0; i < TILE_MAX; i++) {
+                const b = list[i];
+                let v = -1, warn = 0, z = 0;
+                if (b) {
+                    const sn = b.slot ? this.slotSensor(this.activeName, b.slot, this.layoutSlots) : null;
+                    const bar = sn && b.bar !== false ? TILE_BAR[sn.id] : null;
+                    if (bar) {
+                        let raw = this._raw(bar.raw);
+                        if (bar.abs && isNum(raw)) raw = Math.abs(raw);
+                        const max = bar.max === 'rpm' ? this._barMax() : bar.max;
+                        v = isNum(raw) ? Math.round(Math.min(1, Math.max(0, (raw - bar.min) / (max - bar.min))) * 200) / 200 : 0;
+                        z = bar.z ? 1 : 0;
+                    }
+                    warn = sn && this._overLimit(sn.id) ? 1 : 0;
+                }
+                vals.push(v, warn, z, 0);
+                key += v + ',' + warn + ',' + z + ';';
+            }
+            if (!force && key === x.last) return;
+            x.last = key;
+            x.c.uniform(x.ref, 'u_tileV', vals, { type: 'vec4' });
         } else if (w.type === 'gmeter') {
-            // lateral + to the right, longitudinal + accelerating (drawn down); "flipX" / "flipY" if the car's sign is the other way
+            // the car's lateral g is + turning left, longitudinal + speeding up (G-Force's labels). Drawn as G-Force
+            // draws it: the dot moves the way the car accelerates, into the turn and up when speeding up (the shader
+            // draws + x right, + y down). The settings "gFlipLat" / "gFlipLong" swap left / right and accel / brake;
+            // a layout's "flipX" / "flipY" swap again on top
             const gx = this._raw('gLat'), gy = this._raw('gLong');
-            const X = isNum(gx) ? (w.flipX ? -gx : gx) : 0, Y = isNum(gy) ? (w.flipY ? -gy : gy) : 0;
+            const fx = (this.setting('gFlipLat') === true) !== !!w.flipX, fy = (this.setting('gFlipLong') === true) !== !!w.flipY;
+            const X = isNum(gx) ? (fx ? gx : -gx) : 0, Y = isNum(gy) ? (fy ? gy : -gy) : 0;
             const qx = Math.round(X * 50) / 50, qy = Math.round(Y * 50) / 50;
             const pk = this._peakHold(x, Math.sqrt(qx * qx + qy * qy), now, w.peak || 3000);
             const key = qx + '|' + qy + '|' + pk;

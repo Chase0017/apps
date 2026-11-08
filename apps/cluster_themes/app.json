@@ -1,8 +1,8 @@
 {
   "id": "cluster_themes",
   "title": "Cluster Themes",
-  "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s or Cruise, with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
-  "version": "0.12.0",
+  "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s, Cruise or Dyno (BMW-coloured readout tiles), with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
+  "version": "0.13.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -143,6 +143,10 @@
           "Cruise"
         ],
         [
+          "dyno",
+          "Dyno"
+        ],
+        [
           "grid",
           "Calibration grid"
         ],
@@ -207,6 +211,10 @@
         [
           "cruise",
           "Cruise"
+        ],
+        [
+          "dyno",
+          "Dyno"
         ]
       ]
     },
@@ -259,6 +267,10 @@
         [
           "cruise",
           "Cruise"
+        ],
+        [
+          "dyno",
+          "Dyno"
         ]
       ]
     },
@@ -311,6 +323,10 @@
         [
           "cruise",
           "Cruise"
+        ],
+        [
+          "dyno",
+          "Dyno"
         ]
       ]
     },
@@ -445,6 +461,18 @@
         1.8,
         2.0
       ]
+    },
+    {
+      "key": "gFlipLat",
+      "label": "G-meter: swap left / right",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "gFlipLong",
+      "label": "G-meter: swap accel / brake",
+      "type": "bool",
+      "default": false
     },
     {
       "key": "nightDim",

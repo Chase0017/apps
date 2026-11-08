@@ -38,6 +38,7 @@ const TYPES = {
     dial: ['measure'],
     meter: ['signal', 'min', 'max'],
     gmeter: [],
+    tiles: ['tiles'],
     revarc: ['center', 'r', 'start', 'sweep'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];

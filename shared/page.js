@@ -305,17 +305,26 @@ class Page {
         const rw = cv.textWidth('Reset slots', 16, { font: 'bold', literal: true }) + 30;
         chip(cv, CX + 700 - rw, 82, 'Reset slots', false, () => { slots.forEach((x) => this.hud.setSlot(lay, x.id, null)); this.kick(); }, 'slots:reset');
         // the slots
-        const lw = 700, rh = Math.min(56, Math.floor((bottom - 132) / slots.length) - 6);
+        // more than 8 slots (Dyno's 13): two columns of compact rows, the name and value only
+        const lw = 700, two = slots.length > 8, per = two ? Math.ceil(slots.length / 2) : slots.length;
+        const sw = two ? (lw - 8) / 2 : lw, rh = Math.min(56, Math.floor((bottom - 132) / per) - 6);
         slots.forEach((sl, i) => {
-            const y = 130 + i * (rh + 6), sel = sl.id === this.slot, sn = this.hud.slotSensor(lay, sl.id, slots);
-            glass(cv, CX, y, lw, rh, sel);
-            cv.circle(CX + 30, y + rh / 2, 15, sel ? C.blue : A(C.blue, 0.75));
-            cv.text(String(i + 1), CX + 30, y + rh / 2 + 6, 16, '#ffffff', { align: 'center', font: 'bold', literal: true });
-            cv.text(sn ? sn.name : '--', CX + 60, y + rh / 2 - 1, 19, '#ffffff', { font: 'bold', literal: true });
-            cv.text(sl.where || '', CX + 60, y + rh / 2 + 18, 14, C.dim, { literal: true });
-            cv.text(this.sensorText(sn), CX + lw - 40, y + rh / 2 + 7, 20, C.live, { align: 'right', font: 'bold', literal: true });
-            chevron(cv, CX + lw - 22, y + rh / 2, C.dim);
-            cv.target(CX, y, lw, rh, () => { this.slot = sl.id; if (sn) this.cat = sn.cat; this.kick(); }, 'slot:' + sl.id, 14);
+            const x = CX + (two && i >= per ? sw + 8 : 0), y = 130 + (i % per) * (rh + 6);
+            const sel = sl.id === this.slot, sn = this.hud.slotSensor(lay, sl.id, slots);
+            glass(cv, x, y, sw, rh, sel);
+            cv.circle(x + 26, y + rh / 2, 14, sel ? C.blue : A(C.blue, 0.75));
+            cv.text(String(i + 1), x + 26, y + rh / 2 + 6, 15, '#ffffff', { align: 'center', font: 'bold', literal: true });
+            if (two) {
+                cv.text(sn ? sn.head : '--', x + 50, y + rh / 2 - 1, 17, '#ffffff', { font: 'bold', literal: true });
+                cv.text(sl.where || '', x + 50, y + rh / 2 + 16, 13, C.dim, { literal: true });
+                cv.text(this.sensorText(sn), x + sw - 32, y + rh / 2 + 6, 17, C.live, { align: 'right', font: 'bold', literal: true });
+            } else {
+                cv.text(sn ? sn.name : '--', x + 60, y + rh / 2 - 1, 19, '#ffffff', { font: 'bold', literal: true });
+                cv.text(sl.where || '', x + 60, y + rh / 2 + 18, 14, C.dim, { literal: true });
+                cv.text(this.sensorText(sn), x + sw - 40, y + rh / 2 + 7, 20, C.live, { align: 'right', font: 'bold', literal: true });
+            }
+            chevron(cv, x + sw - 18, y + rh / 2, C.dim);
+            cv.target(x, y, sw, rh, () => { this.slot = sl.id; if (sn) this.cat = sn.cat; this.kick(); }, 'slot:' + sl.id, 14);
         });
         // the sensors for the picked slot
         const px = CX + lw + 24, pw = CR - px, py = 82, ph = bottom - py - 4;

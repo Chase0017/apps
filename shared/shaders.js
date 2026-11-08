@@ -1038,8 +1038,8 @@ void main() {
 `;
 
 const GMETER = `// A G-meter for a cluster-render "effect" layer (GLSL ES 1.00): a dot at the car's lateral (x) and
-// longitudinal (y, braking up) g inside rings at every 0.5 g out to u_max, a crosshair, and a faint ring at the
-// peak g of the last few seconds. u_g in g (x lateral, y longitudinal: + = accelerating, drawn down). The dial
+// longitudinal (y) g inside rings at every 0.5 g out to u_max, a crosshair, and a faint ring at the
+// peak g of the last few seconds. u_g in g as drawn: + x right, + y down (hud.js maps the car's signs). The dial
 // fills the smaller side of the layer. v_uv (0,0) is the top-left.
 precision mediump float;
 varying vec2 v_uv;
@@ -1134,4 +1134,75 @@ void main() {
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, dial: DIAL, meter: METER, gmeter: GMETER, revarc: REVARC };
+const TILES = `// The Dyno theme's tiles in one cluster-render "effect" layer (GLSL ES 1.00): the background u_bg and up to 14
+// rounded readout tiles, each filled u_fill (u_warn while its readout is over its warning limit), framed u_line,
+// with a thin u_accent strip along the top and an optional bar along the bottom: track u_track, lit from the left
+// to the tile's value, coloured by where along the bar it is (u_c1 below u_at.x, u_c2 to u_at.y, u_c3 past it) or
+// all u_c1 for a plain bar. Array uniforms (sent with type vec4):
+//   u_tile[i]   x, y, w, h in layer px
+//   u_tileV[i]  bar value 0..1 (< 0: no bar), warning (0 / 1), zoned bar (0 / 1), unused
+//   u_n         tiles in use. u_geo: corner radius, border px, accent strip px, bar height px.
+// Colours rgba (fills) or rgb, straight alpha. The loop bound is constant and the arrays are indexed by the loop
+// counter only, as GLSL ES 1.00 requires. v_uv (0,0) is the top-left.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec4 u_bg;
+uniform float u_n;
+uniform vec4 u_tile[14];
+uniform vec4 u_tileV[14];
+uniform vec4 u_geo;
+uniform vec4 u_fill;
+uniform vec4 u_warn;
+uniform vec4 u_line;
+uniform vec4 u_track;
+uniform vec3 u_accent;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+uniform vec3 u_c3;
+uniform vec2 u_at;
+
+float sdBox(vec2 p, vec4 r, float rad) {
+    vec2 hs = r.zw * 0.5;
+    vec2 q = abs(p - (r.xy + hs)) - (hs - vec2(rad));
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rad;
+}
+vec4 over(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    if (a <= 0.0) return vec4(0.0);
+    return vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
+
+void main() {
+    vec2 p = v_uv * u_size;
+    vec4 c = u_bg;
+    for (int i = 0; i < 14; i++) {
+        if (float(i) >= u_n) break;
+        vec4 b = u_tile[i];
+        if (p.x < b.x - 1.0 || p.x > b.x + b.z + 1.0 || p.y < b.y - 1.0 || p.y > b.y + b.w + 1.0) continue;
+        vec4 v = u_tileV[i];
+        float d = sdBox(p, b, u_geo.x);
+        float outer = clamp(0.5 - d, 0.0, 1.0);
+        if (outer <= 0.0) continue;
+        vec4 col = v.y > 0.5 ? u_warn : u_fill;
+        // the accent strip along the top, inside the frame
+        if (p.y < b.y + u_geo.z + u_geo.y) col = vec4(v.y > 0.5 ? vec3(1.0) : u_accent, 1.0);
+        // the bar: inset 16 px a side, its bottom 12 px over the tile's
+        if (v.x >= 0.0) {
+            float bx0 = b.x + 16.0, bw = b.z - 32.0, by1 = b.y + b.w - 12.0, by0 = by1 - u_geo.w;
+            if (p.x >= bx0 && p.x <= bx0 + bw && p.y >= by0 && p.y <= by1) {
+                float f = (p.x - bx0) / bw;
+                vec3 lit = v.z > 0.5 ? (f < u_at.x ? u_c1 : (f < u_at.y ? u_c2 : u_c3)) : u_c1;
+                if (v.y > 0.5) lit = vec3(1.0);
+                col = f <= v.x ? vec4(lit, 1.0) : over(u_track, col);
+            }
+        }
+        float edge = clamp(d + u_geo.y + 0.5, 0.0, 1.0);
+        col = mix(col, v.y > 0.5 ? vec4(1.0, 1.0, 1.0, 0.85) : u_line, edge);
+        c = over(vec4(col.rgb, col.a * outer), c);
+    }
+    gl_FragColor = c;
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, dial: DIAL, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES };

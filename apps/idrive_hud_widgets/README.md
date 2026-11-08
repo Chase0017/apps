@@ -61,7 +61,7 @@ Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and 
 - **Shift only:** 12 shift lights and the gear, and SHIFT at the shift point.
 - **Boost:** a boost gauge with a dot that holds the peak for 4 seconds, the boost in figures, and the peak since your last 0 to 60 run.
 - **Warm-up:** oil, coolant and intake air temperature as bars with figures, and WARMING UP until the oil reaches 80°C. The intake temperature is read from the engine unit (read-only), like the boost fallback.
-- **Track:** 12 shift lights, the gear with SHIFT under it, and a G-meter: a dot shows the cornering and braking or accelerating force, with a ring that holds the peak of the last 3 seconds.
+- **Track:** 12 shift lights, the gear with SHIFT under it, and a G-meter: a dot shows the cornering and braking or accelerating force (into the turn and up when you speed up; Settings can flip it), with a ring that holds the peak of the last 3 seconds.
 - **Cruise:** four quiet figures in soft white: range, outside temperature, your average speed this drive (time moving only, after the first minute) and the time.
 - **Retro:** an 80s digital look in amber: a segmented rev bar, the gear in seven-segment digits, and boost, oil and water as figures with bar graphs.
 - The clock, oil, coolant and shift point readouts can each show another sensor instead (page's Readouts tab).
@@ -94,7 +94,7 @@ Classic, M and Night, plus Auto, which switches to Night at sunset. You choose w
 
 ## Settings
 
-Layout, drive mode switching, which sensor each readout shows, where the HUD sits on the glass and its size, theme, daytime theme for Auto, units (mph, °F, psi or km/h, °C, bar), 12- or 24-hour clock, redline, shift point before redline, cold-engine rev guard, which readouts show (clock, oil, coolant, boost), and demo data. Changes show on the HUD right away, and the HUD keeps running after you leave the page.
+Layout, drive mode switching, which sensor each readout shows, where the HUD sits on the glass and its size, theme, daytime theme for Auto, units (mph, °F, psi or km/h, °C, bar), 12- or 24-hour clock, redline, shift point before redline, cold-engine rev guard, which readouts show (clock, oil, coolant, boost), the G-meter's direction (swap left and right, swap accelerating and braking), and demo data. Changes show on the HUD right away, and the HUD keeps running after you leave the page.
 
 **Alerts:** oil, coolant and boost limits (a readout over its limit flashes red; oil 130°C and coolant 115°C by default, boost off), and a button that runs the shift lights up to the shift point for about 4 seconds while the car stands.
 
