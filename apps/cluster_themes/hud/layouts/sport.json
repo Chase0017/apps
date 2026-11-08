@@ -55,9 +55,9 @@
       ],
       "topEnd": 733,
       "hole": [
-        416,
+        524,
         120,
-        1088,
+        872,
         480
       ],
       "holeWhen": "mapUp",
@@ -401,7 +401,8 @@
       "text": "{{speed}}",
       "font": "s_speed",
       "color": "fg",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "speed_unit",
@@ -414,7 +415,8 @@
       "text": "{{u:speedLc}}",
       "font": "s_unit",
       "color": "sblue",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "gear",
@@ -428,7 +430,51 @@
       "font": "s_gear",
       "color": "fg",
       "align": "center",
-      "hotWhen": "now"
+      "hotWhen": "now",
+      "toggle": "!mapUp"
+    },
+    {
+      "id": "mspeed",
+      "type": "text",
+      "z": 5,
+      "x": 285,
+      "y": 286,
+      "w": 230,
+      "h": 68,
+      "text": "{{speed}}",
+      "font": "s_speed",
+      "color": "fg",
+      "align": "center",
+      "toggle": "mapUp"
+    },
+    {
+      "id": "mspeed_unit",
+      "type": "text",
+      "z": 5,
+      "x": 360,
+      "y": 358,
+      "w": 80,
+      "h": 29,
+      "text": "{{u:speedLc}}",
+      "font": "s_unit",
+      "color": "sblue",
+      "align": "center",
+      "toggle": "mapUp"
+    },
+    {
+      "id": "mgear",
+      "type": "text",
+      "z": 5,
+      "x": 1415,
+      "y": 230,
+      "w": 200,
+      "h": 65,
+      "text": "{{gearnum}}",
+      "font": "s_gear",
+      "color": "fg",
+      "align": "center",
+      "hotWhen": "now",
+      "toggle": "mapUp"
     },
     {
       "id": "f_full",
@@ -441,7 +487,8 @@
       "text": "1",
       "font": "s_gl",
       "color": "fg",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "f_half",
@@ -454,7 +501,8 @@
       "text": "1/2",
       "font": "s_gl",
       "color": "fg",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "fuel_icon",
@@ -465,7 +513,8 @@
       "y": 551,
       "w": 26,
       "h": 30,
-      "color": "dim"
+      "color": "dim",
+      "toggle": "!mapUp"
     },
     {
       "id": "f_empty",
@@ -478,7 +527,8 @@
       "text": "0",
       "font": "s_gl",
       "color": "fg",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "o_hot",
@@ -491,7 +541,8 @@
       "text": "{{temp:150}}",
       "font": "s_gl",
       "color": "fg",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "o_unit",
@@ -504,7 +555,8 @@
       "text": "{{u:temp}}",
       "font": "s_unit",
       "color": "dim",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "o_mid",
@@ -517,7 +569,8 @@
       "text": "{{temp:100}}",
       "font": "s_gl",
       "color": "fg",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "oil_icon",
@@ -528,7 +581,8 @@
       "y": 554,
       "w": 36,
       "h": 24,
-      "color": "dim"
+      "color": "dim",
+      "toggle": "!mapUp"
     },
     {
       "id": "o_cold",
@@ -541,7 +595,8 @@
       "text": "{{temp:50}}",
       "font": "s_gl",
       "color": "fg",
-      "align": "center"
+      "align": "center",
+      "toggle": "!mapUp"
     },
     {
       "id": "boost",

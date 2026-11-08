@@ -13,7 +13,9 @@
  * Which layout: with the "byMode" setting on and the car's drive mode known (FES
  * statusFESVehicleDynamicSwitchHMI), the "inComfort" / "inSport" / "inEco" setting; otherwise "hudLayout".
  * The layout name "off" draws nothing, so BMW's own HUD or cluster shows (and the other app can have the
- * shared scene: cluster-render never shows the HUD and the cluster panel at once).
+ * shared scene: cluster-render never shows the HUD and the cluster panel at once). The two apps tell each other
+ * what they show (screen.js): when the driver gives the screen to the other one (page.js asks first), this one
+ * draws nothing until a theme or layout is picked on its own page again.
  * The colour theme is the layout's own "theme" when it has one (the cluster themes), else the "hudTheme"
  * setting (auto = Night after sunset).
  *
@@ -172,6 +174,7 @@ const shaders = require('./shaders');
 const calibration = require('./calibration');
 const Car = require('./kit/car');
 const Waze = require('./waze');
+const Screen = require('./screen');
 const badges = require('./badges');
 
 const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
@@ -339,12 +342,17 @@ class HudApp {
             if (this.mapLayout && this.setting('mapUp') !== this.mapShown) this._rebuild(); else this._status();
         })) : null;
         this.mapShown = false;           // "mapUp" when the layout was built
+        // the screen shared with the other app (screen.js): stepping aside while the driver gave it to the other one
+        this.screen = new Screen(this.target === 'panel' ? 'cluster' : 'hud', ctx.dataDir, this.log,
+            () => !!(this.started && this.activeName && this.activeName !== 'off'), () => this._guard('screen', () => this._rebuild()));
         this.testAt = null;              // the shift-light test's start (Date.now()), while it runs
         this.nightOn = false;            // the layout was built with the night colours (nightDim)
 
         this._setupVehicleData();
         this.layouts.onChange(() => this._rebuild());
         ctx.settings.onChange((key) => {
+            // a theme or layout picked anywhere (the page asks first, the kit's All settings list doesn't): no longer stepping aside
+            if (['hudLayout', 'inComfort', 'inSport', 'inEco', 'byMode'].indexOf(key) >= 0 && this.screen.yielded) this.screen.release();
             if (PLACE_KEYS.indexOf(key) >= 0) this._guard('place', () => this._place());
             else if (LIVE_KEYS.indexOf(key) >= 0) this.widgets.forEach((x) => { x.last = null; });
             else if (key !== 'demo') this._rebuild(); else this._status();
@@ -567,6 +575,7 @@ class HudApp {
         this._status();
         this._startDme();
         if (this.waze) { this.waze.start(); this._wazeWant(); }
+        this.screen.start();
     }
 
     /** Waze's map on the panel only while the setting is on and the theme shown has a map window. */
@@ -610,6 +619,7 @@ class HudApp {
         clearInterval(this.dmeTimer);
         clearTimeout(this.statusAskT);
         if (this.waze) this._guard('waze stop', () => this.waze.stop());
+        this._guard('screen stop', () => this.screen.stop());
         this.clients.forEach((c) => c.close());
         this.atlases.clear();
     }
@@ -678,6 +688,7 @@ class HudApp {
 
     /** The layout name to show now: per drive mode when that's on and known, else the plain setting. */
     _layoutName() {
+        if (this.screen && this.screen.yielded) return 'off';
         if (this.setting('byMode') === true && this.driveMode && MODE_KEY[this.driveMode]) {
             const v = this.setting(MODE_KEY[this.driveMode]);
             if (v) return v;
@@ -765,6 +776,7 @@ class HudApp {
         const byMode = this.setting('byMode') === true;
         const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + ')' : ' (drive mode not seen yet)') : '';
         const what = this.target === 'panel' ? 'cluster' : 'HUD';
+        if (this.activeName === 'off' && this.screen.yielded) return this.label + ' off: ' + this.screen.otherName + ' has the screen, pick one here to take it back';
         if (this.activeName === 'off') return this.label + ' off' + mode + ": BMW's own " + what + ' shows';
         const name = this._layoutLabel(this.activeName);
         const d = this.car.data();
@@ -1292,6 +1304,8 @@ class HudApp {
             });
             c.uniform(ref, 'u_segMax', [0, 1, 2, 3].map((i) => (bars[i] && bars[i].max) || 1));
             c.uniform(ref, 'u_segSlant', [isNum(w.segSlant) ? w.segSlant : 9]);
+            c.uniform(ref, 'u_hole', this._hole(w));
+            c.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
             x.gauges = [['u_gaugeL', L], ['u_gaugeR', R]];
             x.bars = bars;
         } else if (w.type === 'mtach') {

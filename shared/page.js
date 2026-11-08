@@ -59,6 +59,7 @@ class Page {
         this.slot = null;                // Readouts: the slot picked (its id)
         this.cat = sensors.CATS[0];      // Readouts: the sensor group shown
         this.series = null;              // Badge: the series shown (null: the picked model's)
+        this.confirm = null;             // { title, lines, yes, run } while a question is open over the page
     }
 
     start() {
@@ -93,6 +94,35 @@ class Page {
     shownName() { return this.hud.activeName || this.hud._layoutName() || 'off'; }
     /** the layouts a theme card can show (not the calibration ones) */
     looks() { return ((this.item('inSport') || {}).options || []).map((o) => o[0]); }
+    /**
+     * A theme or layout picked on this page (key: hudLayout or a drive mode's). The cluster panel and the HUD
+     * share one screen (screen.js): when the other app is drawing, ask first whether to turn it off; yes takes
+     * the screen (the other app steps aside), Cancel changes nothing. Any pick here ends our own stepping aside.
+     */
+    chooseLayout(key, v) {
+        const scr = this.hud.screen;
+        if (v === 'off' || !scr || !scr.otherOn()) {
+            if (scr) scr.release();
+            this.set(key, v);
+            return;
+        }
+        const cluster = this.cfg.what === 'cluster';
+        this.confirm = {
+            title: scr.otherName + ' is on',
+            lines: cluster
+                ? ['A cluster theme and the HUD can\'t show at the same time.', 'Turn HUD Widgets off so ' + this.layoutName(v) + ' shows?']
+                : ['The HUD and a cluster theme can\'t show at the same time.', 'Turn the cluster theme off so ' + this.layoutName(v) + ' shows?'],
+            yes: cluster ? 'Turn HUD off' : 'Turn theme off',
+            run: () => { scr.claim(); this.set(key, v); },
+        };
+        this.kick();
+    }
+    /** what the Look tab says while the other app has the screen, else null */
+    yieldNote() {
+        const scr = this.hud.screen;
+        return scr && scr.yielded ? 'Off · ' + scr.otherName + ' has the screen · pick one to take it back' : null;
+    }
+
     /** the key a tap on a theme sets: the drive mode's own while it changes with the drive mode */
     lookKey() {
         const m = this.hud.driveMode;
@@ -114,12 +144,13 @@ class Page {
         ]);
         // the page under an open list takes no taps: the list (and a tap beside it to close) does
         const target = cv.target;
-        if (this.picker) cv.target = function () { return this; };
+        if (this.picker || this.confirm) cv.target = function () { return this; };
         this.rail(cv, bottom);
         const body = { look: this.lookTab, readouts: this.readoutsTab, position: this.positionTab, map: this.mapTab, colours: this.coloursTab, badge: this.badgeTab, alerts: this.alertsTab, settings: this.settingsTab }[this.tab];
         if (body) body.call(this, cv, bottom);
         cv.target = target;
         if (this.picker) this.drawPicker(cv, bottom);
+        if (this.confirm) this.drawConfirm(cv, bottom);
         return this.ctx.ui.image('MAIN_GFX', cv);
     }
     theme() { return this.ctx.theme(); }
@@ -170,7 +201,7 @@ class Page {
         // right: name, tag line, the drive modes
         const rx = px + pw + 36, rw = CR - rx;
         cv.text(this.layoutName(shown), rx, py + 38, 38, '#ffffff', { font: 'bold', literal: true });
-        cv.text(this.tag(shown), rx, py + 68, 17, C.dim, { literal: true });
+        cv.text(this.yieldNote() || this.tag(shown), rx, py + 68, 17, this.yieldNote() ? '#e0a340' : C.dim, { literal: true });
         // compact rows, ending level with the picture
         let y = py + 82;
         y = this.toggleRow(cv, rx, y, rw, 'Change with the drive mode', 'byMode', 46);
@@ -188,29 +219,37 @@ class Page {
             this.picture(cv, v, 'small', x + 10, gy + 10, iw, ih);
             cv.text(this.layoutName(v), x + 14, gy + gh - 14, 19, '#ffffff', { font: 'bold', literal: true });
             cv.text(this.tag(v), x + gw - 14, gy + gh - 14, 15, C.dim, { align: 'right', literal: true });
-            cv.target(x, gy, gw, gh, () => this.set(this.lookKey(), v), 'look:' + v, 16);
+            cv.target(x, gy, gw, gh, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
         });
     }
 
     /** HUD: a card per layout with its picture and the drive modes that show it. */
     lookCards(cv, bottom) {
         const shown = this.shownName();
-        label(cv, CX, 70, this.cfg.look.name + ' · tap a drive mode to give it that layout');
-        const looks = this.looks().filter((v) => v !== 'off'), gap = 20, y = 84;
+        label(cv, CX, 70, this.yieldNote() || this.cfg.look.name + ' · tap a drive mode to give it that layout');
+        const looks = this.looks(), gap = 20, y = 84;
         const cw = (CW - gap * (looks.length - 1)) / looks.length, ch = Math.min(380, bottom - y - 70);
         looks.forEach((v, i) => {
             const x = CX + i * (cw + gap), sel = v === shown;
             glass(cv, x, y, cw, ch, sel);
             const iw = cw - 24, ih = Math.min(ch - 116, iw * 0.624);
             this.picture(cv, v, 'big', x + 12, y + 12, iw, ih);
-            cv.target(x, y, cw, ih + 24, () => this.set(this.lookKey(), v), 'look:' + v, 16);
             const ty = y + 12 + ih + 36;
+            if (v === 'off') {
+                // the off switch: BMW's own HUD in every drive mode
+                cv.target(x, y, cw, ch, () => { this.set('byMode', false); this.chooseLayout('hudLayout', 'off'); }, 'look:off', 16);
+                cv.text('Off', x + 16, ty, 24, '#ffffff', { font: 'bold', literal: true });
+                cv.text(this.tag(v), x + cw - 16, ty, 15, C.dim, { align: 'right', literal: true });
+                cv.text(sel ? 'HUD is off' : 'Tap to turn the HUD off', x + 16, ty + 40, 16, sel ? C.blueHi : C.dim, { literal: true });
+                return;
+            }
+            cv.target(x, y, cw, ih + 24, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
             cv.text(this.layoutName(v), x + 16, ty, 24, '#ffffff', { font: 'bold', literal: true });
             cv.text(this.tag(v), x + cw - 16, ty, 15, C.dim, { align: 'right', literal: true });
             let cx = x + 16;
             MODES.forEach((m) => {
                 const lit = this.get(m[0]) === v;
-                cx += chip(cv, cx, ty + 16, m[1], lit, () => this.set(m[0], lit ? 'off' : v), 'mode:' + v + ':' + m[0]) + 8;
+                cx += chip(cv, cx, ty + 16, m[1], lit, () => this.chooseLayout(m[0], lit ? 'off' : v), 'mode:' + v + ':' + m[0]) + 8;
             });
         });
         // under the cards: switching with the drive mode, and what shows when it doesn't
@@ -337,13 +376,13 @@ class Page {
         // live state from waze.js: the map showing, waiting, the Waze app busy, Waze on Cluster missing
         const info = this.hud.waze ? this.hud.waze.info() : { text: 'Not available in this app', up: false, ok: false };
         let text = info.text;
-        if (this.get('mapInTheme') && !this.hud.mapLayout && this.hud.activeName !== 'off') text = 'This theme has no map version (GT3 and Sport do)';
+        if (this.get('mapInTheme') && !this.hud.mapLayout && this.hud.activeName !== 'off') text = 'This theme has no map version (GT3, Sport and M do)';
         glass(cv, CX, y, w, 46, false);
         cv.circle(CX + 26, y + 23, 7, info.up ? C.live : info.ok ? C.dim : '#e0a340');
         cv.text(text, CX + 46, y + 30, 18, info.up ? C.live : C.text, { literal: true });
         y += 54;
         note(cv, CX, y + 26, [
-            'On: GT3 and Sport open a window in the middle and Waze on Cluster draws its map in it, above',
+            'On: GT3, Sport and M open a window in the middle and Waze on Cluster draws its map in it, above',
             'BMW\'s own map view, so nothing shows twice. When the map goes away the theme fills back in.',
             'While on, Waze\'s map on the HUD is off (the cluster and the HUD share one picture).',
             'Needs robertnisipeanu\'s Waze on Cluster. Turning this off gives Waze its usual place back.',
@@ -494,13 +533,38 @@ class Page {
             const text = p.fmt ? p.fmt(o[0]) : o[1] !== null ? o[1] : fmtInt(o[0]) + ' rpm';
             cv.text(text, x + 30, ry + 34, 20, sel ? '#ffffff' : C.text, { font: sel ? 'bold' : 'label', literal: true });
             if (sel) check(cv, x + w - 50, ry + 26, '#ffffff');
-            cv.target(x + 12, ry, w - 24, rh - 6, () => { this.picker = null; this.set(p.key, o[0]); }, 'pick:' + p.key + ':' + o[0], 12);
+            cv.target(x + 12, ry, w - 24, rh - 6, () => {
+                this.picker = null;
+                if (LOOK_KEYS.indexOf(p.key) >= 0) this.chooseLayout(p.key, o[0]); else this.set(p.key, o[0]);
+            }, 'pick:' + p.key + ':' + o[0], 12);
         });
         cv.target(0, 36, W, bottom, () => { this.picker = null; this.kick(); }, 'pick:close');
+    }
+
+    /** The question chooseLayout asks, over the page: the answer button, Cancel, a tap beside it cancels. */
+    drawConfirm(cv, bottom) {
+        const q = this.confirm, close = () => { this.confirm = null; this.kick(); };
+        cv.fillRect(0, 36, W, bottom + 20, '#000000b0');
+        const w = 720, h = 96 + q.lines.length * 30 + 84, x = (W - w) / 2, y = Math.max(52, (bottom + 44 - h) / 2);
+        cv.card(x, y, w, h, 18, [[0, '#18233a'], [1, '#0c111b']]);
+        cv.strokeRoundRect(x, y, w, h, 18, 1, A(C.blueHi, 0.3));
+        cv.text(q.title, x + 32, y + 56, 28, '#ffffff', { font: 'bold', literal: true });
+        q.lines.forEach((s, i) => cv.text(s, x + 32, y + 98 + i * 30, 19, C.text, { literal: true }));
+        const bh = 52, by = y + h - bh - 24;
+        const yw = cv.textWidth(q.yes, 18, { font: 'bold', literal: true }) + 56, yx = x + w - 32 - yw;
+        cv.roundRect(yx, by, yw, bh, bh / 2, C.blue);
+        cv.text(q.yes, yx + yw / 2, by + 33, 18, '#ffffff', { align: 'center', font: 'bold', literal: true });
+        cv.target(yx, by, yw, bh, () => { this.confirm = null; q.run(); this.kick(); }, 'confirm:yes', bh / 2);
+        const nw = 150, nx = yx - 16 - nw;
+        cv.roundRect(nx, by, nw, bh, bh / 2, '#ffffff14');
+        cv.text('Cancel', nx + nw / 2, by + 33, 18, C.text, { align: 'center', font: 'bold', literal: true });
+        cv.target(nx, by, nw, bh, close, 'confirm:no', bh / 2);
+        cv.target(0, 36, W, bottom, close, 'confirm:close');
     }
 }
 
 /* ---------- small pieces ---------- */
+const LOOK_KEYS = ['hudLayout', 'inComfort', 'inSport', 'inEco'];
 const WARN_KEYS = ['warnOil', 'warnCoolant', 'warnBoost'];
 /** A warning limit as the page shows it, in the display units: "266 °F", "1.2 bar", "Off". */
 function warnText(k, v, us) {

@@ -436,6 +436,8 @@ uniform vec4 u_seg3;
 uniform vec4 u_segLit;    // the level per bar (1-based; 0 = none lit)
 uniform vec4 u_segMax;    // segments per bar
 uniform float u_segSlant; // px each segment leans
+uniform vec4 u_hole;      // the map window x, y, w, h px, already inset (w 0 = none): cut see-through over the map
+uniform float u_holeR;    // its corner radius px
 
 const float PI = 3.14159265;
 
@@ -609,6 +611,14 @@ void main() {
     c = segbar(p, u_seg2, vec2(u_segLit.z, u_segMax.z), c);
     c = segbar(p, u_seg3, vec2(u_segLit.w, u_segMax.w), c);
 
+    // the map window between the rev blades ("Show Waze map inside the theme"): a rounded see-through hole
+    if (u_hole.z > 0.0) {
+        vec2 hs = u_hole.zw * 0.5;
+        vec2 q = abs(p - (u_hole.xy + hs)) - (hs - vec2(u_holeR));
+        float hd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_holeR;
+        c.a *= clamp(hd + 0.5, 0.0, 1.0);
+    }
+
     // tricolour mark: three slanted bars
     if (u_mark.z > 0.0) {
         vec2 m = (p - u_mark.xy) / u_mark.z;
@@ -705,8 +715,8 @@ void main() {
 const SDASH = `// The Sport theme in one cluster-render "effect" layer (GLSL ES 1.00), after BMW's Live Cockpit Sport view:
 // a blue speed bracket left and a red rev bracket right (the left one mirrored). Each is a thin bright outer
 // line, a band that fills from the bottom (white marker at the value), a dark gap and a thin inner line round a
-// black middle: plain black, or BMW's map through a see-through rounded hole (u_hole; only the fuel and oil bars
-// and the bottom strip draw over it). Two-tone fuel and oil bars inside the brackets, a blue / red strip at the bottom. v_uv (0,0) is
+// black middle: plain black, or the map through a see-through rounded hole (u_hole; only the bottom strip draws
+// over it, the fuel and oil bars are off while it is open). Two-tone fuel and oil bars inside the brackets, a blue / red strip at the bottom. v_uv (0,0) is
 // the top-left. The backdrop is pure black: the car brightens dark tints (seen Nov 5 2026), so no dark panels.
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -830,16 +840,17 @@ void main() {
 
     c = bracket(p, u_speed, 2.0, 2.0, u_ticks.x, BLUE_LINE, BLUE_BAND, BLUE_LIT, BLUE_IN, c);
     c = bracket(pm, u_rpm, u_redFrom, u_orange, u_ticks.y, RED_LINE, RED_BAND, RED_LIT, RED_IN, c);
-    // the map window: a rounded hole cut out of the backdrop and brackets, so BMW's map shows clean; the fuel and
-    // oil bars and the bottom strip draw over it, as BMW's own Sport view lays them beside the map
+    // the map window: a rounded hole cut out of the backdrop and brackets, so the map shows clean; the fuel and
+    // oil bars come off while it is open (they ran across the map, car photos Nov 7 2026), the bottom strip stays
     if (u_hole.z > 0.0) {
         vec2 hs = u_hole.zw * 0.5;
         vec2 q = abs(p - (u_hole.xy + hs)) - (hs - vec2(u_holeR));
         float hd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_holeR;
         c.a *= clamp(hd + 0.5, 0.0, 1.0);
+    } else {
+        c = bar(p, u_fuelSeg, u_fuel, 0.0, c);
+        c = bar(p, u_oilSeg, u_oil, 1.0, c);
     }
-    c = bar(p, u_fuelSeg, u_fuel, 0.0, c);
-    c = bar(p, u_oilSeg, u_oil, 1.0, c);
     // the bottom line between the brackets
     if (abs(p.y - u_geo.z) < 3.0 && abs(p.x - u_size.x * 0.5) < u_size.x * 0.5 - outerX(u_geo.z))
         c = over(vec4(mix(BLUE_LINE, RED_LINE, step(u_size.x * 0.5, p.x)) * 0.8, cov(abs(p.y - u_geo.z) - 1.2)), c);

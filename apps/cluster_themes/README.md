@@ -47,13 +47,13 @@ More themes are on the way.
 
 - **Off (BMW's own cluster):** pick it as the theme and the app draws nothing, so BMW's cluster comes back.
 - **Change with SPORT / COMFORT / ECO PRO** (on by default): the cluster follows the drive mode buttons, with a theme for each mode. Out of the box, Sport shows GT3, and Comfort and Eco Pro show BMW's own cluster. Until the car reports a mode, the plain theme setting is used.
-- **With HUD Widgets:** the cluster theme and the HUD cannot show at the same time, because cluster-render has one screen slot for both. With the defaults, Sport gets the cluster theme and Comfort gets the HUD, so they take turns.
+- **With HUD Widgets:** the cluster theme and the HUD cannot show at the same time, because cluster-render has one screen slot for both. With the defaults, Sport gets the cluster theme and Comfort gets the HUD, so they take turns. Pick a theme while the HUD is on and the page asks whether to turn HUD Widgets off; yes turns it off until you pick a layout in HUD Widgets again, and it asks the same the other way round.
 
 ## Settings
 
 - **Theme**, and one per drive mode.
 - **Readouts:** pick which car sensor each GT3 box shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
-- **Show Waze map inside the theme:** GT3 and Sport open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
+- **Show Waze map inside the theme:** GT3, Sport and M open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
 - **Badge:** the model name, like "BMW X3 M40i", as text in the theme's font (GT3 top left, Sport and M bottom centre). Off by default.
 - **Warnings:** oil, coolant and boost limits. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off).
 - **Test the shift lights:** runs the rpm up to the shift point for about 4 seconds while the car stands.

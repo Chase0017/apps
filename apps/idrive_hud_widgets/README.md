@@ -46,9 +46,9 @@ Classic, M and Night, plus Auto, which switches to Night at sunset. You choose w
 
 ## Off and drive modes
 
-- **Off (BMW's own HUD):** pick it as the layout and the app draws nothing, so BMW's HUD comes back.
+- **Off (BMW's own HUD):** the first card on the Layouts tab. Tap it and the app draws nothing in any drive mode, so BMW's HUD comes back.
 - **Change with SPORT / COMFORT / ECO PRO** (on by default): the HUD follows the drive mode buttons, with a layout for each mode. Out of the box, Comfort shows Daily, and Sport and Eco Pro hand the HUD back to BMW. In Sport, BMW's own HUD puts its speed and rev line in the middle of the window, right where these layouts sit. Until the car reports a mode, the plain layout setting is used.
-- **With Cluster Themes:** the HUD and the cluster theme cannot show at the same time, because cluster-render has one screen slot for both. With the defaults, Comfort gets the HUD and Sport gets the cluster theme, so they take turns.
+- **With Cluster Themes:** the HUD and the cluster theme cannot show at the same time, because cluster-render has one screen slot for both. With the defaults, Comfort gets the HUD and Sport gets the cluster theme, so they take turns. Pick a layout while a cluster theme is on and the page asks whether to turn the theme off; yes turns it off until you pick a theme in Cluster Themes again, and it asks the same the other way round.
 
 ## Settings
 

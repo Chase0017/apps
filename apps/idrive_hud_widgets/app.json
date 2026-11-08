@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "HUD Widgets",
   "description": "Speed, gear, shift bar, boost, oil and coolant on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -23,7 +23,8 @@
     "previews.js",
     "sensors.js",
     "waze.js",
-    "badges.js"
+    "badges.js",
+    "screen.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {

@@ -71,6 +71,8 @@ def main():
     post(port, '/setting', {'key': 'byMode', 'value': False})
     if 'nightDim' in defaults:       # the pictures show the day colours, whatever the time
         post(port, '/setting', {'key': 'nightDim', 'value': 'off'})
+    if 'hudTheme' in defaults:       # HUD Widgets: the day colours too (Auto shot after sunset came out Night)
+        post(port, '/setting', {'key': 'hudTheme', 'value': defaults.get('dayTheme') or 'classic'})
     try:
         for name in layouts:
             post(port, '/setting', {'key': 'hudLayout', 'value': name})
@@ -84,7 +86,7 @@ def main():
                 out[name]['full'] = pack(whole, sz['full'])
             print('  %s: %s' % (name, ', '.join('%s %d KB' % (k, len(v['z']) // 1024) for k, v in out[name].items())))
     finally:
-        for k in ('hudLayout', 'byMode', 'nightDim'):
+        for k in ('hudLayout', 'byMode', 'nightDim', 'hudTheme'):
             if k not in defaults:
                 continue
             post(port, '/setting', {'key': k, 'value': saved.get(k, defaults.get(k))})

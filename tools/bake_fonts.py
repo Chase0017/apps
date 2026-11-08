@@ -56,7 +56,7 @@ CLUSTER_FONTS = [
     ('m_mid', 'Orbitron[wght].ttf', 34, DIGITS + ':+-.', 0, 'Bold', {'0': 'O'}),
     ('m_tyre', 'Orbitron[wght].ttf', 25, DIGITS + '.-', 0, 'Bold', {'0': 'O'}),
     ('m_unit', 'Barlow-Medium.ttf', 30, LOWER + UPPER + '°/-.'),
-    ('m_label', 'Orbitron[wght].ttf', 20, UPPER + ' ', 0, 'Bold'),
+    ('m_label', 'Orbitron[wght].ttf', 20, UPPER + ' -', 0, 'Bold'),
     ('m_tiny', 'Barlow-Medium.ttf', 26, LOWER + DIGITS + 'CF./ -°'),
     ('m_badge', 'Barlow-Medium.ttf', 26, UPPER + LOWER + DIGITS + ' -'),
     # Sport: BMW Live Cockpit style, the wide numbers in Michroma like BMW's own
