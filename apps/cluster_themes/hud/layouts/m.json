@@ -756,6 +756,19 @@
       "text": "{{u:temp}}",
       "font": "m_tiny",
       "color": "dim"
+    },
+    {
+      "id": "badge",
+      "type": "text",
+      "z": 5,
+      "x": 760,
+      "y": 627,
+      "w": 400,
+      "h": 28,
+      "text": "{{badge}}",
+      "font": "m_badge",
+      "color": "dim",
+      "align": "center"
     }
   ]
 }

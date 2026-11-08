@@ -3,6 +3,10 @@
  * HUD colour themes. Layouts name colour *roles* ("fg", "dim", "arc", ...) and
  * the active theme fills them in, so every layout works in every theme.
  *
+ * HUD rule (Nov 7 2026, from road photos: greys were hard to see even at night): the HUD is a projector, so a dim or
+ * see-through colour comes out faint on the glass. Every HUD role is opaque and no lit colour is darker than
+ * about 70 % brightness; only "track" (the unlit part of a bar) stays partly see-through, at 96..110 of 255.
+ *
  * Colours are [r, g, b, a] 0-255. On the HUD, black is see-through glass, so a
  * theme only ever adds light. Dark blue is the weakest colour on a HUD in sun;
  * M's mid blue is kept brighter than the paint-chip M blue for that reason.
@@ -14,24 +18,24 @@
 const THEMES = {
     classic: {
         name: 'Classic',
-        fg: [243, 246, 250, 255], dim: [243, 246, 250, 148], track: [243, 246, 250, 36], arc: [243, 246, 250, 255],
+        fg: [243, 246, 250, 255], dim: [200, 208, 220, 255], track: [243, 246, 250, 96], arc: [243, 246, 250, 255],
         glow: 0.35, stripe: false,
         bar: { low: [243, 246, 250], mid: [255, 154, 60], high: [255, 75, 62], midAt: 'shift' },
-        rev: { from: [120, 128, 140], to: [243, 246, 250] },
+        rev: { from: [185, 192, 204], to: [243, 246, 250] },
     },
     m: {
         name: 'M',
-        fg: [243, 246, 250, 255], dim: [170, 205, 255, 158], track: [80, 150, 255, 41], arc: [79, 180, 255, 255],
+        fg: [243, 246, 250, 255], dim: [170, 205, 255, 255], track: [80, 150, 255, 110], arc: [79, 180, 255, 255],
         glow: 0.4, stripe: true,
         bar: { low: [79, 180, 255], mid: [51, 102, 255], high: [232, 38, 45], midAt: 0.5 },
         rev: { from: [51, 102, 255], to: [110, 170, 255] },
     },
     night: {
         name: 'Night',
-        fg: [255, 179, 71, 255], dim: [255, 179, 71, 140], track: [255, 179, 71, 36], arc: [255, 179, 71, 255],
+        fg: [255, 179, 71, 255], dim: [235, 165, 70, 255], track: [255, 179, 71, 96], arc: [255, 179, 71, 255],
         glow: 0.3, stripe: false,
         bar: { low: [255, 179, 71], mid: [255, 179, 71], high: [255, 75, 62], midAt: 'shift' },
-        rev: { from: [150, 95, 35], to: [255, 179, 71] },
+        rev: { from: [205, 135, 55], to: [255, 179, 71] },
     },
     // Cluster theme (a layout's own "theme"). The cluster is an LCD, not glass: black is solid black there,
     // and it covers BMW's gauges under it. Extra roles: bg (the screen), panel (box inside), line (box

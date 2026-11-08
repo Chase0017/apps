@@ -100,6 +100,7 @@ function sceneMeta() {
     return Array.from(layers.values()).map((l) => ({
         key: l.key, conn: l.conn, ref: l.ref, app: l.app, kind: l.kind, target: l.target,
         class: l.class, z: l.z, x: l.x, y: l.y, w: l.w, h: l.h, visible: l.visible, opacity: l.opacity,
+        sx: l.sx, sy: l.sy, px: l.px, py: l.py, rotate: l.rotate,
         exclusive: l.exclusive, iw: l.iw, ih: l.ih, fs: l.fs, time: l.time, uniforms: l.uniforms, binds: l.binds, format: l.format,
         state: l.state, reason: l.reason, warnings: l.kind === 'asset' ? [] : layerWarnings(l),
     }));
@@ -220,6 +221,8 @@ const renderServer = net.createServer((sock) => {
                     visible: m.visible === undefined ? 1 : m.visible, opacity: m.opacity === undefined ? 1 : m.opacity,
                     exclusive: m.exclusive || 0, uniforms: {}, state: 'shown', reason: '',
                 };
+                // scale / rotation about the pivot (PROTOCOL.md: sx, sy default 1; px, py default the rect's centre)
+                ['sx', 'sy', 'px', 'py', 'rotate'].forEach((k) => { if (m[k] !== undefined) nl[k] = m[k]; });
                 // The layer cap: count this connection's live layers that got a slot; past the cap, the
                 // layer is registered (so set/uniform/frames on it stay valid) but waits and is not drawn.
                 if (layerCap > 0) {
@@ -283,7 +286,7 @@ const renderServer = net.createServer((sock) => {
             }
             case 'set': {
                 if (!l) return refuse('set', m.ref, 'no such layer');
-                ['class', 'z', 'x', 'y', 'w', 'h', 'visible', 'exclusive', 'opacity'].forEach((k) => { if (m[k] !== undefined) l[k] = m[k]; });
+                ['class', 'z', 'x', 'y', 'w', 'h', 'visible', 'exclusive', 'opacity', 'sx', 'sy', 'px', 'py', 'rotate'].forEach((k) => { if (m[k] !== undefined) l[k] = m[k]; });
                 sceneChanged();
                 return;
             }
@@ -485,6 +488,13 @@ const web = http.createServer(async (req, res) => {
         drive = { t: 'drive', value: b.value === null || b.value === undefined ? null : b.value };
         if (child) child.send(drive);
         log('info', 'bench: drive mode ' + JSON.stringify(drive.value));
+        res.writeHead(204); return res.end();
+    }
+    if (req.method === 'POST' && url === '/shift-test') {
+        // the page's "Test the shift lights" button (hud.testShift)
+        if (!child) { res.writeHead(409); return res.end('app not running'); }
+        child.send({ t: 'shiftTest' });
+        log('info', 'bench: shift-light test');
         res.writeHead(204); return res.end();
     }
     if (req.method === 'POST' && url === '/restart') {

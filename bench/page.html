@@ -313,8 +313,15 @@
       hud.forEach((l, i) => { if (l.exclusive) start = i; });
       hud.slice(start).forEach((l) => {
         ctx.globalAlpha = l.opacity === undefined ? 1 : l.opacity;
+        // cluster-render's scale and rotation about the layer's pivot (px, py from its top-left; default its centre)
+        const sx = l.sx === undefined ? 1 : l.sx, sy = l.sy === undefined ? 1 : l.sy, rot = l.rotate || 0;
+        if (sx !== 1 || sy !== 1 || rot) {
+          const pvx = l.x + (l.px === undefined ? l.w / 2 : l.px), pvy = l.y + (l.py === undefined ? l.h / 2 : l.py);
+          ctx.save(); ctx.translate(pvx, pvy); ctx.rotate(rot * Math.PI / 180); ctx.scale(sx, sy); ctx.translate(-pvx, -pvy);
+        }
         if (l.kind === 'image') { const c = images.get(l.key); if (c) ctx.drawImage(c, l.x, l.y, l.w, l.h); }
         else if (l.kind === 'effect') { const c = drawEffect(l, t); if (c) ctx.drawImage(c, l.x, l.y, l.w, l.h); }
+        if (sx !== 1 || sy !== 1 || rot) ctx.restore();
         ctx.globalAlpha = 1;
       });
       if (document.getElementById('outlines').checked) {

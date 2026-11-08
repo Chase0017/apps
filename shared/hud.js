@@ -115,6 +115,8 @@
  *             "accent" for all of them; the labels are text widgets on top. Sent as array uniforms (vec4 x 12).
  * Any widget: "toggle": "<bool setting>" hides it when that setting is off, "!<setting>" when it is on,
  * "<choice setting>=<value>" shows it only while that choice is picked (also with "!");
+ * "mapUp" (toggle or holeWhen) is not a saved setting: on while the Waze map shows inside the theme (waze.js; the
+ * "mapInTheme" setting); the map is a content z 0 layer, so a frame meant to sit over it is content z 1 or more.
  * "themes": [...] shows it only in those themes. Text "color2": a second role, the colour at the bottom
  * of the box (a top-to-bottom gradient, the chrome look). Text: "hotWhen": "now" turns it the shift red
  * at the shift point; "coldWhen": "cold" turns it blue while the cold guard lowers the shift point.
@@ -139,6 +141,13 @@
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
  * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
+ * {{badge}}: the model picked on the Badge tab (badges.js), "BMW X3 M40i" with the lettering on, '' for none.
+ * Warnings: a text showing oil, coolant or boost (a {{oil}} / {{coolant}} / {{boost}} token, or a readout slot with that
+ * sensor) flashes in the shift red while the value is over "warnOil" / "warnCoolant" (C) / "warnBoost" (bar); 0 = off.
+ * Shift-light test (testShift(), the page's Alerts tab): for about 4 s the rpm every widget sees climbs from 1500 to just
+ * past the shift point and holds there; only while the car stands. Shift scoring keeps the car's own rpm.
+ * Night colours (Cluster Themes "nightDim" on Auto): after sunset (sun.js, config.location) a layout's own theme is
+ * built with its whites and greys at 60 %; the minute timer rebuilds at sunset and sunrise.
  *
  * Boost is a PUSH signal, not a diagnostic poll: tracing cauliflowermossgrape's
  * car_vitals showed its boost reading is de.bmw.infotainment.drivingexcitement.FES /
@@ -150,6 +159,8 @@
  * app exit, and on the car a second unexpected exit uninstalls the app.
  */
 const fs = require('fs');
+const path = require('path');
+const sensors = require('./sensors');
 const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client.js');
 const Layouts = require('./layouts');
 const { THEMES, M_STRIPE, LIGHTS, VERDICT, color } = require('./hud_themes');
@@ -160,6 +171,8 @@ const { paintIcon } = require('./icons');
 const shaders = require('./shaders');
 const calibration = require('./calibration');
 const Car = require('./kit/car');
+const Waze = require('./waze');
+const badges = require('./badges');
 
 const BOOST_SCALE = { factor: 0.01, offset: 0, invalid: 255 }; // see header comment
 // the widget types drawn as pixels (image layers, packed into sheets unless "own": true); the rest are shaders
@@ -175,6 +188,17 @@ const DEFAULT_LOCATION = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC: for 
 const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 const TYRE_CORNERS = ['FL', 'FR', 'RL', 'RR'];
+// the HUD's place (the page's Position tab): settings that move / scale the layers already there, no rebuild
+const PLACE_KEYS = ['hudX', 'hudY', 'hudScale'];
+// settings that only change what a text shows (the next tick paints it), no rebuild
+const LIVE_KEYS = ['warnOil', 'warnCoolant', 'warnBoost', 'badge', 'badgeBMW'];
+// warnings (page.js Alerts): a readout of oil / coolant / boost over its limit flashes in the shift red
+const WARN = { oil: 'warnOil', coolant: 'warnCoolant', boost: 'warnBoost' };
+const WARN_FLASH_MS = 300;       // half a flash: red, then the normal colour
+// the shift-light test (page.js Alerts): rpm climbs from TEST_FROM to just past the shift point, then holds
+const TEST_FROM = 1500, TEST_CLIMB_MS = 2500, TEST_HOLD_MS = 1200;
+// night colours (Cluster Themes "nightDim"): after sunset the theme's whites and greys go to this brightness
+const NIGHT_DIM = 0.6;
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
 const PRESS_UNITS = { 1: 'BAR', 2: 'KPA', 3: 'PSI' }, TEMP_UNITS = { 1: 'C', 2: 'F' };
 const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
@@ -304,13 +328,107 @@ class HudApp {
         this.statusListeners = [];
         this.lastStatus = null;
 
+        this.slotsFile = path.join(ctx.dataDir || '.', 'slots.json');
+        this.slotPicks = {};             // { layout: { slot id: sensor id } }: the readout slots' picks (page.js Readouts)
+        try { this.slotPicks = JSON.parse(fs.readFileSync(this.slotsFile, 'utf8')) || {}; } catch (e) { /* none yet */ }
+        this.layoutSlots = [];           // the active layout's "slots"
+        this.placed = [];                // every layer made for the layout: { c, ref, x, y, w, h } (where the layout puts it)
+        this.mapLayout = false;          // the active layout has a map window (a widget with holeWhen "mapUp")
+        // the Waze map inside the theme (Cluster Themes, config.waze; waze.js): "mapUp" is on while it shows
+        this.waze = this.config.waze ? new Waze(Object.assign({ dataDir: ctx.dataDir }, this.config.waze), this.log, () => this._guard('waze', () => {
+            if (this.mapLayout && this.setting('mapUp') !== this.mapShown) this._rebuild(); else this._status();
+        })) : null;
+        this.mapShown = false;           // "mapUp" when the layout was built
+        this.testAt = null;              // the shift-light test's start (Date.now()), while it runs
+        this.nightOn = false;            // the layout was built with the night colours (nightDim)
+
         this._setupVehicleData();
         this.layouts.onChange(() => this._rebuild());
-        ctx.settings.onChange((key) => { if (key !== 'demo') this._rebuild(); else this._status(); });
+        ctx.settings.onChange((key) => {
+            if (PLACE_KEYS.indexOf(key) >= 0) this._guard('place', () => this._place());
+            else if (LIVE_KEYS.indexOf(key) >= 0) this.widgets.forEach((x) => { x.last = null; });
+            else if (key !== 'demo') this._rebuild(); else this._status();
+        });
     }
+
+    /* ---------------- readout slots ---------------- */
+
+    /** The sensor (sensors.js) slot `id` of `layout` shows: the pick, else the layout's default. */
+    slotSensor(layout, id, slots) {
+        const pick = (this.slotPicks[layout] || {})[id];
+        if (pick && sensors.get(pick)) return sensors.get(pick);
+        const def = (slots || []).find((x) => x.id === id);
+        return def ? sensors.get(def.default) : null;
+    }
+    /** The slots of `layout` ([{ id, where, default }]), [] when it has none or can't be read. */
+    slotsOf(layout) {
+        if (layout === this.activeName) return this.layoutSlots;
+        try { return this.layouts.load(layout).slots || []; } catch (e) { return []; }
+    }
+    /** Show `sensorId` in slot `id` of `layout` (null: back to its default); saved in <data>/slots.json, shown at once. */
+    setSlot(layout, id, sensorId) {
+        const m = this.slotPicks[layout] || (this.slotPicks[layout] = {});
+        if (sensorId) m[id] = sensorId; else delete m[id];
+        if (!Object.keys(m).length) delete this.slotPicks[layout];
+        try { fs.writeFileSync(this.slotsFile, JSON.stringify(this.slotPicks, null, 1)); } catch (e) { this.log.warn('slots: cannot save ' + this.slotsFile + ' (' + e.message + ')'); }
+        this.widgets.forEach((x) => { x.last = null; });       // the slot texts paint again on the next tick
+    }
+    /** A sensor's value now, as its slot shows it ('--' without one). */
+    sensorValue(sn) { return sn ? this._token(sn.tok) : '--'; }
+    sensorUnit(sn) {
+        if (!sn) return '';
+        const us = this.setting('units') === 'us';
+        return sn.unit ? sn.unit(us) : this._token('ampm');
+    }
+
+    /* ---------------- the HUD's place ---------------- */
+
+    /**
+     * Move (hudX, hudY px) and scale (hudScale %) every layer of the layout, kept on the target: the move is cut
+     * so the layout's box stays inside it. The scale is cluster-render's layer sx / sy about the layout's centre.
+     */
+    _place() {
+        const off = this._offset(), sc = this._scale();
+        if (!this.placed.length) return;
+        const b = this._placedBox(), cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+        this.placed.forEach((l) => {
+            const o = { x: l.x + off.x, y: l.y + off.y };
+            if (sc !== 1 || l.scaled) { o.sx = sc; o.sy = sc; o.px = cx - l.x; o.py = cy - l.y; l.scaled = sc !== 1; }
+            l.c.set(l.ref, o);
+        });
+    }
+    _placedBox() {
+        const ls = this.placed;
+        if (!ls.length) return { x: 0, y: 0, w: 0, h: 0 };
+        const x0 = Math.min.apply(null, ls.map((l) => l.x)), y0 = Math.min.apply(null, ls.map((l) => l.y));
+        const x1 = Math.max.apply(null, ls.map((l) => l.x + l.w)), y1 = Math.max.apply(null, ls.map((l) => l.y + l.h));
+        return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    }
+    _scale() {
+        if (!this.ctx.settings.item('hudScale')) return 1;
+        const v = this.setting('hudScale');
+        return isNum(v) && v >= 50 && v <= 150 ? v / 100 : 1;
+    }
+    /** The move asked for, cut so the layout (at its scale) stays on the target. */
+    _offset() {
+        if (!this.ctx.settings.item('hudX')) return { x: 0, y: 0 };
+        const want = { x: this.setting('hudX') || 0, y: this.setting('hudY') || 0 };
+        if (!this.placed.length) return want;
+        const b = this._placedBox(), sc = this._scale();
+        const cx = b.x + b.w / 2, cy = b.y + b.h / 2, hw = b.w * sc / 2, hh = b.h * sc / 2;
+        const clamp = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v)));
+        return {
+            x: Math.round(clamp(want.x, hw - cx, this.size[0] - hw - cx)),
+            y: Math.round(clamp(want.y, hh - cy, this.size[1] - hh - cy)),
+        };
+    }
+    /** Where the HUD sits now, for the page: { x, y, scale, box } (box: the layout's own, unmoved). */
+    placeInfo() { return { x: this._offset().x, y: this._offset().y, scale: this._scale(), box: this._placedBox() }; }
 
     /** A setting's value, or its default when the saved value isn't one the schema allows. */
     setting(key) {
+        // "mapUp": not saved, the Waze map is showing inside the theme now (the setting on, waze.js says so)
+        if (key === 'mapUp') return !!(this.waze && this.waze.up && this.ctx.settings.get('mapInTheme') === true);
         const s = this.ctx.settings.item(key);
         const v = this.ctx.settings.get(key);
         if (!s) return v;
@@ -442,12 +560,18 @@ class HudApp {
         this.tickTimer = setInterval(() => this._guard('tick', () => this._tick()), TICK_MS);
         // Auto theme: check for sunrise / sunset once a minute; the status line too
         this.themeTimer = setInterval(() => this._guard('theme check', () => {
-            if (this._themeName() !== this.themeName) this._rebuild();
+            if (this._themeName() !== this.themeName || this._nightDim() !== this.nightOn) this._rebuild();
             this._status();
         }), 60000);
         this.statusTimer = setInterval(() => this._guard('status', () => this._status()), 5000);
         this._status();
         this._startDme();
+        if (this.waze) { this.waze.start(); this._wazeWant(); }
+    }
+
+    /** Waze's map on the panel only while the setting is on and the theme shown has a map window. */
+    _wazeWant() {
+        if (this.waze) this.waze.want(this.started && this.setting('mapInTheme') === true && this.mapLayout);
     }
 
     /** Boost from the engine unit when the sport display's value isn't there (config.dme, read-only UDS). */
@@ -485,6 +609,7 @@ class HudApp {
         clearInterval(this.statusTimer);
         clearInterval(this.dmeTimer);
         clearTimeout(this.statusAskT);
+        if (this.waze) this._guard('waze stop', () => this.waze.stop());
         this.clients.forEach((c) => c.close());
         this.atlases.clear();
     }
@@ -655,7 +780,8 @@ class HudApp {
     }
 
     _status() {
-        const s = this.statusText();
+        // the Waze map's state rides along while that setting is on (and redraws the page's Map tab when it changes)
+        const s = this.statusText() + (this.waze && this.setting('mapInTheme') === true ? '; Waze: ' + this.waze.info().text : '');
         if (s === this.lastStatus) return;
         this.lastStatus = s;
         this.statusListeners.forEach((fn) => { try { fn(s); } catch (e) { this.log.warn('status listener: ' + e); } });
@@ -668,6 +794,46 @@ class HudApp {
         const t = this.setting('hudTheme');
         if (t !== 'auto') return t;
         return sun.isNight(Date.now(), this.location.lat, this.location.lon) ? 'night' : this.setting('dayTheme');
+    }
+
+    /** Night colours now: Cluster Themes' "nightDim" on Auto, a theme of the layout's own, and the sun down. */
+    _nightDim() {
+        if (!this.ctx.settings.item('nightDim') || this.setting('nightDim') !== 'auto' || !this.layoutTheme) return false;
+        return sun.isNight(Date.now(), this.location.lat, this.location.lon);
+    }
+
+    /** Start the shift-light test: the rpm the lights, bars and readouts see climbs to the shift point and holds there
+     *  (about 4 s). Only while the car stands (or on demo data). Returns false when it can't run now. */
+    testShift() {
+        const d = this.car.data(), sp = d.speed;
+        if (isNum(sp) && sp > 3 && !d.demo) return false;
+        this.testAt = Date.now();
+        this.log.info('shift-light test');
+        return true;
+    }
+    shiftTesting() { return this.testAt !== null; }
+
+    /** The test's rpm now, or null when no test runs (it ends by itself). */
+    _testRpm(now) {
+        if (this.testAt === null) return null;
+        const t = now - this.testAt;
+        if (t > TEST_CLIMB_MS + TEST_HOLD_MS || t < 0) { this.testAt = null; return null; }
+        const top = this._shiftPointRaw() + 200;
+        return TEST_FROM + (top - TEST_FROM) * Math.min(1, t / TEST_CLIMB_MS);
+    }
+    _shiftPointRaw() { return this.score.shiftPoint(this.car.data().oil).rpm; }
+
+    /** A readout over its warning limit ("warnOil" C, "warnCoolant" C, "warnBoost" bar; 0 = off): which sensor, else null. */
+    _warning(w) {
+        const t = String(w.text || '');
+        let id = null;
+        if (t.indexOf('{{slot:') >= 0 && w.slot) id = (this.slotSensor(this.activeName, w.slot, this.layoutSlots) || {}).id;
+        else if (t.indexOf('{{oil}}') >= 0) id = 'oil';
+        else if (t.indexOf('{{coolant}}') >= 0) id = 'coolant';
+        else if (t.indexOf('{{boost}}') >= 0) id = 'boost';
+        if (!WARN[id]) return null;
+        const lim = this.setting(WARN[id]), v = this._raw(id);
+        return isNum(lim) && lim > 0 && isNum(v) && v > lim ? id : null;
     }
 
     _barMax(w) { return Math.ceil(this.setting('redline') / 1000) * 1000 + ((w && w.over) || 0); }
@@ -779,10 +945,20 @@ class HudApp {
     _token(tok) {
         const us = this.setting('units') === 'us';
         const fix = (v, n) => (isNum(v) ? v.toFixed(n) : '--');
+        if (tok.indexOf('slot') === 0 && tok.indexOf(':') > 0) {
+            const kind = tok.slice(0, tok.indexOf(':')), sn = this.slotSensor(this.activeName, tok.slice(kind.length + 1), this.layoutSlots);
+            if (kind === 'slot') return this.sensorValue(sn);
+            if (kind === 'slotHead') return sn ? sn.head : '';
+            // the heading with the unit, for a slot with no unit of its own: "FUEL %" (a temperature's ° is on its value)
+            if (kind === 'slotHeadU') { const u = sn && !sn.suffix ? this.sensorUnit(sn) : ''; return sn ? sn.head + (u ? ' ' + u : '') : ''; }
+            if (kind === 'slotUnit') return this.sensorUnit(sn);
+            if (kind === 'slotSuffix') return sn && sn.suffix ? sn.suffix : '';
+        }
         if (tok.indexOf('tyreP:') === 0) { const v = this._tyre('p', tok.slice(6)); return isNum(v) ? (us ? fix(v * 14.5038, 0) : fix(v, 1)) : '--'; }
         if (tok.indexOf('tyreT:') === 0) { const v = this._tyre('t', tok.slice(6)); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
         switch (tok) {
             case 'u:pressure': return us ? 'psi' : 'bar';
+            case 'badge': return badges.text(this.setting('badge'), this.setting('badgeBMW') === true);
             case 'speed': { const v = this._raw('speed'); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
             case 'u:speed': return us ? 'MPH' : 'KM/H';
             case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
@@ -799,6 +975,14 @@ class HudApp {
                 return (n > 0 ? '+' : '') + n;
             }
             case 'u:torque': return us ? 'lb-ft' : 'Nm';
+            case 'power': {          // kW from the crank torque and rpm; hp in US units
+                const d = this.car.data(), rpm = this._raw('rpm');
+                if (!isNum(d.torque) || !isNum(rpm)) return '--';
+                const kw = Math.max(0, d.torque) * rpm / 9549;
+                return String(Math.round(us ? kw * 1.341 : kw));
+            }
+            case 'fuelPct': { const v = this._raw('fuel'); return isNum(v) ? String(Math.round(v * 100)) : '--'; }
+            case 'ambientN': { const v = this._raw('ambient'); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
             case 'torque': { const v = this._raw('torque'); return fix(isNum(v) ? (us ? v * 0.737562 : v) : v, 0); }
             case 'torquePct': case 'powerPct': { const v = this._raw(tok); return isNum(v) ? String(Math.min(100, Math.round(v))) : '--'; }
             case 'boostHi': return us ? '20' : '1.4';
@@ -876,6 +1060,7 @@ class HudApp {
     _rebuildInner() {
         if (!this.client.ready) return; // the 'ready' handler calls us again
         this._layerRefs().forEach((r) => r.c.drop(r.ref));
+        this.placed = [];
         this.widgets.clear();
         this.sheets = [];
         this.pixelBytes = 0;
@@ -885,7 +1070,10 @@ class HudApp {
         this.car.setRedline(this.setting('redline'));
         const name = this._layoutName();
         this.activeName = name;
+        this.mapLayout = false;
+        this.mapShown = this.setting('mapUp');
         if (name === 'off') {
+            this._wazeWant();
             this.problem = null; this.layoutTheme = null; this.needsBoost = false;
             this.log.info('off: nothing drawn, BMW\'s own ' + (this.target === 'panel' ? 'cluster' : 'HUD') + ' shows');
             return;
@@ -894,12 +1082,18 @@ class HudApp {
         try { layout = this.layouts.load(name); } catch (e) {
             this.problem = e.message;
             this.log.warn('layout "' + name + '" unusable (' + e.message + '); showing nothing');
+            this._wazeWant();
             return;
         }
         this.problem = null;
+        this.mapLayout = layout.widgets.some((w) => w.holeWhen === 'mapUp');
+        this._wazeWant();
+        this.layoutSlots = layout.slots || [];
         this.layoutTheme = layout.theme && THEMES[layout.theme] ? layout.theme : null;
         this.themeName = this._themeName();
         this.theme = THEMES[this.themeName] || THEMES.classic;
+        this.nightOn = this._nightDim();
+        if (this.nightOn) this.theme = dimTheme(this.theme, NIGHT_DIM);
         this.log.info('layout "' + layout.name + '", theme ' + this.theme.name + (this.layoutTheme ? '' : ' (' + this.setting('hudTheme') + ')'));
         const shown = layout.widgets.filter((w) => !(w.toggle && !this._toggleOn(w.toggle)) && !(w.themes && w.themes.indexOf(this.themeName) < 0));
         this.needsBoost = /boost/.test(JSON.stringify(shown));
@@ -921,6 +1115,7 @@ class HudApp {
                 this._guard('widget ' + e.w.id, () => this._create(e.w, null));
             }
         });
+        if (this._offset().x || this._offset().y || this._scale() !== 1) this._place();
         const atlasBytes = this._atlasBytes();
         px += atlasBytes;
         this.pixelBytes = px;
@@ -980,6 +1175,7 @@ class HudApp {
         const ref = c.image({ target: this.target, klass: s.klass, z: s.z, x: s.x, y: s.y, w: s.w, h: s.h, iw: s.w, ih: s.h });
         if (!ref) { this.log.warn('sheet ' + s.klass + '/' + s.z + ' at ' + s.x + ',' + s.y + ' ' + s.w + 'x' + s.h + ': layer refused'); return; }
         s.ref = ref; s.c = c; s.ci = s.conn;
+        this.placed.push({ c, ref, x: s.x, y: s.y, w: s.w, h: s.h });
         s.buf = Buffer.alloc(s.w * s.h * 4, 0);
         this.sheets.push(s);
         s.members.forEach((w) => this._guard('widget ' + w.id, () => this._create(w, s)));
@@ -1039,6 +1235,7 @@ class HudApp {
             if (IMAGE_TYPES[w.type]) ref = c.image(Object.assign({ iw: w.w, ih: w.h }, base));
             else ref = c.effect(Object.assign({ fs: w.type === 'swatch' ? calibration.SWATCH : shaders[w.type] }, base));
             if (!ref) { this.log.warn('widget "' + w.id + '": layer refused'); return; }
+            this.placed.push({ c, ref, x: w.x, y: w.y, w: w.w, h: w.h });
         }
         const x = { w, ref, c, ci: sheet ? sheet.ci : this._connOf(w), sheet: sheet || null, last: null, lastPaint: 0, px: null };
         this.widgets.set(w.id, x);
@@ -1232,7 +1429,8 @@ class HudApp {
 
     /** BMW-like tach: a 120 ms filter, and a readout that moves in 50 rpm steps, only by 40 rpm or more. */
     _smoothRpm(now) {
-        const raw = this.car.data().rpm;
+        const test = this._testRpm(now);
+        const raw = isNum(test) ? test : this.car.data().rpm;
         const dt = this.lastTickT ? Math.min(500, now - this.lastTickT) : 0;
         this.lastTickT = now;
         if (!isNum(raw)) { this.rpmF = null; this.rpmShown = null; return; }
@@ -1254,16 +1452,28 @@ class HudApp {
             let role = w.color || 'fg';
             if (w.colorBy === 'verdict' && this.score.last) role = VERDICT[this.score.last.verdict] || role;
             if (w.near && this._nearMark(w.near[0]) === w.near[1]) role = w.nearColor || 'fg';
-            if (w.hotWhen || w.coldWhen) {
+            // a readout slot goes red / blue at the shift point only while it shows engine speed or the shift point
+            const shiftish = !w.slot || ['rpm', 'shiftAt'].indexOf((this.slotSensor(this.activeName, w.slot, this.layoutSlots) || {}).id) >= 0;
+            if ((w.hotWhen || w.coldWhen) && shiftish) {
                 const sp = this._shift();
                 if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
                 if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
             }
+            // over its warning limit: the value flashes in the shift red
+            if (this._warning(w) && Math.floor(now / WARN_FLASH_MS) % 2 === 0) role = 'hot';
             const key = s + '|' + role;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
+            // "fit": smaller fonts to fall back on when the text is wider than the box (a readout slot showing a
+            // longer value than its default), on the same baseline
+            let font = w.font, offsetY = 0;
+            if (w.fit && textRaster.measure(s, font, w.spacing) > w.w) {
+                const f = w.fit.find((n) => textRaster.measure(s, n, w.spacing) <= w.w) || w.fit[w.fit.length - 1];
+                offsetY = textRaster.loadFont(w.font).metrics.baseline - textRaster.loadFont(f).metrics.baseline;
+                font = f;
+            }
             const buf = textRaster.drawText(w.w, w.h, s, {
-                font: w.font, color: color(this.theme, role), align: w.align, spacing: w.spacing,
+                font, offsetY, color: color(this.theme, role), align: w.align, spacing: w.spacing,
                 color2: w.color2 && role !== 'hot' ? color(this.theme, w.color2) : null,
                 glow: w.glow ? this.theme.glow : 0,
             });
@@ -1443,6 +1653,18 @@ class HudApp {
         }
         this._blit(x, null, buf);
     }
+}
+
+/** A theme with its whites and greys (any colour with little tint) at k brightness; colours keep theirs. */
+function dimTheme(theme, k) {
+    const out = {};
+    Object.keys(theme).forEach((key) => {
+        const c = theme[key];
+        const grey = Array.isArray(c) && c.length >= 3 && Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]) < 40;
+        out[key] = grey ? [Math.round(c[0] * k), Math.round(c[1] * k), Math.round(c[2] * k)].concat(c.length > 3 ? [c[3]] : []) : c;
+    });
+    out.name = theme.name;
+    return out;
 }
 
 function pad2(n) { return n < 10 ? '0' + n : String(n); }

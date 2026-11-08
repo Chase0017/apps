@@ -90,49 +90,13 @@
    "rate": 100
   },
   {
-   "id": "speed_label",
-   "type": "text",
-   "text": "SPEED",
-   "font": "small",
-   "x": 130,
-   "y": 206,
-   "w": 60,
-   "h": 17,
-   "color": "dim",
-   "spacing": 1.5
-  },
-  {
-   "id": "speed",
-   "type": "text",
-   "text": "{{speed}}",
-   "font": "big",
-   "x": 130,
-   "y": 225,
-   "w": 60,
-   "h": 33,
-   "glow": true,
-   "align": "right"
-  },
-  {
-   "id": "speed_unit",
-   "type": "text",
-   "text": "{{u:speed}}",
-   "font": "label",
-   "x": 196,
-   "y": 240,
-   "w": 44,
-   "h": 20,
-   "color": "dim",
-   "spacing": 1.5
-  },
-  {
    "id": "oil_label",
    "type": "text",
-   "text": "OIL",
+   "text": "{{slotHeadU:1}}",
    "font": "small",
    "x": 130,
    "y": 266,
-   "w": 40,
+   "w": 60,
    "h": 17,
    "color": "dim",
    "spacing": 1.5,
@@ -141,22 +105,26 @@
   {
    "id": "oil",
    "type": "text",
-   "text": "{{oil}}°",
+   "text": "{{slot:1}}{{slotSuffix:1}}",
    "font": "mid",
    "x": 130,
    "y": 283,
    "w": 60,
    "h": 27,
-   "toggle": "showOil"
+   "toggle": "showOil",
+   "slot": "1",
+   "fit": [
+    "label"
+   ]
   },
   {
    "id": "coolant_label",
    "type": "text",
-   "text": "COOLANT",
+   "text": "{{slotHeadU:2}}",
    "font": "small",
    "x": 196,
    "y": 266,
-   "w": 70,
+   "w": 100,
    "h": 17,
    "color": "dim",
    "spacing": 1.5,
@@ -165,18 +133,22 @@
   {
    "id": "coolant",
    "type": "text",
-   "text": "{{coolant}}°",
+   "text": "{{slot:2}}{{slotSuffix:2}}",
    "font": "mid",
    "x": 196,
    "y": 283,
    "w": 60,
    "h": 27,
-   "toggle": "showCoolant"
+   "toggle": "showCoolant",
+   "slot": "2",
+   "fit": [
+    "label"
+   ]
   },
   {
    "id": "shift_at_label",
    "type": "text",
-   "text": "SHIFT AT",
+   "text": "{{slotHeadU:3}}",
    "font": "small",
    "x": 505,
    "y": 206,
@@ -189,14 +161,18 @@
   {
    "id": "shift_at",
    "type": "text",
-   "text": "{{shiftAt}}",
+   "text": "{{slot:3}}{{slotSuffix:3}}",
    "font": "big",
    "x": 505,
    "y": 225,
    "w": 94,
    "h": 33,
    "align": "right",
-   "coldWhen": "cold"
+   "coldWhen": "cold",
+   "slot": "3",
+   "fit": [
+    "mid"
+   ]
   },
   {
    "id": "last_label",
@@ -257,6 +233,23 @@
    "w": 159,
    "h": 24,
    "spacing": 0.5
+  }
+ ],
+ "slots": [
+  {
+   "id": "1",
+   "where": "left",
+   "default": "oil"
+  },
+  {
+   "id": "2",
+   "where": "left, next",
+   "default": "coolant"
+  },
+  {
+   "id": "3",
+   "where": "right, top",
+   "default": "shiftAt"
   }
  ]
 }

@@ -40,12 +40,13 @@ HUD_FONTS = [
 # Cluster Themes, 1920x720 LCD. GT3: the race-dash look, Barlow Condensed.
 CLUSTER_FONTS = [
     ('gear', 'BarlowCondensed-Bold.ttf', 330, DIGITS + 'PRND-'),
-    ('big', 'BarlowCondensed-Bold.ttf', 124, DIGITS + '.-'),   # 124: "20.3 PSI" fits a 280 px box beside the hood
+    ('big', 'BarlowCondensed-Bold.ttf', 124, DIGITS + '.:-'),   # 124: "20.3 PSI" fits a 280 px box beside the hood; ':' for a clock in a readout slot
     ('value', 'BarlowCondensed-Bold.ttf', 92, DIGITS + '.:- PRND'),
     ('small', 'BarlowCondensed-Bold.ttf', 50, DIGITS + '.:-° '),
     ('unit', 'BarlowCondensed-SemiBold.ttf', 34, UPPER + DIGITS + '/°%>·.: -'),
     ('head', 'BarlowCondensed-SemiBold.ttf', 24, UPPER + DIGITS + '/°%>·.: -'),
     ('scale', 'BarlowCondensed-SemiBold.ttf', 30, DIGITS),
+    ('badge', 'BarlowCondensed-SemiBold.ttf', 30, UPPER + LOWER + DIGITS + ' -'),   # the model badge (shared/badges.js)
     # M: the wide squared numbers (Michroma, SIL OFL) and Barlow for the small print
     ('m_num', 'Orbitron[wght].ttf', 36, DIGITS, 0, 'Black', {'0': 'O'}),
     ('m_gear', 'Orbitron[wght].ttf', 125, 'PRNDSM-' + DIGITS, 3, 'Black', {'0': 'O'}),
@@ -57,6 +58,7 @@ CLUSTER_FONTS = [
     ('m_unit', 'Barlow-Medium.ttf', 30, LOWER + UPPER + '°/-.'),
     ('m_label', 'Orbitron[wght].ttf', 20, UPPER + ' ', 0, 'Bold'),
     ('m_tiny', 'Barlow-Medium.ttf', 26, LOWER + DIGITS + 'CF./ -°'),
+    ('m_badge', 'Barlow-Medium.ttf', 26, UPPER + LOWER + DIGITS + ' -'),
     # Sport: BMW Live Cockpit style, the wide numbers in Michroma like BMW's own
     ('s_scale', 'Michroma-Regular.ttf', 27, DIGITS, 1),
     ('s_speed', 'Michroma-Regular.ttf', 74, DIGITS + '-', 3),

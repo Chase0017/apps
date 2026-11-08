@@ -1,6 +1,6 @@
 # HUD Widgets
 
-Puts your own readouts on the windshield HUD: speed, gear, a shift bar, boost, oil and coolant temperatures, and a clock. Open **HUD Widgets** from the apps menu on the center screen and pick the layout, theme, units and widgets there.
+Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and coolant temperatures, a clock, or any car sensor you pick. BMW's HUD already shows the speed, so these layouts leave it out. Open **HUD Widgets** from the apps menu on the center screen and set it up on its page.
 
 <p align="center"><img src="../../docs/images/hud-redline.gif" width="520" alt="Redline layout"></p>
 
@@ -19,9 +19,10 @@ Puts your own readouts on the windshield HUD: speed, gear, a shift bar, boost, o
   </tr>
 </table>
 
-- **Daily:** speed is the hero, with the gear, clock and oil.
-- **Sport:** a segmented shift bar, a big gear, speed, a boost gauge, oil and coolant.
+- **Daily:** the gear, the clock and the oil temperature.
+- **Sport:** a segmented shift bar, a big gear, a boost gauge, oil and coolant.
 - **Redline:** a slanted rev bar with 12 shift lights, a big gear, your shift point and your last shift with its grade.
+- The clock, oil, coolant and shift point readouts can each show another sensor instead (page's Readouts tab).
   - **Shift lights:** they come on from 3000 rpm and fill up to the shift point. At the shift point everything goes red and SHIFT shows.
   - **Shift grades:** every upshift is graded on its peak rpm. EARLY means more than 250 rpm under the shift point, LATE more than 200 over it, COLD REV the same while the cold guard is on, LIMITER within 60 rpm of the redline, and anything in between is SPOT ON.
   - **Cold-engine guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
@@ -51,9 +52,11 @@ Classic, M and Night, plus Auto, which switches to Night at sunset. You choose w
 
 ## Settings
 
-Layout, drive mode switching, theme, daytime theme for Auto, units (mph, °F, psi or km/h, °C, bar), 12- or 24-hour clock, redline, shift point before redline, cold-engine rev guard, which readouts show (clock, oil, coolant, boost), and demo data. Changes show on the HUD right away, and the HUD keeps running after you leave the page.
+Layout, drive mode switching, which sensor each readout shows, where the HUD sits on the glass and its size, theme, daytime theme for Auto, units (mph, °F, psi or km/h, °C, bar), 12- or 24-hour clock, redline, shift point before redline, cold-engine rev guard, which readouts show (clock, oil, coolant, boost), and demo data. Changes show on the HUD right away, and the HUD keeps running after you leave the page.
 
-The page's first row says what the HUD is doing, the drive mode it sees, and why anything is not drawn (for example "waiting: another app has this display").
+**Alerts:** oil, coolant and boost limits (a readout over its limit flashes red; oil 130°C and coolant 115°C by default, boost off), and a button that runs the shift lights up to the shift point for about 4 seconds while the car stands.
+
+The last line of the Settings tab says what the HUD is doing, the drive mode it sees, and why anything is not drawn (for example "waiting: another app has this display").
 
 **Boost:** read from the car's sport display signal. When the car does not send it, the app asks the engine computer directly (read only), the same way Car Vitals does.
 
@@ -62,6 +65,8 @@ The page's first row says what the HUD is doing, the drive mode it sees, and why
 The HUD is an 800x480 screen, but only part of it comes through the windshield. Measured from a photo of the calibration grid on a 2020 X3 (Nov 5 2026), the visible window is **x 120, y 100, 485 x 278**. It moves a little with eye position and HUD height, and every layout sits inside it.
 
 BMW keeps drawing its own HUD content over ours. In Comfort mode that is the speed readout and the speed-limit sign in the bottom-left of the window, so the layouts keep **x 150..355, y 314..378** free for it.
+
+**Window calibration:** a 50 px grid over the whole HUD with a frame where the visible window is assumed to be; photograph it while moving the HUD height so BMW's own adjustment frame shows the real edges.
 
 **Calibration grid:** pick it as the layout to see lines every 50 px with labels on the glass. A photo of it shows exactly which part of the HUD is visible; take a new one if the HUD height or the seat changes a lot. The grid also carries a few test marks used to measure cluster-render's limits on the car.
 

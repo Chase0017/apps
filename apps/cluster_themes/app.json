@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style or Sport, with shift lights, boost, temps and shift scoring",
-  "version": "0.8.4",
+  "version": "0.9.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -18,7 +18,12 @@
     "sun.js",
     "cluster_render_client.js",
     "calibration.js",
-    "visible.js"
+    "visible.js",
+    "page.js",
+    "waze.js",
+    "previews.js",
+    "sensors.js",
+    "badges.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -62,7 +67,11 @@
       "dataDisplayGearbox": "s",
       "_optional": "S or M next to the gear"
     },
-    "de.bmw.infotainment.vehicle.TPMS": {"statusTyrePressure": "rs", "statusTyreTemperature": "rs", "_optional": "tyre pressures and temperatures in the M theme"},
+    "de.bmw.infotainment.vehicle.TPMS": {
+      "statusTyrePressure": "rs",
+      "statusTyreTemperature": "rs",
+      "_optional": "tyre pressures and temperatures in the M theme"
+    },
     "de.bmw.infrastructure.EnvironmentalInformation": {
       "ExteriorTemperature": "s"
     }
@@ -70,14 +79,12 @@
   "screens": [
     {
       "name": "MAIN",
-      "kind": "menu",
+      "kind": "canvas",
       "title": "Cluster Themes",
-      "settings": true,
-      "items": [
+      "buttons": [
         [
-          "text",
-          "STATUS",
-          "Starting the cluster"
+          "BTN_SETTINGS",
+          "All settings"
         ]
       ]
     }
@@ -194,8 +201,8 @@
       ]
     },
     {
-      "key": "mapWindow",
-      "label": "Leave room for the map",
+      "key": "mapInTheme",
+      "label": "Show Waze map inside the theme",
       "type": "bool",
       "default": false
     },
@@ -274,6 +281,320 @@
       "default": true
     },
     {
+      "key": "warnOil",
+      "label": "Oil temperature warning",
+      "type": "number",
+      "unit": "°C",
+      "default": 130,
+      "steps": [
+        0,
+        110,
+        115,
+        120,
+        125,
+        130,
+        135,
+        140,
+        145,
+        150
+      ]
+    },
+    {
+      "key": "warnCoolant",
+      "label": "Coolant temperature warning",
+      "type": "number",
+      "unit": "°C",
+      "default": 115,
+      "steps": [
+        0,
+        100,
+        105,
+        110,
+        115,
+        120,
+        125
+      ]
+    },
+    {
+      "key": "warnBoost",
+      "label": "Boost warning",
+      "type": "number",
+      "unit": "bar",
+      "default": 0,
+      "steps": [
+        0,
+        0.8,
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8,
+        2.0
+      ]
+    },
+    {
+      "key": "nightDim",
+      "label": "Night colours",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (dimmer after sunset)"
+        ],
+        [
+          "off",
+          "Off"
+        ]
+      ]
+    },
+    {
+      "key": "badge",
+      "label": "Badge",
+      "type": "choice",
+      "default": "none",
+      "options": [
+        [
+          "none",
+          "None"
+        ],
+        [
+          "128ti",
+          "128ti"
+        ],
+        [
+          "M135i",
+          "M135i"
+        ],
+        [
+          "228i",
+          "228i"
+        ],
+        [
+          "230i",
+          "230i"
+        ],
+        [
+          "M235i",
+          "M235i"
+        ],
+        [
+          "M240i",
+          "M240i"
+        ],
+        [
+          "320i",
+          "320i"
+        ],
+        [
+          "330i",
+          "330i"
+        ],
+        [
+          "330e",
+          "330e"
+        ],
+        [
+          "M340i",
+          "M340i"
+        ],
+        [
+          "430i",
+          "430i"
+        ],
+        [
+          "M440i",
+          "M440i"
+        ],
+        [
+          "i4 eDrive40",
+          "i4 eDrive40"
+        ],
+        [
+          "i4 M50",
+          "i4 M50"
+        ],
+        [
+          "530i",
+          "530i"
+        ],
+        [
+          "530e",
+          "530e"
+        ],
+        [
+          "540i",
+          "540i"
+        ],
+        [
+          "M550i",
+          "M550i"
+        ],
+        [
+          "i5 M60",
+          "i5 M60"
+        ],
+        [
+          "740i",
+          "740i"
+        ],
+        [
+          "760i",
+          "760i"
+        ],
+        [
+          "i7 M70",
+          "i7 M70"
+        ],
+        [
+          "840i",
+          "840i"
+        ],
+        [
+          "M850i",
+          "M850i"
+        ],
+        [
+          "X1 M35i",
+          "X1 M35i"
+        ],
+        [
+          "X2 M35i",
+          "X2 M35i"
+        ],
+        [
+          "X3 30i",
+          "X3 30i"
+        ],
+        [
+          "X3 M40i",
+          "X3 M40i"
+        ],
+        [
+          "X3 M50",
+          "X3 M50"
+        ],
+        [
+          "X4 M40i",
+          "X4 M40i"
+        ],
+        [
+          "X5 40i",
+          "X5 40i"
+        ],
+        [
+          "X5 M60i",
+          "X5 M60i"
+        ],
+        [
+          "X6 M60i",
+          "X6 M60i"
+        ],
+        [
+          "X7 M60i",
+          "X7 M60i"
+        ],
+        [
+          "XM",
+          "XM"
+        ],
+        [
+          "Z4 30i",
+          "Z4 30i"
+        ],
+        [
+          "Z4 M40i",
+          "Z4 M40i"
+        ],
+        [
+          "i4",
+          "i4"
+        ],
+        [
+          "i5",
+          "i5"
+        ],
+        [
+          "i7",
+          "i7"
+        ],
+        [
+          "iX",
+          "iX"
+        ],
+        [
+          "iX M60",
+          "iX M60"
+        ],
+        [
+          "M2",
+          "M2"
+        ],
+        [
+          "M3",
+          "M3"
+        ],
+        [
+          "M4",
+          "M4"
+        ],
+        [
+          "M5",
+          "M5"
+        ],
+        [
+          "M8",
+          "M8"
+        ],
+        [
+          "X3 M",
+          "X3 M"
+        ],
+        [
+          "X4 M",
+          "X4 M"
+        ],
+        [
+          "X5 M",
+          "X5 M"
+        ],
+        [
+          "X6 M",
+          "X6 M"
+        ],
+        [
+          "B3",
+          "B3"
+        ],
+        [
+          "B4",
+          "B4"
+        ],
+        [
+          "B5",
+          "B5"
+        ],
+        [
+          "B8",
+          "B8"
+        ],
+        [
+          "XB7",
+          "XB7"
+        ],
+        [
+          "XD3",
+          "XD3"
+        ]
+      ]
+    },
+    {
+      "key": "badgeBMW",
+      "label": "BMW lettering on the badge",
+      "type": "bool",
+      "default": true
+    },
+    {
       "key": "demo",
       "label": "Demo data",
       "type": "choice",
@@ -303,6 +624,11 @@
       "lon": -80.8431
     },
     "utcOffsetMinutes": null,
+    "waze": {
+      "comment": "Show Waze map inside the theme (shared/waze.js): waze-on-cluster's status file (read every second) and its control socket (one short 'start' command, then closed). Paths from waze-on-cluster 0.9.3.",
+      "status": "/run/waze-on-cluster/status.json",
+      "control": "/dev/shm/waze-on-cluster/ctl.sock"
+    },
     "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. location and utcOffsetMinutes: as in HUD Widgets (the clock box). tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65). engine: the peak crank torque (Nm) and power (kW) the {{torquePct}} and {{powerPct}} tokens count from (an M40i: 500 Nm, 285 kW / 382 hp).",
     "dme": {
       "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT).",

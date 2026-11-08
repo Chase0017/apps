@@ -4,6 +4,8 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 7 2026
 
+- **Cluster Themes 0.9.0:** a page of its own on the center screen instead of BMW's settings list: the themes with pictures, the readout boxes (pick any car sensor for each GT3 box), a model badge, the Waze map, alerts and settings. "Show Waze map inside the theme" replaces "Leave room for the map": Waze on Cluster draws its map inside GT3 or Sport, above BMW's own map view, so BMW's speed and gauges no longer show twice. Warnings flash a readout red over an oil, coolant or boost limit, a button tests the shift lights, and the colours dim after sunset.
+- **HUD Widgets 0.6.0:** the same kind of page: layouts with pictures, the readouts, the HUD's position and size on the glass, colours, alerts and settings. Brighter, solid colours that read better on the glass, warnings, and the shift-light test.
 - **Cluster Themes 0.8.4:** the M theme fills the panel: taller blades and cards that reach from the top of the screen to the bottom, bigger side groups, and black cards with a grey rim so BMW's black gear box no longer shows as a hole. New Map calibration theme for measuring the map cut-out on a photo.
 
 ## Nov 6 2026

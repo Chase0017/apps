@@ -1,37 +1,8 @@
 {
  "schemaVersion": 2,
  "name": "Daily",
- "_about": "Calm everyday layout: speed is the hero, with the gear on the left and the clock and oil on the right. Fitted (Nov 5 2026 grid photo) to the part of the HUD the driver sees, x 120..605, y 100..378, with a 6 px margin; the bottom-left x 150..355, y 314..378 is left to BMW's own speed and speed-limit sign, which it keeps drawing over ours in Comfort. To change it, copy this file into the app data folder layouts/ (scripts/deploy.sh); the app reloads it by itself. Widget types and tokens: see the header of hud.js.",
+ "_about": "Calm everyday layout: the gear on the left and the clock and oil on the right; no speed of its own, since BMW's HUD always shows the speed (Nov 7 2026). Fitted (Nov 5 2026 grid photo) to the part of the HUD the driver sees, x 120..605, y 100..378, with a 6 px margin; the bottom-left x 150..355, y 314..378 is left to BMW's own speed and speed-limit sign, which it keeps drawing over ours in Comfort. To change it, copy this file into the app data folder layouts/ (scripts/deploy.sh); the app reloads it by itself. Widget types and tokens: see the header of hud.js.",
  "widgets": [
-  {
-   "id": "speed",
-   "type": "text",
-   "text": "{{speed}}",
-   "font": "hero",
-   "x": 277,
-   "y": 166,
-   "w": 170,
-   "h": 73,
-   "class": "overlay",
-   "z": 10,
-   "align": "center",
-   "glow": true
-  },
-  {
-   "id": "speed_unit",
-   "type": "text",
-   "text": "{{u:speed}}",
-   "font": "label",
-   "x": 277,
-   "y": 247,
-   "w": 170,
-   "h": 20,
-   "class": "overlay",
-   "z": 10,
-   "align": "center",
-   "color": "dim",
-   "spacing": 2
-  },
   {
    "id": "m_stripe",
    "type": "stripe",
@@ -62,7 +33,7 @@
   {
    "id": "clock",
    "type": "text",
-   "text": "{{time}}",
+   "text": "{{slot:1}}{{slotSuffix:1}}",
    "font": "mid",
    "x": 470,
    "y": 214,
@@ -71,12 +42,16 @@
    "class": "overlay",
    "z": 10,
    "align": "right",
-   "toggle": "showClock"
+   "toggle": "showClock",
+   "slot": "1",
+   "fit": [
+    "label"
+   ]
   },
   {
    "id": "ampm",
    "type": "text",
-   "text": "{{ampm}}",
+   "text": "{{slotUnit:1}}",
    "font": "label",
    "x": 565,
    "y": 220,
@@ -91,22 +66,23 @@
   {
    "id": "oil_label",
    "type": "text",
-   "text": "OIL",
+   "text": "{{slotHeadU:2}}",
    "font": "small",
-   "x": 470,
+   "x": 430,
    "y": 265,
-   "w": 40,
+   "w": 78,
    "h": 17,
    "class": "content",
    "z": 10,
    "color": "dim",
    "spacing": 1.5,
-   "toggle": "showOil"
+   "toggle": "showOil",
+   "align": "right"
   },
   {
    "id": "oil",
    "type": "text",
-   "text": "{{oil}}°",
+   "text": "{{slot:2}}{{slotSuffix:2}}",
    "font": "mid",
    "x": 512,
    "y": 256,
@@ -115,7 +91,23 @@
    "class": "overlay",
    "z": 10,
    "align": "right",
-   "toggle": "showOil"
+   "toggle": "showOil",
+   "slot": "2",
+   "fit": [
+    "label"
+   ]
+  }
+ ],
+ "slots": [
+  {
+   "id": "1",
+   "where": "right, top",
+   "default": "time"
+  },
+  {
+   "id": "2",
+   "where": "right, bottom",
+   "default": "oil"
   }
  ]
 }

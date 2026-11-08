@@ -41,33 +41,6 @@
    "glow": true
   },
   {
-   "id": "speed",
-   "type": "text",
-   "text": "{{speed}}",
-   "font": "big",
-   "x": 292,
-   "y": 241,
-   "w": 74,
-   "h": 33,
-   "class": "overlay",
-   "z": 10,
-   "align": "right"
-  },
-  {
-   "id": "speed_unit",
-   "type": "text",
-   "text": "{{u:speed}}",
-   "font": "label",
-   "x": 372,
-   "y": 256,
-   "w": 44,
-   "h": 20,
-   "class": "overlay",
-   "z": 10,
-   "color": "dim",
-   "spacing": 2
-  },
-  {
    "id": "m_stripe",
    "type": "stripe",
    "x": 329,
@@ -128,11 +101,11 @@
   {
    "id": "oil_label",
    "type": "text",
-   "text": "OIL",
+   "text": "{{slotHeadU:1}}",
    "font": "small",
    "x": 130,
    "y": 175,
-   "w": 66,
+   "w": 68,
    "h": 17,
    "class": "content",
    "z": 10,
@@ -143,7 +116,7 @@
   {
    "id": "oil",
    "type": "text",
-   "text": "{{oil}}°",
+   "text": "{{slot:1}}{{slotSuffix:1}}",
    "font": "mid",
    "x": 200,
    "y": 166,
@@ -151,16 +124,20 @@
    "h": 27,
    "class": "overlay",
    "z": 10,
-   "toggle": "showOil"
+   "toggle": "showOil",
+   "slot": "1",
+   "fit": [
+    "label"
+   ]
   },
   {
    "id": "coolant_label",
    "type": "text",
-   "text": "COOLANT",
+   "text": "{{slotHeadU:2}}",
    "font": "small",
    "x": 130,
    "y": 215,
-   "w": 66,
+   "w": 68,
    "h": 17,
    "class": "content",
    "z": 10,
@@ -171,7 +148,7 @@
   {
    "id": "coolant",
    "type": "text",
-   "text": "{{coolant}}°",
+   "text": "{{slot:2}}{{slotSuffix:2}}",
    "font": "mid",
    "x": 200,
    "y": 206,
@@ -179,7 +156,23 @@
    "h": 27,
    "class": "overlay",
    "z": 10,
-   "toggle": "showCoolant"
+   "toggle": "showCoolant",
+   "slot": "2",
+   "fit": [
+    "label"
+   ]
+  }
+ ],
+ "slots": [
+  {
+   "id": "1",
+   "where": "left, top",
+   "default": "oil"
+  },
+  {
+   "id": "2",
+   "where": "left, bottom",
+   "default": "coolant"
   }
  ]
 }

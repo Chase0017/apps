@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const data = require('./hud_data');
 const visible = require('./visible');
+const sensors = require('./sensors');
 
 const TYPES = {
     text: ['text', 'font'],
@@ -75,6 +76,13 @@ class Layouts {
         if (!p || typeof p !== 'object') bad('not an object');
         if (p.schemaVersion !== 2) bad('schemaVersion must be 2 (got ' + p.schemaVersion + ')');
         if (!Array.isArray(p.widgets)) bad('missing widgets array');
+        if (p.slots !== undefined) {
+            if (!Array.isArray(p.slots)) bad('"slots" must be a list');
+            p.slots.forEach((sl, i) => {
+                if (!sl || !sl.id) bad('slots[' + i + '] has no id');
+                if (!sensors.get(sl.default)) bad('slot "' + sl.id + '": default "' + sl.default + '" is not a sensor (shared/sensors.js)');
+            });
+        }
         const ids = {};
         p.widgets.forEach((w, i) => {
             const at = 'widgets[' + i + '] ("' + w.id + '")';

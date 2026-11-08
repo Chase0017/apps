@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "HUD Widgets",
   "description": "Speed, gear, shift bar, boost, oil and coolant on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -18,7 +18,12 @@
     "sun.js",
     "cluster_render_client.js",
     "calibration.js",
-    "visible.js"
+    "visible.js",
+    "page.js",
+    "previews.js",
+    "sensors.js",
+    "waze.js",
+    "badges.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -60,14 +65,12 @@
   "screens": [
     {
       "name": "MAIN",
-      "kind": "menu",
+      "kind": "canvas",
       "title": "HUD Widgets",
-      "settings": true,
-      "items": [
+      "buttons": [
         [
-          "text",
-          "STATUS",
-          "Starting the HUD"
+          "BTN_SETTINGS",
+          "All settings"
         ]
       ]
     }
@@ -98,6 +101,10 @@
         [
           "grid",
           "Calibration grid"
+        ],
+        [
+          "wincal",
+          "Window calibration"
         ]
       ]
     },
@@ -220,6 +227,117 @@
       ]
     },
     {
+      "key": "hudX",
+      "label": "HUD position, left / right",
+      "type": "number",
+      "unit": "px",
+      "default": 0,
+      "steps": [
+        -200,
+        -190,
+        -180,
+        -170,
+        -160,
+        -150,
+        -140,
+        -130,
+        -120,
+        -110,
+        -100,
+        -90,
+        -80,
+        -70,
+        -60,
+        -50,
+        -40,
+        -30,
+        -20,
+        -10,
+        0,
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+        110,
+        120,
+        130,
+        140,
+        150,
+        160,
+        170,
+        180,
+        190,
+        200
+      ],
+      "hidden": true
+    },
+    {
+      "key": "hudY",
+      "label": "HUD position, up / down",
+      "type": "number",
+      "unit": "px",
+      "default": 0,
+      "steps": [
+        -150,
+        -140,
+        -130,
+        -120,
+        -110,
+        -100,
+        -90,
+        -80,
+        -70,
+        -60,
+        -50,
+        -40,
+        -30,
+        -20,
+        -10,
+        0,
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+        110,
+        120,
+        130,
+        140,
+        150
+      ],
+      "hidden": true
+    },
+    {
+      "key": "hudScale",
+      "label": "HUD size",
+      "type": "number",
+      "unit": "%",
+      "default": 100,
+      "steps": [
+        80,
+        85,
+        90,
+        95,
+        100,
+        105,
+        110,
+        115,
+        120
+      ],
+      "hidden": true
+    },
+    {
       "key": "units",
       "label": "Units",
       "type": "choice",
@@ -310,6 +428,58 @@
       "label": "Show boost (Sport layout)",
       "type": "bool",
       "default": true
+    },
+    {
+      "key": "warnOil",
+      "label": "Oil temperature warning",
+      "type": "number",
+      "unit": "°C",
+      "default": 130,
+      "steps": [
+        0,
+        110,
+        115,
+        120,
+        125,
+        130,
+        135,
+        140,
+        145,
+        150
+      ]
+    },
+    {
+      "key": "warnCoolant",
+      "label": "Coolant temperature warning",
+      "type": "number",
+      "unit": "°C",
+      "default": 115,
+      "steps": [
+        0,
+        100,
+        105,
+        110,
+        115,
+        120,
+        125
+      ]
+    },
+    {
+      "key": "warnBoost",
+      "label": "Boost warning",
+      "type": "number",
+      "unit": "bar",
+      "default": 0,
+      "steps": [
+        0,
+        0.8,
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8,
+        2.0
+      ]
     },
     {
       "key": "demo",

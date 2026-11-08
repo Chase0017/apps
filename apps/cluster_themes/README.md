@@ -1,6 +1,6 @@
 # Cluster Themes
 
-Redraws the whole instrument cluster in a theme of your choice. Open **Cluster Themes** from the apps menu on the center screen and pick the theme there.
+Redraws the whole instrument cluster in a theme of your choice. Open **Cluster Themes** from the apps menu on the center screen: its own page has the themes with pictures, the readouts, the badge, the Waze map, warnings and settings.
 
 <p align="center"><img src="../../docs/images/cluster-gt3.gif" width="900" alt="GT3 race dash"></p>
 
@@ -17,7 +17,7 @@ A race dash.
 - **At the shift point** the lights, the rev bar, the rpm and the gear all go red.
 
 <p align="center"><img src="../../docs/images/cluster-gt3.png" width="900" alt="GT3 theme"></p>
-<p align="center"><img src="../../docs/images/cluster-gt3-map.png" width="900" alt="GT3 theme with room for the map"></p>
+<p align="center"><img src="../../docs/images/cluster-gt3-map.png" width="900" alt="GT3 theme with the Waze map inside"></p>
 
 ### M
 
@@ -36,7 +36,7 @@ The look of BMW's newer Live Cockpit Sport view.
 
 - **Left:** speed as a blue bracket on BMW's 0 to 200 mph scale (0 to 320 km/h), with the digital speed and a fuel bar inside it.
 - **Right:** revs as a red bracket on the M40i's 0 to 7000 rpm scale, with yellow and red marks around your redline, with the gear and an oil temperature bar inside it.
-- **Middle:** black, or BMW's map with "Leave room for the map" on.
+- **Middle:** black, or the Waze map with "Show Waze map inside the theme" on.
 - **Bottom:** boost and coolant in the blue and red strip, plus the clock, range and outside temperature.
 
 <p align="center"><img src="../../docs/images/cluster-sport.png" width="900" alt="Sport theme"></p>
@@ -52,7 +52,12 @@ More themes are on the way.
 ## Settings
 
 - **Theme**, and one per drive mode.
-- **Leave room for the map:** cuts a window out of the dash so BMW's map shows through, moves the gear and temperatures to the sides, and slims the rev bar. Works in GT3 and Sport.
+- **Readouts:** pick which car sensor each GT3 box shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more).
+- **Show Waze map inside the theme:** GT3 and Sport open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
+- **Badge:** the model name, like "BMW X3 M40i", as text in the theme's font (GT3 top left, Sport and M bottom centre). Off by default.
+- **Warnings:** oil, coolant and boost limits. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off).
+- **Test the shift lights:** runs the rpm up to the shift point for about 4 seconds while the car stands.
+- **Night colours:** after sunset the theme's whites and greys dim to 60% (Auto, the default), or Off.
 - **Units:** mph, °F, psi or km/h, °C, bar.
 - **Clock:** 12-hour or 24-hour.
 - **Redline:** where the red marks start on the rev scales (they always cover at least the last 500 rpm, and the yellow marks sit in the 700 rpm before them).

@@ -44,7 +44,8 @@ const realLoad = Module._load;
 Module._load = function (req) {
     const m = realLoad.apply(this, arguments);
     if (req === './hud' && typeof m === 'function' && !m.__bench) {
-        const Wrapped = class extends m { constructor(ctx) { super(ctx); hud = this; } };
+        // the status line: the engine's own (the page shows it on its Settings tab; there is no STATUS row any more)
+        const Wrapped = class extends m { constructor(ctx) { super(ctx); hud = this; this.onStatus((s) => { status = s; send({ t: 'status', s }); }); } };
         Wrapped.__bench = true;
         return Wrapped;
     }
@@ -126,6 +127,7 @@ process.on('message', (m) => {
         if (settings.get('demo') !== want) press('demo', want);
     } else if (m.t === 'set') press(m.key, m.value);
     else if (m.t === 'drive') drive = m.value;
+    else if (m.t === 'shiftTest' && hud) hud.testShift();
 });
 process.on('disconnect', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
