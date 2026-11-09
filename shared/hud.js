@@ -107,12 +107,16 @@
  *             bar, rpm), "segments" (20), "gap" px (4), "vertical": true fills upward; "colors" [3 roles] lit below
  *             "at"[0] / up to "at"[1] / past it (fractions of the bar), "trackColor" (track); "peak": ms (true = 3 s)
  *             holds the highest segment lit in "peakColor" (fg). arc takes "peak" too: a dot on the stroke.
- *   gmeter    effect layer (shaders.js gmeter): a G-meter, a dot at {{gLat}} / {{gLong}} inside rings every 0.5 g to "max"
- *             (1.5), with a ring at the peak g of the last "peak" ms (3000); roles "line" (dim), "dot" (hot), "peakColor"
- *             (fg), "lineAlpha" 0-255 (150; 255 on the HUD, where see-through is faint). The dot moves the way the car
- *             accelerates (into the turn, up when speeding up), as cauliflowermossgrape's G-Force draws it; the settings
- *             "gFlipLat" / "gFlipLong" swap left / right and accel / brake, a layout's "flipX" / "flipY" swap again.
- *             g is averaged over 150 ms and a sample over 3 g is dropped (also for {{gLat}} / {{gLong}}).
+ *   gmeter    effect layer (shaders.js gmeter): a G-meter: a bezel, rings every 0.25 g (0.5 g past 1.2 g) out to the
+ *             setting "gRange" (1.2 g; the layout's "max" only when the setting is missing), the grip envelope (the
+ *             furthest g this drive in 48 directions, role "envColor", fg), a trail of the last "gTrail" seconds (2;
+ *             0 = none) and the dot: role "dot" (fg) under 0.5 g, amber to 0.8 g, the shift red past it; roles "line"
+ *             (dim), "lineAlpha" 0-255 (150; 255 on the HUD, where see-through is faint). The dot moves the way the
+ *             car accelerates (into the turn, up when speeding up), as cauliflowermossgrape's G-Force draws it; the
+ *             settings "gFlipLat" (the car's left / right the other way round) / "gFlipLong" (brake on top) swap the
+ *             drawing, a layout's "flipX" / "flipY" swap again. g is averaged over 150 ms and a sample over 3 g is
+ *             dropped (also for the tokens). The envelope and the bests (tokens, the page's G-meter tab) last until
+ *             resetG(), the app's restart or the switch between demo and car data.
  *   revarc    effect layer (shaders.js revarc): a segmented rev arc, the Rally theme's: centre "center" [x, y] (layer px, may
  *             sit below the layer), outer radius "r", "band" px (40), "start" / "sweep" degrees clockwise from 12 o'clock,
  *             "segments" (30); colours, flash and scale as the shiftbar.
@@ -165,7 +169,8 @@
  * {{spd:<i>}} (speed scale label i of SPEED_SCALE: 0..200 mph, 0..320 km/h) {{range}} {{u:distLc}} (mi, km) {{u:dist}} (MI, KM) {{ambient}} (outside, signed: +75) {{u:speedLc}} (mph, km/h) {{ampmLc}} (am, pm) {{torque}} {{u:torque}} (lb-ft, Nm) {{torquePct}} {{powerPct}} (% of config.engine's peak) {{boostHi}} {{boostMid}}
  * (gauge labels for 1.4 / 0.7 bar in the display unit) {{stage}} (P R N, D / S / M by the shifter programme) {{gearInD}} (gear number while in D) {{mode}} (COMFORT, SPORT, SPORT PLUS, SPORT INDIVIDUAL, ECO PRO, ...)
  * {{temp:<deg C>}} (that temperature in the display unit, °F rounded to 10, for gauge labels) {{setup:engine|chassis|steering|gearbox}} (what that part is set to in the drive mode now)
- * {{time}} {{ampm}} {{u:temp}} (°F / °C) {{gLat}} {{gLong}} (g, 2 decimals) {{signal:<car.data() key>}} (raw, 1 decimal).
+ * {{time}} {{ampm}} {{u:temp}} (°F / °C) {{gLat}} {{gLong}} (g, 2 decimals) {{gSide}} ("0.42 L", "0.42 R")
+ * {{gFwd}} ("0.31 ACC", "0.31 BRK") {{gBest}} (the most g this drive) {{gMax}} (the G-meter's range, "1.2") {{signal:<car.data() key>}} (raw, 1 decimal).
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
  * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
@@ -226,11 +231,15 @@ const DIAL_SPEED = { us: { max: 160, ticks: 8 }, metric: { max: 240, ticks: 8 } 
 // the HUD's place (the page's Position tab): settings that move / scale the layers already there, no rebuild
 const PLACE_KEYS = ['hudX', 'hudY', 'hudScale'];
 // settings that only change what a text shows (the next tick paints it), no rebuild
-const LIVE_KEYS = ['warnOil', 'warnCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong'];
+const LIVE_KEYS = ['warnOil', 'warnCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong', 'gRange', 'gTrail'];
 // g (after cauliflowermossgrape's G-Force, MIT, idea only): a sample over G_BAD is a bad reading, not a corner;
 // the rest are averaged over G_AVG_MS so kerbs and potholes don't throw the dot about
 const G_BAD = 3;
 const G_AVG_MS = 150;
+// the G-meter's grip envelope: G_SECTORS directions, a reading also lifts the G_SPREAD sectors either side of it
+// (by the cosine), so the outline closes up between nearby readings; the trail holds G_TRAIL points
+const G_AMBER = [255, 176, 40];         // the dot between 0.5 and 0.8 g
+const G_SECTORS = 48, G_SPREAD = 3, G_TRAIL = 16;
 // warnings (page.js Alerts): a readout of oil / coolant / boost over its limit flashes in the shift red
 const WARN = { oil: 'warnOil', coolant: 'warnCoolant', boost: 'warnBoost' };
 const WARN_FLASH_MS = 300;
@@ -583,7 +592,8 @@ class HudApp {
         this.car.setRedline(this.setting('redline'));
         this.gBuf = [];                  // [t, lat, long] of the last G_AVG_MS
         this.gSm = null;                 // { lat, long, at }: their average
-        this.car.onSample((d, t) => this._gSample(d, t), () => { this.gBuf = []; this.gSm = null; });
+        this.car.onSample((d, t) => this._gSample(d, t), () => { this.gBuf = []; this.gSm = null; this.resetG(); });
+        this.resetG();
         this.score = new ShiftScore(this.car, () => ({
             redline: this.setting('redline'), shiftBefore: this.setting('shiftBefore'), coldGuard: this.setting('coldGuard'),
         }), this.log);
@@ -1013,6 +1023,74 @@ class HudApp {
         this.gSm = { lat: this.gBuf.reduce((a, s) => a + s[1], 0) / n, long: this.gBuf.reduce((a, s) => a + s[2], 0) / n, at: Date.now() };
     }
 
+    /** Forget the G-meter's envelope, trail and bests (the page's Reset button, the demo / car switch). */
+    resetG() {
+        this.gEnv = new Array(G_SECTORS).fill(0);    // car frame: sector n at n * 7.5 degrees, atan2(long, lat)
+        this.gBest = { left: 0, right: 0, accel: 0, brake: 0, total: 0 };
+        this.gTrail = [];                            // [t, lat, long], newest first
+        this.gEnvAt = Date.now();                    // changes when the envelope does (widgets resend it)
+    }
+
+    /** The G-meter's range in g: the setting, else the layout's "max", else 1.2. */
+    _gRange(w) {
+        const v = Number(this.setting('gRange'));
+        return v > 0 ? v : (w && w.max) || 1.2;
+    }
+
+    /** The g every tick (car frame, lat + = left, long + = speeding up): the envelope, bests and trail. */
+    _gTick(now) {
+        const lat = this._raw('gLat'), lon = this._raw('gLong');
+        if (!isNum(lat) || !isNum(lon)) return;
+        const r = Math.sqrt(lat * lat + lon * lon), B = this.gBest;
+        if (lat > B.left) B.left = lat;
+        if (-lat > B.right) B.right = -lat;
+        if (lon > B.accel) B.accel = lon;
+        if (-lon > B.brake) B.brake = -lon;
+        if (r > B.total) B.total = r;
+        if (r > 0.05) {
+            const n = Math.round(Math.atan2(lon, lat) / (2 * Math.PI) * G_SECTORS);
+            for (let o = -G_SPREAD; o <= G_SPREAD; o++) {
+                const i = ((n + o) % G_SECTORS + G_SECTORS) % G_SECTORS;
+                const v = Math.round(r * Math.cos(o * 2 * Math.PI / G_SECTORS) * 50) / 50;
+                if (v > this.gEnv[i]) { this.gEnv[i] = v; this.gEnvAt = now; }
+            }
+        }
+        const secs = Number(this.setting('gTrail')), step = secs > 0 ? secs * 1000 / (G_TRAIL - 1) : 0;
+        if (!step) { this.gTrail = []; return; }
+        if (!this.gTrail.length || now - this.gTrail[0][0] >= step) {
+            this.gTrail.unshift([now, lat, lon]);
+            if (this.gTrail.length > G_TRAIL - 1) this.gTrail.length = G_TRAIL - 1;
+        }
+    }
+
+    /** Screen signs for the G-meter: [sx, sy], drawn x = sx * lat, drawn y (down) = sy * long. */
+    _gSigns(w) {
+        const fx = (this.setting('gFlipLat') === true) !== !!(w && w.flipX), fy = (this.setting('gFlipLong') === true) !== !!(w && w.flipY);
+        return [fx ? 1 : -1, fy ? 1 : -1];
+    }
+
+    /** What the page's G-meter tab shows: the g now, the trail and envelope as drawn, the bests, the range. */
+    gState() {
+        const S = this._gSigns(null), lat = this._raw('gLat'), lon = this._raw('gLong');
+        return {
+            x: isNum(lat) ? S[0] * lat : null, y: isNum(lon) ? S[1] * lon : null,
+            trail: this.gTrail.map((p) => [S[0] * p[1], S[1] * p[2]]), env: this._gEnvDrawn(S),
+            best: this.gBest, max: this._gRange(null), live: isNum(lat) && isNum(lon),
+        };
+    }
+
+    /** The envelope by drawn sector: sector m at m * 7.5 degrees counter-clockwise from + x, + y up. */
+    _gEnvDrawn(S) {
+        const out = new Array(G_SECTORS);
+        for (let m = 0; m < G_SECTORS; m++) {
+            const a = m * 2 * Math.PI / G_SECTORS;
+            // drawn up vector u = (sx * lat, -sy * long), so the car's direction is (sx cos a, -sy sin a)
+            const n = Math.round(Math.atan2(-S[1] * Math.sin(a), S[0] * Math.cos(a)) / (2 * Math.PI) * G_SECTORS);
+            out[m] = this.gEnv[((n % G_SECTORS) + G_SECTORS) % G_SECTORS];
+        }
+        return out;
+    }
+
     _raw(name) {
         if (name === 'boost') return this._boost();
         if (name === 'gLat' || name === 'gLong') {
@@ -1135,6 +1213,17 @@ class HudApp {
             case 'boostMid': return us ? '10' : '0.7';
             case 'ampmLc': return this._token('ampm').toLowerCase();
             case 'gLat': case 'gLong': { const v = this._raw(tok); return isNum(v) ? Math.abs(v).toFixed(2) : '--'; }
+            case 'gSide': case 'gFwd': {
+                // the car's left / right (gFlipLat: its sign the other way round); brake on top doesn't change the words
+                const v = this._raw(tok === 'gSide' ? 'gLat' : 'gLong');
+                if (!isNum(v)) return '--';
+                const a = Math.abs(v).toFixed(2);
+                if (a === '0.00') return a;
+                if (tok === 'gFwd') return a + (v > 0 ? ' ACC' : ' BRK');
+                return a + ((v > 0) !== (this.setting('gFlipLat') === true) ? ' L' : ' R');
+            }
+            case 'gBest': return this.gBest.total > 0 ? this.gBest.total.toFixed(2) : '--';
+            case 'gMax': return this._gRange(null).toFixed(1);
             case 'rpm': case 'rpm10': return isNum(this.rpmShown) ? String(this.rpmShown) : (tok === 'rpm' ? '--' : '----');
             case 'shiftAt': return String(this._shift().rpm);
             case 'lastShift': return this.score.last ? String(this.score.last.rpm) : '--';
@@ -1501,12 +1590,17 @@ class HudApp {
         } else if (w.type === 'gmeter') {
             const L = color(t, w.line || 'dim');
             c.uniform(ref, 'u_size', [w.w, w.h]);
-            c.uniform(ref, 'u_max', [w.max || 1.5]);
             c.uniform(ref, 'u_line', rgba([L[0], L[1], L[2], isNum(w.lineAlpha) ? w.lineAlpha : 150]));
-            c.uniform(ref, 'u_dot', rgb(color(t, w.dot || 'hot')));
-            c.uniform(ref, 'u_peakC', rgb(color(t, w.peakColor || 'fg')));
+            c.uniform(ref, 'u_c1', rgb(color(t, w.dot || 'fg')));
+            c.uniform(ref, 'u_c2', rgb(G_AMBER));
+            c.uniform(ref, 'u_c3', rgb(t.hot));
+            c.uniform(ref, 'u_at', [0.5, 0.8]);
+            c.uniform(ref, 'u_envC', rgb(color(t, w.envColor || 'fg')));
+            c.uniform(ref, 'u_envOn', [w.envelope === false ? 0 : 1]);
             c.uniform(ref, 'u_g', [0, 0]);
-            c.uniform(ref, 'u_peak', [0]);
+            c.uniform(ref, 'u_trailN', [0]);
+            c.uniform(ref, 'u_trail', new Array(32).fill(0), { type: 'vec4' });
+            c.uniform(ref, 'u_env', new Array(G_SECTORS).fill(0), { type: 'vec4' });
         } else if (w.type === 'revarc') {
             const max = this._barMax(), red = this.setting('redline');
             const midAt = t.bar.midAt === 'shift' ? (red - 1500) / max : t.bar.midAt;
@@ -1662,6 +1756,7 @@ class HudApp {
         // the 0-60 timer only on the car's own data (the demo drive would set a best time)
         if (!this.car.data().demo) this.runs.update(this.car.data().speed, now, this.setting('units') === 'us' ? 'us' : 'metric');
         this._trip(now);
+        this._gTick(now);
         const b = this._boost();
         if (isNum(b) && (!isNum(this.boostPeak) || b > this.boostPeak)) this.boostPeak = b;
         if (!this.client.ready) return;
@@ -1783,16 +1878,32 @@ class HudApp {
             // draws it: the dot moves the way the car accelerates, into the turn and up when speeding up (the shader
             // draws + x right, + y down). The settings "gFlipLat" / "gFlipLong" swap left / right and accel / brake;
             // a layout's "flipX" / "flipY" swap again on top
-            const gx = this._raw('gLat'), gy = this._raw('gLong');
-            const fx = (this.setting('gFlipLat') === true) !== !!w.flipX, fy = (this.setting('gFlipLong') === true) !== !!w.flipY;
-            const X = isNum(gx) ? (fx ? gx : -gx) : 0, Y = isNum(gy) ? (fy ? gy : -gy) : 0;
-            const qx = Math.round(X * 50) / 50, qy = Math.round(Y * 50) / 50;
-            const pk = this._peakHold(x, Math.sqrt(qx * qx + qy * qy), now, w.peak || 3000);
-            const key = qx + '|' + qy + '|' + pk;
+            // range and envelope go only when they change; the trail with every move of the dot (its first point)
+            const S = this._gSigns(w), gx = this._raw('gLat'), gy = this._raw('gLong');
+            const q = (v) => Math.round(v * 50) / 50;
+            const qx = isNum(gx) ? q(S[0] * gx) : 0, qy = isNum(gy) ? q(S[1] * gy) : 0;
+            const max = this._gRange(w), step = max > 1.2 ? 0.5 : 0.25;
+            const envKey = this.gEnvAt + '|' + S.join(',');
+            const tr = this.gTrail, trKey = tr.length ? qx + ',' + qy + '|' + tr[0][0] + '|' + tr.length + '|' + S.join(',') : 'none';
+            const key = qx + '|' + qy + '|' + max + '|' + envKey + '|' + trKey;
             if (!force && key === x.last) return;
             x.last = key;
             x.c.uniform(x.ref, 'u_g', [qx, qy]);
-            x.c.uniform(x.ref, 'u_peak', [pk]);
+            if (force || x.gMax !== max) { x.gMax = max; x.c.uniform(x.ref, 'u_max', [max]); x.c.uniform(x.ref, 'u_step', [step]); }
+            if (force || x.gEnvKey !== envKey) {
+                x.gEnvKey = envKey;
+                x.c.uniform(x.ref, 'u_env', this._gEnvDrawn(S), { type: 'vec4' });
+            }
+            if (force || x.gTrKey !== trKey) {
+                // point 0 is the dot itself, so the trail joins it; then the samples, newest first
+                x.gTrKey = trKey;
+                const pts = [qx, qy];
+                tr.forEach((p) => pts.push(q(S[0] * p[1]), q(S[1] * p[2])));
+                const n = tr.length ? pts.length / 2 : 0;
+                while (pts.length < 32) pts.push(0);
+                x.c.uniform(x.ref, 'u_trail', pts, { type: 'vec4' });
+                x.c.uniform(x.ref, 'u_trailN', [n]);
+            }
         } else if (w.type === 'shiftbar' || w.type === 'revarc') {
             const rpm = this._raw('rpm');
             const segs = w.segments || (w.type === 'revarc' ? 30 : 40);

@@ -67,7 +67,7 @@ A full-width shift bar and a 0 to 60 mph timer (0 to 100 km/h in metric). Stop f
 
 ### Rally
 
-A segmented rev arc sweeps across the top of the screen, white, then rally yellow from the shift zone, red and flashing at the redline. A huge gear sits in the middle with the speed under it. On the left a G-meter: a dot shows the cornering and braking or accelerating force (it moves into the turn and up when you speed up; Settings can flip either way), with rings every 0.5 g and a ring that holds the peak of the last 3 seconds. Boost with a peak-hold bar and two readouts on the right.
+A segmented rev arc sweeps across the top of the screen, white, then rally yellow from the shift zone, red and flashing at the redline. A huge gear sits in the middle with the speed under it. On the left a G-meter: a dot shows the cornering and braking or accelerating force (it moves into the turn and up when you speed up), white, then amber from 0.5 g, then red from 0.8 g, with a fading trail behind it and an outline of the most g you reached this drive in every direction. Under it the g now (left or right, accelerating or braking), the best of the drive and the range. Boost with a peak-hold bar and two readouts on the right.
 
 <p align="center"><img src="../../docs/images/cluster-rally.png" width="900" alt="Rally theme"></p>
 
@@ -114,7 +114,7 @@ More themes are on the way.
 - **Shift point before redline:** how far below the redline the shift lights peak (300 rpm by default).
 - **Cold-engine rev guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
 - **Show boost.**
-- **G-meter: swap left / right** and **swap accel / brake:** the dot moves the way the car accelerates by default (into the turn, up when speeding up); these flip it, for example to show the push you feel instead.
+- **G-meter** (its own tab): the range (0.8, 1.0, 1.2, 1.5 or 2.0 g at the edge; 1.2 by default), the trail (off, 1, 2 or 4 seconds), **Swap left / right** (if the dot goes the wrong way in a turn) and **Brake on top**, the best left, right, accelerating, braking and overall g of the drive with a Reset button, and a live copy of the meter. The g comes from the car's own acceleration sensor: parked on level ground it reads 0.00, and a hill adds a little.
 - **Demo data:** fake driving data for trying it out parked.
 - **Calibration grid:** a theme that draws lines every 50 px with labels, for checking on a photo where things land on the real screen. It also carries a few test marks used to measure cluster-render's limits on the car.
 - **Map calibration:** a theme that leaves BMW's whole map window open with a grid through it, for photographing exactly what shows through the map cut-out with a navigation map up.

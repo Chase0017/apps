@@ -1037,51 +1037,125 @@ void main() {
 }
 `;
 
-const GMETER = `// A G-meter for a cluster-render "effect" layer (GLSL ES 1.00): a dot at the car's lateral (x) and
-// longitudinal (y) g inside rings at every 0.5 g out to u_max, a crosshair, and a faint ring at the
-// peak g of the last few seconds. u_g in g as drawn: + x right, + y down (hud.js maps the car's signs). The dial
-// fills the smaller side of the layer. v_uv (0,0) is the top-left.
+const GMETER = `// A G-meter for a cluster-render "effect" layer (GLSL ES 1.00): a bezel with ticks every 30 degrees, rings every
+// u_step g out to u_max (each 0.5 g a little brighter), a crosshair, the grip envelope (the furthest g reached in
+// each of 48 directions, as an outline round a faint fill), a fading trail of the last moments, and the dot,
+// white, then amber from u_at.x g, then red from u_at.y g (pinned to the bezel past u_max). Positions in g as
+// drawn: + x right, + y down (hud.js maps the car's signs). Array uniforms (sent with type vec4):
+//   u_trail[i]  two trail points (x, y, x, y), newest first; u_trailN points in use (0..16)
+//   u_env[i]    four envelope radii in g, sector k centred on k * 7.5 degrees counter-clockwise from + x
+// The loops have constant bounds and the arrays are indexed by the loop counter only, as GLSL ES 1.00 requires.
+// The dial fills the smaller side of the layer. v_uv (0,0) is the top-left.
 precision mediump float;
 varying vec2 v_uv;
 uniform vec2 u_size;
 uniform vec2 u_g;
 uniform float u_max;
-uniform float u_peak;
+uniform float u_step;
 uniform vec4 u_line;
-uniform vec3 u_dot;
-uniform vec3 u_peakC;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+uniform vec3 u_c3;
+uniform vec2 u_at;
+uniform vec3 u_envC;
+uniform float u_envOn;
+uniform vec4 u_trail[8];
+uniform float u_trailN;
+uniform vec4 u_env[12];
+
+const float TAU = 6.2831853;
+
+float envAt(float k) {
+    float slot = floor(k / 4.0), lane = k - slot * 4.0;
+    vec4 v = u_env[0];
+    for (int i = 1; i < 12; i++) if (float(i) == slot) v = u_env[i];
+    return lane < 0.5 ? v.x : lane < 1.5 ? v.y : lane < 2.5 ? v.z : v.w;
+}
+vec2 trailAt(float j) {
+    float slot = floor(j / 2.0);
+    vec4 v = u_trail[0];
+    for (int i = 1; i < 8; i++) if (float(i) == slot) v = u_trail[i];
+    return j - slot * 2.0 < 0.5 ? v.xy : v.zw;
+}
+vec3 heat(float g) {
+    vec3 c = mix(u_c1, u_c2, smoothstep(u_at.x - 0.1, u_at.x, g));
+    return mix(c, u_c3, smoothstep(u_at.y - 0.08, u_at.y, g));
+}
+vec4 over(vec4 top, vec4 under) {
+    float a = top.a + under.a * (1.0 - top.a);
+    if (a <= 0.0) return vec4(0.0);
+    return vec4((top.rgb * top.a + under.rgb * under.a * (1.0 - top.a)) / a, a);
+}
 
 void main() {
     vec2 p = vec2(v_uv.x - 0.5, 0.5 - v_uv.y) * u_size;   // px from the centre, +y up
     float R = min(u_size.x, u_size.y) * 0.5 - 2.0;
     float d = length(p);
-    if (d > R + 1.0) { gl_FragColor = vec4(0.0); return; }
-    float k = R / u_max;                                   // px per g
+    if (d > R + 1.5) { gl_FragColor = vec4(0.0); return; }
+    float k = (R - 5.0) / u_max;                           // px per g (the scale ends inside the bezel)
     vec4 col = vec4(0.0);
-    // rings every 0.5 g, the outer one brighter
-    for (int i = 1; i <= 6; i++) {
-        float g = float(i) * 0.5;
-        if (g > u_max + 0.01) break;
-        float rr = g * k, wdt = g > u_max - 0.01 ? 1.6 : 1.0;
-        float c = clamp(wdt + 0.5 - abs(d - rr), 0.0, 1.0);
-        col = max(col, vec4(u_line.rgb, u_line.a * c * (g > u_max - 0.01 ? 1.0 : 0.6)));
+    // the bezel and its ticks (longer at 12, 3, 6 and 9 o'clock)
+    float bez = clamp(1.8 - abs(d - (R - 1.0)), 0.0, 1.0);
+    float ang = atan(p.y, p.x);
+    float t30 = abs(fract(ang / (TAU / 12.0) + 0.5) - 0.5) * (TAU / 12.0) * d;   // px from the nearest tick line
+    float t90 = abs(fract(ang / (TAU / 4.0) + 0.5) - 0.5) * (TAU / 4.0) * d;
+    float tick = d > R - 9.0 ? clamp(1.3 - t30, 0.0, 1.0) * 0.8 : 0.0;
+    if (d > R - 15.0) tick = max(tick, clamp(1.6 - t90, 0.0, 1.0));
+    col = vec4(u_line.rgb, u_line.a * max(bez, tick));
+    // rings every u_step g; the 0.5 g ones brighter
+    for (int i = 1; i <= 10; i++) {
+        float g = float(i) * u_step;
+        if (g > u_max - 0.01) break;
+        float half_ = abs(fract(g / 0.5 + 0.5) - 0.5) < 0.01 ? 1.0 : 0.0;
+        float c = clamp(1.0 - abs(d - g * k), 0.0, 1.0) * (half_ > 0.5 ? 0.7 : 0.38);
+        col = max(col, vec4(u_line.rgb, u_line.a * c));
     }
-    // crosshair
-    float cx = clamp(1.5 - abs(p.x), 0.0, 1.0), cy = clamp(1.5 - abs(p.y), 0.0, 1.0);
-    col = max(col, vec4(u_line.rgb, u_line.a * 0.45 * max(cx, cy)));
-    // the peak ring
-    if (u_peak > 0.05) {
-        float c = clamp(2.0 - abs(d - min(u_peak, u_max) * k), 0.0, 1.0);
-        if (c > 0.0) col = vec4(u_peakC, c * 0.8);
+    // the crosshair, with a gap round the centre
+    float cx = clamp(1.2 - abs(p.x), 0.0, 1.0), cy = clamp(1.2 - abs(p.y), 0.0, 1.0);
+    if (d > 6.0) col = max(col, vec4(u_line.rgb, u_line.a * 0.4 * max(cx, cy)));
+    // the grip envelope: radius between the two nearest sectors
+    if (u_envOn > 0.5) {
+        float f = fract(ang / TAU + 1.0) * 48.0;
+        float k0 = floor(f), k1 = k0 + 1.0;
+        if (k1 > 47.5) k1 = 0.0;
+        float r0 = min(envAt(k0), u_max), r1 = min(envAt(k1), u_max);
+        if (r0 > 0.04 || r1 > 0.04) {
+            // a direction not reached yet is 0 g, so the outline runs in towards the centre there (a radar
+            // chart); the distance is divided by the slope so the steep parts keep their width
+            float re = mix(r0, r1, f - k0) * k;
+            float slope = (r1 - r0) * k * 48.0 / TAU / max(d, 1.0);
+            float dist = abs(d - re) / sqrt(1.0 + slope * slope);
+            float edge = clamp(1.4 - dist, 0.0, 1.0) * 0.9;
+            float fill = clamp(re - d + 0.5, 0.0, 1.0) * 0.10;
+            col = over(vec4(u_envC, max(edge, fill)), col);
+        }
     }
-    // the dot (with a soft glow)
-    vec2 g = clamp(u_g, vec2(-u_max), vec2(u_max));
-    vec2 dp = vec2(g.x, -g.y) * k;
+    // the trail: fading, thinning segments from the dot back
+    float tA = 0.0;
+    for (int j = 0; j < 15; j++) {
+        float fj = float(j);
+        if (fj + 1.0 >= u_trailN) break;
+        vec2 a = clamp(trailAt(fj), vec2(-u_max), vec2(u_max)) * vec2(k, -k);
+        vec2 b = clamp(trailAt(fj + 1.0), vec2(-u_max), vec2(u_max)) * vec2(k, -k);
+        vec2 ab = b - a;
+        float h = clamp(dot(p - a, ab) / max(dot(ab, ab), 0.001), 0.0, 1.0);
+        float dd = length(p - a - ab * h);
+        float age = (fj + h) / 15.0;
+        float wdt = mix(3.2, 0.8, age);
+        tA = max(tA, clamp(wdt - dd, 0.0, 1.0) * mix(0.85, 0.08, age));
+    }
+    vec2 g = u_g;
+    float gm = length(g);
+    if (tA > 0.0) col = over(vec4(heat(gm), tA), col);
+    // the dot with a soft glow, pinned to the bezel past u_max
+    if (gm > u_max) g = g * (u_max / gm);
+    vec2 dp = g * vec2(k, -k);
     float dd = length(p - dp);
-    float dt = clamp(9.5 - dd, 0.0, 1.0);
-    float glow = clamp(1.0 - (dd - 9.0) / 12.0, 0.0, 1.0) * 0.35;
-    if (dt > 0.0) col = vec4(u_dot, max(dt, col.a));
-    else if (glow > col.a) col = vec4(u_dot, glow);
+    vec3 dc = heat(gm);
+    float glow = clamp(1.0 - (dd - 7.0) / 13.0, 0.0, 1.0) * 0.4;
+    float dt = clamp(8.0 - dd, 0.0, 1.0);
+    col = over(vec4(dc, glow), col);
+    col = over(vec4(mix(dc, vec3(1.0), clamp(3.5 - dd, 0.0, 1.0) * 0.6), dt), col);
     gl_FragColor = col;
 }
 `;

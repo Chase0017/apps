@@ -26,9 +26,9 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 SKIP = {'off', 'grid', 'mapcal', 'wincal'}           # calibration layouts get no picture
-# the values every picture shows: 3rd gear at 4200 rpm, 61 mph, warm engine, a little boost
+# the values every picture shows: 3rd gear at 4200 rpm, 61 mph, warm engine, a little boost, braking into a left turn
 SIGNALS = {'rpm': 4200, 'speed': 98, 'gear': 3, 'oil': 95, 'coolant': 90, 'boost': 1.1, 'torque': 290,
-           'fuelL': 38, 'range': 310, 'ambient': 18, 'tyreP': 2.4, 'tyreT': 30}
+           'fuelL': 38, 'range': 310, 'ambient': 18, 'tyreP': 2.4, 'tyreT': 30, 'gLat': 0.42, 'gLong': -0.3}
 # picture sizes in device px (the page is drawn at logical px and scaled about 1.165 on the car's screen)
 SIZES = {
     'panel': {'src': (1920, 720), 'crop': (0, 0, 1920, 720), 'big': (888, 333), 'small': (280, 105)},
@@ -82,6 +82,13 @@ def main():
     raw = os.path.join(ROOT, '..', 'design', 'previews-src', app)
     os.makedirs(raw, exist_ok=True)
     out = {}
+    # a short lap of g first (brake, both turns, accelerate), so a G-meter shows a grip outline, not one wedge
+    lap = [(0, -0.9), (0.5, -0.6), (0.85, -0.15), (0.6, 0.2), (0, 0.35), (-0.6, 0.2), (-0.8, -0.1), (-0.45, -0.55), (0, -0.9)]
+    for (a, b), (c, d) in zip(lap, lap[1:]):
+        for i in range(6):
+            t = i / 6
+            post(port, '/signals', {'mode': 'manual', 'values': dict(SIGNALS, gLat=a + (c - a) * t, gLong=b + (d - b) * t)})
+            time.sleep(0.12)
     post(port, '/signals', {'mode': 'manual', 'values': SIGNALS})
     post(port, '/setting', {'key': 'byMode', 'value': False})
     if 'nightDim' in defaults:       # the pictures show the day colours, whatever the time

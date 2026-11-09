@@ -11,7 +11,7 @@
  *   new Page(ctx, hud, {
  *       title, what: 'cluster' | 'HUD',
  *       look: { name: 'Themes', style: 'hero' | 'cards', tags: { gt3: 'race dash', ... } },
- *       tabs: ['look', 'readouts', 'badge', 'map', 'alerts', 'settings'],
+ *       tabs: ['look', 'readouts', 'badge', 'map', 'alerts', 'gmeter', 'settings'],
  *       settings: ['units', 'clock', ...],          // the Settings tab's rows, in order
  *   }).start();
  *
@@ -32,6 +32,7 @@ const C = {
     blue: '#2b7fff', blueHi: '#5aa2ff', blueDeep: '#1c69d4', live: '#7fd3a0', off: '#c3cad6',
 };
 const RAIL = { x: 16, y: 54, w: 252, h: 66, gap: 8 };
+const RAIL7 = { x: 16, y: 54, w: 252, h: 58, gap: 6 };     // seven tabs or more: a little shorter, so they fit
 const CX = 300, CR = 1584, CW = CR - CX;
 const MODES = [['inComfort', 'Comfort'], ['inSport', 'Sport'], ['inEco', 'Eco Pro']];
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
@@ -42,6 +43,7 @@ const TAB = {
     map: { name: 'Map', icon: 'map' },
     badge: { name: 'Badge', icon: 'badge' },
     alerts: { name: 'Alerts', icon: 'alert' },
+    gmeter: { name: 'G-meter', icon: 'gmeter' },
     colours: { name: 'Colours', icon: 'colour' },
     settings: { name: 'Settings', icon: 'cog' },
 };
@@ -146,7 +148,7 @@ class Page {
         const target = cv.target;
         if (this.picker || this.confirm) cv.target = function () { return this; };
         this.rail(cv, bottom);
-        const body = { look: this.lookTab, readouts: this.readoutsTab, position: this.positionTab, map: this.mapTab, colours: this.coloursTab, badge: this.badgeTab, alerts: this.alertsTab, settings: this.settingsTab }[this.tab];
+        const body = { look: this.lookTab, readouts: this.readoutsTab, position: this.positionTab, map: this.mapTab, colours: this.coloursTab, badge: this.badgeTab, alerts: this.alertsTab, gmeter: this.gmeterTab, settings: this.settingsTab }[this.tab];
         if (body) body.call(this, cv, bottom);
         cv.target = target;
         if (this.picker) this.drawPicker(cv, bottom);
@@ -157,16 +159,17 @@ class Page {
 
     rail(cv, bottom) {
         cv.fillRect(RAIL.x + RAIL.w + 15, 50, 1, bottom - 56, C.line);
+        const R = this.cfg.tabs.length > 6 ? RAIL7 : RAIL, dy = (66 - R.h) / 2;
         this.cfg.tabs.forEach((id, i) => {
-            const x = RAIL.x, y = RAIL.y + i * (RAIL.h + RAIL.gap), w = RAIL.w, h = RAIL.h, sel = id === this.tab;
+            const x = R.x, y = R.y + i * (R.h + R.gap), w = R.w, h = R.h, sel = id === this.tab;
             if (sel) {
                 cv.card(x, y, w, h, 12, [[0, A(C.blue, 0.30)], [1, A(C.blueDeep, 0.10)]]);
                 cv.strokeRoundRect(x, y, w, h, 12, 1, A(C.blueHi, 0.35));
                 cv.roundRect(x, y + 12, 4, h - 24, 2, C.blue);
             }
             icon(cv, (TAB[id] || {}).icon, x + 34, y + h / 2, sel ? C.text : C.dim);
-            cv.text(this.tabName(id), x + 64, y + 30, 21, sel ? '#ffffff' : C.text, { font: 'bold', literal: true });
-            cv.text(this.tabValue(id), x + 64, y + 53, 15, sel ? A(C.blueHi, 0.95) : C.dim, { literal: true });
+            cv.text(this.tabName(id), x + 64, y + 30 - dy, 21, sel ? '#ffffff' : C.text, { font: 'bold', literal: true });
+            cv.text(this.tabValue(id), x + 64, y + 53 - dy * 1.5, 15, sel ? A(C.blueHi, 0.95) : C.dim, { literal: true });
             cv.target(x, y, w, h, () => { this.tab = id; this.picker = null; this.kick(); }, 'tab:' + id, 12);
         });
     }
@@ -181,6 +184,7 @@ class Page {
         if (id === 'map') return this.get('mapInTheme') ? 'Waze map · on' : 'Waze map · off';
         if (id === 'badge') return badges.text(this.get('badge'), this.get('badgeBMW') === true) || 'none';
         if (id === 'alerts') { const n = WARN_KEYS.filter((k) => this.get(k) > 0).length; return n ? n + ' warning' + (n > 1 ? 's' : '') + ' on' : 'warnings off'; }
+        if (id === 'gmeter') return this.optLabel('gRange', this.get('gRange')) + ' · trail ' + this.optLabel('gTrail', this.get('gTrail')).toLowerCase();
         if (id === 'colours') return this.valueText('hudTheme').replace(/ \(.*\)$/, '');
         if (id === 'settings') return (this.get('units') === 'metric' ? 'km/h' : 'mph') + ' · ' + fmtInt(this.get('redline')) + ' rpm';
         return '';
@@ -463,6 +467,79 @@ class Page {
         ]);
     }
 
+    /* ---------- G-meter (both) ---------- */
+    /** The range, the trail, which way it draws, the bests with a reset, and a live copy of the meter. */
+    gmeterTab(cv, bottom) {
+        const lw = 840, g = this.hud.gState ? this.hud.gState() : null;
+        label(cv, CX, 70, 'G-meter');
+        let y = 84;
+        y = this.chipRow(cv, CX, y, lw, 'Range', 'gRange');
+        y = this.chipRow(cv, CX, y, lw, 'Trail', 'gTrail');
+        const hw = (lw - 12) / 2;
+        this.toggleRow(cv, CX, y, hw, 'Swap left / right', 'gFlipLat');
+        y = this.toggleRow(cv, CX + hw + 12, y, hw, 'Brake on top', 'gFlipLong');
+        // the bests this drive (the car's left / right: gFlipLat turns its sign round)
+        glass(cv, CX, y, lw, 104, false);
+        cv.text('BEST THIS DRIVE, IN G', CX + 18, y + 26, 13, C.label, { font: 'bold', spacing: 2, literal: true });
+        const b = g ? g.best : null, sw = this.get('gFlipLat') === true;
+        const cols = [['Left', b && (sw ? b.right : b.left)], ['Right', b && (sw ? b.left : b.right)], ['Accel', b && b.accel], ['Brake', b && b.brake], ['Peak', b && b.total]];
+        cols.forEach((c, i) => {
+            const x = CX + 18 + i * 118;
+            cv.text(c[1] > 0 ? c[1].toFixed(2) : '--', x, y + 66, 28, i === 4 ? '#ffffff' : C.text, { font: 'bold', literal: true });
+            cv.text(c[0], x, y + 90, 15, C.dim, { literal: true });
+        });
+        const bw = 150, bx = CX + lw - bw - 18, by = y + 34;
+        cv.roundRect(bx, by, bw, 40, 20, '#ffffff14');
+        cv.text('Reset', bx + bw / 2, by + 26, 17, C.text, { align: 'center', font: 'bold', literal: true });
+        cv.target(bx, by, bw, 40, () => { if (this.hud.resetG) this.hud.resetG(); this.kick(); }, 'g:reset', 20);
+        y += 112;
+        note(cv, CX, y + 22, [
+            'From the car\'s own acceleration sensor. Parked on level ground it reads 0.00; hills add a little.',
+            'The outline is the most g this drive in every direction; Reset clears it with the bests.',
+        ]);
+        // right: the meter as the layout draws it, live
+        const rx = CX + lw + 30, rw = CR - rx, r = Math.min(rw / 2 - 30, (bottom - 120) / 2), cx = rx + rw / 2, cy = 84 + 18 + r;
+        label(cv, rx, 70, 'Live');
+        if (g) this.gPreview(cv, cx, cy, r, g);
+        const now = g && g.live ? (Math.sqrt(g.x * g.x + g.y * g.y)).toFixed(2) + ' g' : 'no g reading';
+        cv.text(now, cx, cy + r + 34, 20, g && g.live ? C.text : C.dim, { align: 'center', font: 'bold', literal: true });
+    }
+    /** The page's copy of the G-meter shader (shaders.js gmeter): bezel, rings, envelope, trail, dot. */
+    gPreview(cv, cx, cy, r, g) {
+        const max = g.max, step = max > 1.2 ? 0.5 : 0.25, k = (r - 6) / max;
+        const ring = (rr, w, c) => cv.arc(cx, cy, Math.max(0, rr - w / 2), rr + w / 2, 0, 360, c);
+        ring(r - 1, 2.5, '#c3cad6');
+        for (let v = step; v < max - 0.01; v += step) ring(v * k, 1, Math.abs(v / 0.5 - Math.round(v / 0.5)) < 0.01 ? '#ffffff55' : '#ffffff26');
+        cv.line(cx - r + 8, cy, cx + r - 8, cy, 1, '#ffffff30');
+        cv.line(cx, cy - r + 8, cx, cy + r - 8, 1, '#ffffff30');
+        cv.text(max.toFixed(1) + ' g', cx + r * 0.72 + 4, cy - r * 0.72 - 2, 14, C.dim, { literal: true });
+        const flipL = this.get('gFlipLong') === true;
+        cv.text(flipL ? 'BRAKE' : 'ACCEL', cx, cy - r + 26, 13, C.label, { align: 'center', font: 'bold', spacing: 1.5, literal: true });
+        cv.text(flipL ? 'ACCEL' : 'BRAKE', cx, cy + r - 14, 13, C.label, { align: 'center', font: 'bold', spacing: 1.5, literal: true });
+        cv.text('L', cx - r + 16, cy - 6, 13, C.label, { align: 'center', font: 'bold', literal: true });
+        cv.text('R', cx + r - 16, cy - 6, 13, C.label, { align: 'center', font: 'bold', literal: true });
+        const P = (x, y) => { const m = Math.sqrt(x * x + y * y), s = m > max ? max / m : 1; return [cx + x * s * k, cy + y * s * k]; };
+        // the envelope: drawn sector m at m * 7.5 degrees, + y up
+        const n = g.env.length;
+        for (let m = 0; m < n; m++) {
+            const a = g.env[m], b = g.env[(m + 1) % n];
+            if (!(a > 0.04 || b > 0.04)) continue;
+            const t0 = m * 2 * Math.PI / n, t1 = (m + 1) * 2 * Math.PI / n;
+            const p0 = P(Math.cos(t0) * a, -Math.sin(t0) * a), p1 = P(Math.cos(t1) * b, -Math.sin(t1) * b);
+            cv.line(p0[0], p0[1], p1[0], p1[1], 2, '#eef2f8cc');
+        }
+        if (!g.live) return;
+        const heat = (v) => (v >= 0.8 ? '#ff4b3e' : v >= 0.5 ? '#ffb028' : '#ffffff');
+        const pts = [[g.x, g.y]].concat(g.trail);
+        for (let i = 0; i + 1 < pts.length; i++) {
+            const a = P(pts[i][0], pts[i][1]), b = P(pts[i + 1][0], pts[i + 1][1]), f = i / 15;
+            cv.line(a[0], a[1], b[0], b[1], 4 - 3 * f, A(heat(Math.sqrt(g.x * g.x + g.y * g.y)), 0.85 - 0.75 * f));
+        }
+        const d = P(g.x, g.y), c = heat(Math.sqrt(g.x * g.x + g.y * g.y));
+        cv.circle(d[0], d[1], 18, A(c, 0.25));
+        cv.circle(d[0], d[1], 10, c);
+    }
+
     /* ---------- Colours (HUD) ---------- */
     coloursTab(cv) {
         label(cv, CX, 70, 'Colours on the glass');
@@ -670,6 +747,10 @@ function icon(cv, name, x, y, c) {
         cv.polyline([[x, y - 12], [x + 13, y + 10], [x - 13, y + 10], [x, y - 12]], lw, c);
         cv.line(x, y - 4, x, y + 3, lw, c);
         cv.circle(x, y + 6.5, 1.4, c);
+    } else if (name === 'gmeter') {
+        cv.arc(x, y, 11, 13.2, 0, 360, c);
+        cv.line(x - 8, y, x + 8, y, 1.4, c); cv.line(x, y - 8, x, y + 8, 1.4, c);
+        cv.circle(x + 4.5, y - 4, 3.2, c);
     } else if (name === 'cog') {
         cv.arc(x, y, 6.5, 9, 0, 360, c);
         for (let i = 0; i < 8; i++) {

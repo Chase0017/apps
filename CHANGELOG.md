@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 9 2026
 
+- **Cluster Themes 0.14.0, HUD Widgets 0.12.0:** a better G-meter for Rally and Track. The dot turns amber from 0.5 g and red from 0.8 g and leaves a fading trail, an outline shows the most g reached this drive in every direction, and the meter has a bezel with ticks and finer rings. Under it (Rally) or beside it (Track): the g now, as left or right and accelerating or braking, and the best of the drive. A new G-meter tab on the center screen sets the range (0.8 to 2.0 g, 1.2 by default) and the trail length, holds the two swap switches ("swap accel / brake" is now "Brake on top"), shows the bests of the drive with a Reset button, and has a live copy of the meter.
 - **HUD Widgets 0.11.0:** every layout spread out to the HUD's real edges. BMW's own height-adjust frame shows the picture reaching about 80 px further right than the layouts used, so they now run from x 120 to 680 instead of stopping at 600. Every layout also leaves the bottom-left corner empty, where BMW draws its speed and speed-limit sign and, in Sport, its own rev band, so no layout gets covered in any drive mode. Cruise's figures are bigger. The Window calibration frame shows the new edges.
 
 ## Nov 8 2026

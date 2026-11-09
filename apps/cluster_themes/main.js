@@ -26,8 +26,8 @@ mgu.run({
         new Page(ctx, hud, {
             title: ctx.spec.title, what: 'cluster',
             look: { name: 'Themes', style: 'hero', tags: { gt3: 'race dash', m: 'M8 style', sport: 'Live Cockpit', minimal: 'just the speed', roadster: 'round dials', track: 'tyres + temps', drag: '0-60 timer', rally: 'rev arc · G-meter', retro80s: '80s digital', cruise: 'calm · trip', dyno: 'safety tiles' } },
-            tabs: ['look', 'readouts', 'badge', 'map', 'alerts', 'settings'],
-            settings: ['units', 'clock', 'redline', 'shiftBefore', 'coldGuard', 'showBoost', 'nightDim', 'gFlipLat', 'gFlipLong', 'demo'],
+            tabs: ['look', 'readouts', 'badge', 'map', 'alerts', 'gmeter', 'settings'],
+            settings: ['units', 'clock', 'redline', 'shiftBefore', 'coldGuard', 'showBoost', 'nightDim', 'demo'],
         }).start();
         process.on('exit', () => { try { hud.stop(); } catch (e) { /* exiting anyway */ } });
     },
