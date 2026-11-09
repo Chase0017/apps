@@ -253,6 +253,12 @@
       ctx.fillRect(0, w.y, w.x, w.h); ctx.fillRect(w.x + w.w, w.y, VW - w.x - w.w, w.h);
       ctx.strokeStyle = '#ff8c1a'; ctx.lineWidth = 1.5; ctx.strokeRect(w.x + .5, w.y + .5, w.w - 1, w.h - 1);
       labelBox('visible window ' + w.x + ',' + w.y + ' ' + w.w + 'x' + w.h, w.x + 2, w.y + w.h - 18, '#ff8c1a');
+      // BMW's own speed, speed-limit sign and (Sport) rev band draw over ours here
+      if (geo.HUD_BMW) {
+        const [bx0, by0, bx1, by1] = geo.HUD_BMW;
+        ctx.setLineDash([5, 4]); ctx.strokeStyle = '#ff8c1a'; ctx.strokeRect(bx0 + .5, by0 + .5, bx1 - bx0 - 1, by1 - by0 - 1); ctx.setLineDash([]);
+        labelBox("BMW speed / Sport band", bx0 + 4, by0 + 4, '#ff8c1a');
+      }
     }
   }
   function setView(v, targets) {

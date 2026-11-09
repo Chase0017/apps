@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 9 2026
+
+- **HUD Widgets 0.11.0:** every layout spread out to the HUD's real edges. BMW's own height-adjust frame shows the picture reaching about 80 px further right than the layouts used, so they now run from x 120 to 680 instead of stopping at 600. Every layout also leaves the bottom-left corner empty, where BMW draws its speed and speed-limit sign and, in Sport, its own rev band, so no layout gets covered in any drive mode. Cruise's figures are bigger. The Window calibration frame shows the new edges.
+
 ## Nov 8 2026
 
 - **Cluster Themes 0.13.0:** a new Dyno theme in BMW M colours: twelve readout tiles (rpm, speed, boost, oil, coolant, intake, cornering and braking g, gear, fuel, range, outside temperature) and tall Power and Torque tiles, each with a bar, and a rev bar across the top. A tile turns red while its oil, coolant or boost reading is over the warning limit. Every tile but the gear can show another sensor (the Readouts tab now lists long slot lists in two columns). The G-meter now moves the way the car accelerates (into the turn, up when speeding up), and two new settings swap left and right or accelerating and braking. G readings are smoothed over 0.15 s and a reading over 3 g is ignored. A readout set to intake air or boost now asks the engine unit for it (before, only Warm-up and readouts that named it did).

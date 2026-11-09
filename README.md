@@ -16,7 +16,7 @@ Redraws the whole instrument cluster in a theme of your choice: a GT3 race dash,
 
 Puts your own readouts on the windshield HUD: gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures. Ten layouts, in Classic, M and Night colours (Cruise and Retro bring their own). [Read more](apps/idrive_hud_widgets/README.md)
 
-<p align="center"><img src="docs/images/hud-redline.gif" width="520" alt="Redline layout on the HUD"></p>
+<p align="center"><img src="docs/images/hud-redline.gif" width="600" alt="Redline layout on the HUD"></p>
 
 <table align="center">
   <tr>

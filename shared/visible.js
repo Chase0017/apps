@@ -20,8 +20,12 @@ const HOOD = [
 const BLACK_BOX = [1406, 342, 1597, 419];
 /** BMW's seat-belt warning light is drawn over us here: [x0, y0, x1, y1]. */
 const BELT = [587, 663, 626, 700];
-/** The part of the 800x480 HUD target seen through the windshield (eye-position dependent). */
-const HUD_WINDOW = { x: 120, y: 100, w: 485, h: 278 };
+/** The part of the 800x480 HUD target seen through the windshield: BMW's own height-adjust frame (car photo Nov 7,
+ *  measured Nov 9 2026) spans x 117..681, y ~85..395. The Nov 5 grid photo's right edge (x 600) was the phone's angle. */
+const HUD_WINDOW = { x: 120, y: 100, w: 560, h: 280 };
+/** BMW's own HUD items that draw over ours, bottom left: its speed and speed-limit sign (Comfort), and in Sport also
+ *  its segmented rev band (x ~125..335, y ~245..280, Nov 9 photos). Every layout keeps it clear: [x0, y0, x1, y1]. */
+const HUD_BMW = [120, 235, 350, 380];
 
 /** The first visible y at x on the panel (interpolated along HOOD). */
 function hoodY(x) {
@@ -85,9 +89,12 @@ function check(widgets, target) {
             if (d > 0) {
                 out.push(id + ': ' + Math.ceil(d) + ' px outside the visible HUD window ' + win.x + ',' + win.y + ' ' + win.w + 'x' + win.h);
             }
+            if (overlaps(w, HUD_BMW)) {
+                out.push(id + ': under BMW\'s own speed / Sport rev band x' + HUD_BMW[0] + '-' + HUD_BMW[2] + ' y' + HUD_BMW[1] + '-' + HUD_BMW[3]);
+            }
         }
     });
     return out;
 }
 
-module.exports = { HOOD, BLACK_BOX, BELT, HUD_WINDOW, hoodY, check };
+module.exports = { HOOD, BLACK_BOX, BELT, HUD_WINDOW, HUD_BMW, hoodY, check };

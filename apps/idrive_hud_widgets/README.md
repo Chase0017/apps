@@ -2,7 +2,7 @@
 
 Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and coolant temperatures, a clock, or any car sensor you pick. BMW's HUD already shows the speed, so these layouts leave it out. Open **HUD Widgets** from the apps menu on the center screen and set it up on its page.
 
-<p align="center"><img src="../../docs/images/hud-redline.gif" width="520" alt="Redline layout"></p>
+<p align="center"><img src="../../docs/images/hud-redline.gif" width="600" alt="Redline layout"></p>
 
 ## Layouts
 
@@ -57,11 +57,11 @@ Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and 
 - **Daily:** the gear, the clock and the oil temperature.
 - **Sport:** a segmented shift bar, a big gear, a boost gauge, oil and coolant.
 - **Redline:** a slanted rev bar with 12 shift lights, a big gear, your shift point and your last shift with its grade.
-- **Minimal:** built round BMW's own speed and speed-limit sign without covering them: a thin shift bar over them, the gear beside BMW's speed, and one readout.
+- **Minimal:** built round BMW's own speed and speed-limit sign without covering them: a thin shift bar beside them, the gear right of BMW's speed, and one readout.
 - **Shift only:** 12 shift lights and the gear, and SHIFT at the shift point.
 - **Boost:** a boost gauge with a dot that holds the peak for 4 seconds, the boost in figures, and the peak since your last 0 to 60 run.
 - **Warm-up:** oil, coolant and intake air temperature as bars with figures, and WARMING UP until the oil reaches 80°C. The intake temperature is read from the engine unit (read-only), like the boost fallback.
-- **Track:** 12 shift lights, the gear with SHIFT under it, and a G-meter: a dot shows the cornering and braking or accelerating force (into the turn and up when you speed up; Settings can flip it), with a ring that holds the peak of the last 3 seconds.
+- **Track:** 12 shift lights, the gear with SHIFT beside it, and a G-meter: a dot shows the cornering and braking or accelerating force (into the turn and up when you speed up; Settings can flip it), with a ring that holds the peak of the last 3 seconds.
 - **Cruise:** four quiet figures in soft white: range, outside temperature, your average speed this drive (time moving only, after the first minute) and the time.
 - **Retro:** an 80s digital look in amber: a segmented rev bar, the gear in seven-segment digits, and boost, oil and water as figures with bar graphs.
 - The clock, oil, coolant and shift point readouts can each show another sensor instead (page's Readouts tab).
@@ -89,7 +89,7 @@ Classic, M and Night, plus Auto, which switches to Night at sunset. You choose w
 ## Off and drive modes
 
 - **Off (BMW's own HUD):** the first card on the Layouts tab. Tap it and the app draws nothing in any drive mode, so BMW's HUD comes back.
-- **Change with SPORT / COMFORT / ECO PRO** (on by default): the HUD follows the drive mode buttons, with a layout for each mode. Out of the box, Comfort shows Daily, and Sport and Eco Pro hand the HUD back to BMW. In Sport, BMW's own HUD puts its speed and rev line in the middle of the window, right where these layouts sit. Until the car reports a mode, the plain layout setting is used.
+- **Change with SPORT / COMFORT / ECO PRO** (on by default): the HUD follows the drive mode buttons, with a layout for each mode. Out of the box, Comfort shows Daily, and Sport and Eco Pro hand the HUD back to BMW. In Sport, BMW's own HUD adds its rev band bottom left, next to its speed; every layout leaves that corner empty, so any layout can be used in Sport too. Until the car reports a mode, the plain layout setting is used.
 - **With Cluster Themes:** the HUD and the cluster theme cannot show at the same time, because cluster-render has one screen slot for both. With the defaults, Comfort gets the HUD and Sport gets the cluster theme, so they take turns. Pick a layout while a cluster theme is on and the page asks whether to turn the theme off; yes turns it off until you pick a theme in Cluster Themes again, and it asks the same the other way round.
 
 ## Settings
@@ -104,9 +104,9 @@ The last line of the Settings tab says what the HUD is doing, the drive mode it 
 
 ## The visible window
 
-The HUD is an 800x480 screen, but only part of it comes through the windshield. Measured from a photo of the calibration grid on a 2020 X3 (Nov 5 2026), the visible window is **x 120, y 100, 485 x 278**. It moves a little with eye position and HUD height, and every layout sits inside it.
+The HUD is an 800x480 screen, but only part of it comes through the windshield. When you change the HUD height in iDrive, BMW shows corner brackets around the picture; measured on a photo of them on a 2020 X3 (Nov 2026), the visible window is **x 120, y 100, 560 x 280**, and every layout sits inside it. (A first measurement from a calibration grid photo, Nov 5, gave 485 x 278: the phone's angle cut off the right side.)
 
-BMW keeps drawing its own HUD content over ours. In Comfort mode that is the speed readout and the speed-limit sign in the bottom-left of the window, so the layouts keep **x 150..355, y 314..378** free for it.
+BMW keeps drawing its own HUD content over ours, bottom left: the speed and speed-limit sign in every mode, and in Sport also its segmented rev band above them. Every layout keeps **x 120..350, y 235..380** free for it.
 
 **Window calibration:** a 50 px grid over the whole HUD with a frame where the visible window is assumed to be; photograph it while moving the HUD height so BMW's own adjustment frame shows the real edges.
 
@@ -120,7 +120,7 @@ BMW keeps drawing its own HUD content over ours. In Comfort mode that is the spe
 
 Tested on a 2020 X3 M40i. It runs, the rpm is smooth at idle, and the layouts were fitted to the visible window from the grid photo. Still to be checked:
 
-- the fitted layouts on the glass: nothing cut off, nothing under BMW's speed and sign;
+- the fitted layouts on the glass: nothing cut off on the right, nothing under BMW's speed, sign or Sport rev band;
 - the drive mode switching and the engine computer boost;
 - how the colours and edges look on the real glass, especially the M blues in sunlight;
 - whether the head unit's clock is in local time.

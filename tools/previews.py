@@ -32,8 +32,9 @@ SIGNALS = {'rpm': 4200, 'speed': 98, 'gear': 3, 'oil': 95, 'coolant': 90, 'boost
 # picture sizes in device px (the page is drawn at logical px and scaled about 1.165 on the car's screen)
 SIZES = {
     'panel': {'src': (1920, 720), 'crop': (0, 0, 1920, 720), 'big': (888, 333), 'small': (280, 105)},
-    # the HUD: the part seen through the windshield (shared/visible.js HUD_WINDOW 120,100 485x278) with room around it
-    'hud': {'src': (800, 480), 'crop': (90, 70, 635, 410), 'big': (560, 349), 'small': (300, 187), 'full': (840, 504)},
+    # the HUD: the part seen through the windshield (shared/visible.js HUD_WINDOW 120,100 560x280) with room around it,
+    # cut at the pictures' 1.6 : 1
+    'hud': {'src': (800, 480), 'crop': (90, 47, 710, 433), 'big': (560, 349), 'small': (300, 187), 'full': (840, 504)},
 }
 
 
