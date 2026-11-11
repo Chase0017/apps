@@ -253,7 +253,7 @@ const TILE_BAR = {
     coolant: { raw: 'coolant', min: 40, max: 130, z: 1 }, intake: { raw: 'intake', min: 0, max: 80, z: 1 },
     ambient: { raw: 'ambient', min: -20, max: 45 }, gLat: { raw: 'gLat', min: 0, max: 1.2, z: 1, abs: true },
     gLong: { raw: 'gLong', min: 0, max: 1.2, z: 1, abs: true }, fuel: { raw: 'fuel', min: 0, max: 1 },
-    range: { raw: 'range', min: 0, max: 700 },
+    range: { raw: 'range', min: 0, max: 700 }, hvSoc: { raw: 'hvSoc', min: 0, max: 100 },
 };
 const TILE_MAX = 14;       // half a flash: red, then the normal colour
 // the shift-light test (page.js Alerts): rpm climbs from TEST_FROM to just past the shift point, then holds
@@ -268,6 +268,12 @@ const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v :
 const PROGRAMS = { S_MINUS_PROGRAMM: 'S', M_MINUS_PROGRAMM: 'M', 1: 'S', 2: 'M' };
 const MODE_NAME = { comfort: 'Comfort', sport: 'Sport', eco: 'Eco Pro' };
 const FRESH_MS = 3000;
+// A plug-in hybrid's high-voltage battery charge: read-only UDS 22 DDBC from its battery unit (SME, 0x07), 0.1 %.
+// The read Redline 2.0 and eDrive use (cauliflowermossgrape/idrive7-apps, MIT; apps/redline/electrical.js).
+// Asked every HV_EVERY_MS only while a shown readout uses it; a car that doesn't answer is asked once a minute.
+// Not checked on a car by us (no hybrid here, Nov 10 2026).
+const HV_SOC = { ecu: 0x07, did: 'DDBC', bytes: 2, at: 0, factor: 0.1, offset: 0, min: 0, max: 100, timeoutMs: 1000 };
+const HV_EVERY_MS = 5000, HV_RETRY_MS = 60000, HV_STALE_MS = 20000;
 // BMW's speed scale: even steps to 120 mph (180 km/h), then wider ones to 200 mph (320 km/h)
 const SPEED_SCALE = { us: [0, 20, 40, 60, 80, 100, 120, 160, 200], metric: [0, 30, 60, 90, 120, 150, 180, 250, 320] };
 /** speed (display unit) -> 0..1 along a scale of evenly spaced labels */
@@ -374,6 +380,8 @@ class HudApp {
         this.needsBoost = false;         // a shown widget uses boost (the engine unit is only asked then)
         this.intakeDme = null; this.intakeDmeAt = 0;  // C, intake air from the engine unit (config.dme.intake)
         this.needsIntake = false;        // a shown widget uses the intake temperature
+        this.hvSoc = null; this.hvSocAt = 0;  // %, a plug-in hybrid's battery charge (HV_SOC)
+        this.needsHv = false;            // a shown widget uses it
         this.boostPeak = null;           // bar, the highest boost since the last 0-60 run started ({{boostPeak}})
         this.runs = new Runs(ctx.dataDir, this.log);   // the 0-60 timer (runs.js)
         this.runs.onStart = () => { this.boostPeak = null; };
@@ -460,6 +468,7 @@ class HudApp {
         const j = JSON.stringify(shown) + ' ' + ids.join(' ');
         this.needsBoost = /boost/.test(j);
         this.needsIntake = /intake/.test(j);
+        this.needsHv = /hvSoc/.test(j);
     }
     /** A sensor's value now, as its slot shows it ('--' without one). */
     sensorValue(sn) { return sn ? this._token(sn.tok) : '--'; }
@@ -672,23 +681,33 @@ class HudApp {
         const dme = this.config.dme;
         const hasBoost = !!(dme && Array.isArray(dme.boost) && dme.boost.length);
         const hasIntake = !!(dme && Array.isArray(dme.intake) && dme.intake.length);
-        if (!hasBoost && !hasIntake) return;
-        let rd = null, busy = false, baro = 101.3, baroAt = 0, intakeAsk = 0;
+        let rd = null, busy = false, baro = 101.3, baroAt = 0, intakeAsk = 0, hvAsk = 0, hvMiss = 0;
         try {
             const { Diag } = require('./kit/diag');
             const { DidReader } = require('./kit/dids');
             const link = new Diag(this.ctx.signals, this.log);
             link.quiet = true;
             Promise.resolve().then(() => link.init()).catch((e) => this.log.info('engine unit link not available: ' + (e && e.message || e)));
-            rd = new DidReader(link, { ecu: dme.ecu || 18 });
+            rd = new DidReader(link, { ecu: (dme && dme.ecu) || 18 });
         } catch (e) { this.log.info('engine unit boost off: ' + (e && e.message || e)); return; }
         this.dmeTimer = setInterval(() => this._guard('engine unit boost', () => {
             const now = Date.now();
             const wantBoost = hasBoost && this.needsBoost && now - this.boostFesAt >= FRESH_MS;
             const wantIntake = hasIntake && this.needsIntake && now - intakeAsk >= 2000;   // a temperature: every 2 s is plenty
-            if (busy || this.car.data().demo || (!wantBoost && !wantIntake)) return;
+            const wantHv = this.needsHv && now - hvAsk >= (hvMiss >= 3 ? HV_RETRY_MS : HV_EVERY_MS);
+            if (busy || this.car.data().demo || (!wantBoost && !wantIntake && !wantHv)) return;
             busy = true;
             (async () => {
+                if (wantHv) {
+                    hvAsk = now;
+                    const v = await rd.read(HV_SOC);
+                    if (isNum(v)) {
+                        if (hvMiss >= 3 || !isNum(this.hvSoc)) this.log.info('hybrid battery: ' + v.toFixed(1) + ' % from the battery unit (SME 0x07, DDBC)');
+                        this.hvSoc = v; this.hvSocAt = Date.now(); hvMiss = 0;
+                    } else if (++hvMiss === 3) {
+                        this.log.info('hybrid battery: no answer from the battery unit (' + ((rd.raws[rd.key(HV_SOC)] || {}).why || '?') + '); asked once a minute');
+                    }
+                }
                 if (wantIntake) {
                     intakeAsk = now;
                     const t = await rd.value('intake', dme.intake);
@@ -1104,6 +1123,7 @@ class HudApp {
             return this.car.data().demo ? 31 : null;
         }
         if (name === 'rpm' && isNum(this.rpmF)) return this.rpmF;
+        if (name === 'hvSoc') return isNum(this.hvSoc) && Date.now() - this.hvSocAt < HV_STALE_MS ? this.hvSoc : this.car.data().demo ? 64 : null;
         if (name === 'fuel' || name === 'range' || name === 'ambient') {
             // the kit's demo drive has none of these: made-up but steady values while it runs
             const demo = this.car.data().demo;
@@ -1205,6 +1225,7 @@ class HudApp {
                 const kw = Math.max(0, d.torque) * rpm / 9549;
                 return String(Math.round(us ? kw * 1.341 : kw));
             }
+            case 'hvSoc': { const v = this._raw('hvSoc'); return isNum(v) ? String(Math.round(v)) : '--'; }
             case 'fuelPct': { const v = this._raw('fuel'); return isNum(v) ? String(Math.round(v * 100)) : '--'; }
             case 'ambientN': { const v = this._raw('ambient'); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
             case 'torque': { const v = this._raw('torque'); return fix(isNum(v) ? (us ? v * 0.737562 : v) : v, 0); }
@@ -1309,7 +1330,7 @@ class HudApp {
         this.mapShown = this.setting('mapUp');
         if (name === 'off') {
             this._wazeWant();
-            this.problem = null; this.layoutTheme = null; this.needsBoost = false; this.needsIntake = false;
+            this.problem = null; this.layoutTheme = null; this.needsBoost = false; this.needsIntake = false; this.needsHv = false;
             this.log.info('off: nothing drawn, BMW\'s own ' + (this.target === 'panel' ? 'cluster' : 'HUD') + ' shows');
             return;
         }
