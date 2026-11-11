@@ -268,11 +268,18 @@ const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v :
 const PROGRAMS = { S_MINUS_PROGRAMM: 'S', M_MINUS_PROGRAMM: 'M', 1: 'S', 2: 'M' };
 const MODE_NAME = { comfort: 'Comfort', sport: 'Sport', eco: 'Eco Pro' };
 const FRESH_MS = 3000;
+const TZ_AUTO = -9999;           // the "timeZone" setting's Automatic: the head unit's own time zone
 // A plug-in hybrid's high-voltage battery charge: read-only UDS 22 DDBC from its battery unit (SME, 0x07), 0.1 %.
 // The read Redline 2.0 and eDrive use (cauliflowermossgrape/idrive7-apps, MIT; apps/redline/electrical.js).
 // Asked every HV_EVERY_MS only while a shown readout uses it; a car that doesn't answer is asked once a minute.
 // Not checked on a car by us (no hybrid here, Nov 10 2026).
 const HV_SOC = { ecu: 0x07, did: 'DDBC', bytes: 2, at: 0, factor: 0.1, offset: 0, min: 0, max: 100, timeoutMs: 1000 };
+// The fuel level as a % from the engine unit: standard OBD-II PID 2F ("fuel tank level input", A x 100 / 255), as
+// cauliflowermossgrape's Live Data lists it (apps/live_data/std.js, MIT). A % needs no tank size; the car's own fuel
+// signal is litres only. Whether BMW engine units answer it is not known yet (Nov 11 2026): without an answer the
+// gauge falls back to litres / the "tankLitres" setting.
+const FUEL_OBD = { obd: '2F', bytes: 1, at: 0, factor: 100 / 255, offset: 0, min: 0, max: 100, timeoutMs: 1000 };
+const FUEL_EVERY_MS = 10000, FUEL_RETRY_MS = 300000, FUEL_STALE_MS = 60000;
 const HV_EVERY_MS = 5000, HV_RETRY_MS = 60000, HV_STALE_MS = 20000;
 // BMW's speed scale: even steps to 120 mph (180 km/h), then wider ones to 200 mph (320 km/h)
 const SPEED_SCALE = { us: [0, 20, 40, 60, 80, 100, 120, 160, 200], metric: [0, 30, 60, 90, 120, 150, 180, 250, 320] };
@@ -320,7 +327,7 @@ function driveModeOf(raw) {
     if (typeof v !== 'string') return null;
     const u = v.trim().toUpperCase();
     if (u.indexOf('SPORT') === 0) return 'sport';
-    if (u.indexOf('ECO') === 0) return 'eco';
+    if (u.indexOf('ECO') === 0 || u.indexOf('EFFICIEN') === 0) return 'eco';
     if (u.indexOf('COMFORT') === 0 || u.indexOf('ADAPTIVE') === 0) return 'comfort';
     return null;
 }
@@ -382,6 +389,8 @@ class HudApp {
         this.needsIntake = false;        // a shown widget uses the intake temperature
         this.hvSoc = null; this.hvSocAt = 0;  // %, a plug-in hybrid's battery charge (HV_SOC)
         this.needsHv = false;            // a shown widget uses it
+        this.fuelObd = null; this.fuelObdAt = 0;  // %, the fuel level from the engine unit (FUEL_OBD)
+        this.needsFuel = false;          // a shown widget uses the fuel level
         this.boostPeak = null;           // bar, the highest boost since the last 0-60 run started ({{boostPeak}})
         this.runs = new Runs(ctx.dataDir, this.log);   // the 0-60 timer (runs.js)
         this.runs.onStart = () => { this.boostPeak = null; };
@@ -389,6 +398,7 @@ class HudApp {
         this.tripMs = 0;                 // ms moving, for {{avgSpeed}}
         this.tripT = 0;
         this.driveMode = null;           // 'comfort' | 'sport' | 'eco', once the car has said
+        this.driveRaw = null;            // a drive mode value the car sent that we don't know (shown in the status)
         this.driveVariant = null;        // 'plus' (Sport+ / Comfort+ / Eco Pro+), 'individual', or null
         this.carUnits = { press: null, temp: null, psiSeen: false };   // the car's display units, for the TPMS values
         this.program = null;             // 'S' / 'M' from the MDrive gearbox display, else null (D)
@@ -469,6 +479,7 @@ class HudApp {
         this.needsBoost = /boost/.test(j);
         this.needsIntake = /intake/.test(j);
         this.needsHv = /hvSoc/.test(j);
+        this.needsFuel = /fuel/i.test(j);
     }
     /** A sensor's value now, as its slot shows it ('--' without one). */
     sensorValue(sn) { return sn ? this._token(sn.tok) : '--'; }
@@ -590,7 +601,15 @@ class HudApp {
                 statusFESVehicleDynamicSwitchHMI: (v) => {
                     const raw = v && v.actualValueModeDrivingExperience;
                     const m = driveModeOf(raw), variant = m ? driveVariantOf(raw) : null;
-                    if (!m || (m === this.driveMode && variant === this.driveVariant)) return;
+                    if (!m) {
+                        // a value we don't know (M cars: Efficient / Sport / Sport+, issue #8): logged and shown on the
+                        // Settings tab's status line, so a driver can tell us what the car sends
+                        const t = String(JSON.stringify(raw)).slice(0, 60);
+                        if (t !== this.driveRaw) { this.driveRaw = t; this.log.info('drive mode not recognised: ' + t); this._status(); }
+                        return;
+                    }
+                    this.driveRaw = null;
+                    if (m === this.driveMode && variant === this.driveVariant) return;
                     this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
                     this.driveMode = m; this.driveVariant = variant;
                     if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
@@ -681,7 +700,7 @@ class HudApp {
         const dme = this.config.dme;
         const hasBoost = !!(dme && Array.isArray(dme.boost) && dme.boost.length);
         const hasIntake = !!(dme && Array.isArray(dme.intake) && dme.intake.length);
-        let rd = null, busy = false, baro = 101.3, baroAt = 0, intakeAsk = 0, hvAsk = 0, hvMiss = 0;
+        let rd = null, busy = false, baro = 101.3, baroAt = 0, intakeAsk = 0, hvAsk = 0, hvMiss = 0, fuelAsk = 0, fuelMiss = 0;
         try {
             const { Diag } = require('./kit/diag');
             const { DidReader } = require('./kit/dids');
@@ -695,9 +714,20 @@ class HudApp {
             const wantBoost = hasBoost && this.needsBoost && now - this.boostFesAt >= FRESH_MS;
             const wantIntake = hasIntake && this.needsIntake && now - intakeAsk >= 2000;   // a temperature: every 2 s is plenty
             const wantHv = this.needsHv && now - hvAsk >= (hvMiss >= 3 ? HV_RETRY_MS : HV_EVERY_MS);
-            if (busy || this.car.data().demo || (!wantBoost && !wantIntake && !wantHv)) return;
+            const wantFuel = this.needsFuel && now - fuelAsk >= (fuelMiss >= 3 ? FUEL_RETRY_MS : FUEL_EVERY_MS);
+            if (busy || this.car.data().demo || (!wantBoost && !wantIntake && !wantHv && !wantFuel)) return;
             busy = true;
             (async () => {
+                if (wantFuel) {
+                    fuelAsk = now;
+                    const v = await rd.read(FUEL_OBD);
+                    if (isNum(v)) {
+                        if (fuelMiss >= 3 || !isNum(this.fuelObd)) this.log.info('fuel level: ' + v.toFixed(0) + ' % from the engine unit (OBD 2F)');
+                        this.fuelObd = v; this.fuelObdAt = Date.now(); fuelMiss = 0;
+                    } else if (++fuelMiss === 3) {
+                        this.log.info('fuel level: the engine unit gives no OBD 2F (' + ((rd.raws[rd.key(FUEL_OBD)] || {}).why || '?') + '); litres / tank size, asked again every 5 min');
+                    }
+                }
                 if (wantHv) {
                     hvAsk = now;
                     const v = await rd.read(HV_SOC);
@@ -887,7 +917,8 @@ class HudApp {
         }
         if (this.problem) return this.label + ': ' + this.problem;
         const byMode = this.setting('byMode') === true;
-        const mode = byMode ? (this.driveMode ? ' (' + MODE_NAME[this.driveMode] + ')' : ' (drive mode not seen yet)') : '';
+        const mode = byMode ? (this.driveRaw ? ' (drive mode not recognised: the car sends ' + this.driveRaw + ')'
+            : this.driveMode ? ' (' + MODE_NAME[this.driveMode] + ')' : ' (drive mode not seen yet)') : '';
         const what = this.target === 'panel' ? 'cluster' : 'HUD';
         if (this.activeName === 'off' && this.screen.yielded) return this.label + ' off: ' + this.screen.otherName + ' has the screen, pick one here to take it back';
         if (this.activeName === 'off') return this.label + ' off' + mode + ": BMW's own " + what + ' shows';
@@ -1127,7 +1158,10 @@ class HudApp {
         if (name === 'fuel' || name === 'range' || name === 'ambient') {
             // the kit's demo drive has none of these: made-up but steady values while it runs
             const demo = this.car.data().demo;
-            if (name === 'fuel') return isNum(this.fuelL) ? Math.min(1, this.fuelL / (this.config.tankLitres || 65)) : demo ? 0.62 : null;
+            if (name === 'fuel') {
+                if (isNum(this.fuelObd) && Date.now() - this.fuelObdAt < FUEL_STALE_MS) return this.fuelObd / 100;
+                return isNum(this.fuelL) ? Math.min(1, this.fuelL / this._tankLitres()) : demo ? 0.62 : null;
+            }
             if (name === 'range') return isNum(this.rangeKm) ? this.rangeKm : demo ? 368 : null;
             return isNum(this.ambient) ? this.ambient : demo ? 24 : null;
         }
@@ -1296,9 +1330,19 @@ class HudApp {
         }
     }
 
-    /** Local time. config.utcOffsetMinutes overrides the unit's own time zone if that turns out wrong on the car. */
+    /** The fuel tank's size in litres: the "tankLitres" setting, else config.tankLitres (the car sends litres only). */
+    _tankLitres() {
+        const s = this.ctx.settings.item('tankLitres') ? this.setting('tankLitres') : null;
+        return isNum(s) && s > 0 ? s : (this.config.tankLitres || 65);
+    }
+
+    /**
+     * Local time. The head unit's clock runs on UTC (issues #6, #8: the clock 5 to 7 hours ahead), so the "timeZone"
+     * setting (minutes from UTC; TZ_AUTO = the unit's own) wins, then config.utcOffsetMinutes.
+     */
     _now() {
-        const off = this.config.utcOffsetMinutes;
+        const tz = this.ctx.settings.item('timeZone') ? this.setting('timeZone') : TZ_AUTO;
+        const off = isNum(tz) && tz !== TZ_AUTO ? tz : this.config.utcOffsetMinutes;
         if (!isNum(off)) return new Date();
         const d = new Date(Date.now() + off * 60000);
         return { getHours: () => d.getUTCHours(), getMinutes: () => d.getUTCMinutes() };
@@ -1330,7 +1374,7 @@ class HudApp {
         this.mapShown = this.setting('mapUp');
         if (name === 'off') {
             this._wazeWant();
-            this.problem = null; this.layoutTheme = null; this.needsBoost = false; this.needsIntake = false; this.needsHv = false;
+            this.problem = null; this.layoutTheme = null; this.needsBoost = false; this.needsIntake = false; this.needsHv = false; this.needsFuel = false;
             this.log.info('off: nothing drawn, BMW\'s own ' + (this.target === 'panel' ? 'cluster' : 'HUD') + ' shows');
             return;
         }

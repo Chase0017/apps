@@ -89,6 +89,8 @@ class Page {
         if (!s) return '';
         if (s.type === 'bool') return v ? 'On' : 'Off';
         if (s.type === 'number' && WARN_KEYS.indexOf(k) >= 0) return warnText(k, v, this.get('units') === 'us');
+        if (k === 'timeZone') return tzText(v);
+        if (k === 'tankLitres') return fmtInt(v) + ' L';
         if (s.type === 'number') return k === 'shiftBefore' ? (v ? fmtInt(v) + ' rpm before' : 'At the redline') : fmtInt(v) + ' rpm';
         return this.optLabel(k, v);
     }
@@ -663,6 +665,13 @@ function warnText(k, v, us) {
     if (!(v > 0)) return 'Off';
     if (k === 'warnBoost') return us ? Math.round(v * 14.5038) + ' psi' : v.toFixed(1) + ' bar';
     return us ? Math.round(v * 9 / 5 + 32) + ' °F' : v + ' °C';
+}
+/** a "timeZone" setting value (minutes from UTC; -9999 = the head unit's own) as the row shows it */
+function tzText(v) {
+    if (v === -9999 || typeof v !== 'number') return 'Automatic';
+    if (v === 0) return 'UTC';
+    const a = Math.abs(v), h = Math.floor(a / 60), m = a % 60;
+    return 'UTC' + (v < 0 ? '-' : '+') + h + (m ? ':' + (m < 10 ? '0' : '') + m : '');
 }
 function fmtInt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function label(cv, x, y, s) { cv.text(s.toUpperCase(), x, y, 14, C.label, { font: 'bold', spacing: 2.4, literal: true }); }

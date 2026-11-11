@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 11 2026
+
+- **Cluster Themes 0.14.4, HUD Widgets 0.12.4:** two new settings. Time zone (clock): the head unit's clock runs on UTC, so the clock could show 5 to 7 hours off; pick your offset from UTC (for example UTC-5 for New York in winter) and the clock shows your time. Automatic keeps the old behaviour. Fuel: the gauge now asks the engine unit for the fuel level in % (standard OBD), which is right on any car; where the engine unit doesn't answer, it works it out from the litres the car reports and a new Fuel tank size setting (65 L on an X3, 59 L on a 3 Series). On cars with drive modes the apps don't know yet (M cars' Efficient, Sport and Sport+), the Settings page now shows the value the car sends, so it can be added.
+
 ## Nov 10 2026
 
 - **Cluster Themes 0.14.3, HUD Widgets 0.12.3:** a new readout for plug-in hybrids (330e, X5 45e and others): Hybrid battery, the high-voltage battery's charge in %. Pick it for any readout box in Settings > Readouts. It is read from the car's battery unit only while a box shows it, and shows -- on a car without one. Not yet checked on a hybrid; please report how it reads on yours.
