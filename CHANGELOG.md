@@ -2,6 +2,11 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 10 2026
+
+- **Cluster Themes 0.14.1:** fixes the Dyno theme blacking out the cluster. Dyno drew every tile with one large shader over the whole cluster, and on the car that made the cluster's display drop and restart every few seconds, sometimes leaving it black. Each tile is now its own small layer over a plain black background, and Dyno draws steadily. If your cluster is stuck black, lock the car for a couple of minutes and it comes back.
+- **Cluster Themes 0.14.1, HUD Widgets 0.12.1:** the layout check writes each warning once instead of on every reload, so the apps' logs keep their history.
+
 ## Nov 9 2026
 
 - **Cluster Themes 0.14.0, HUD Widgets 0.12.0:** a better G-meter for Rally and Track. The dot turns amber from 0.5 g and red from 0.8 g and leaves a fading trail, an outline shows the most g reached this drive in every direction, and the meter has a bezel with ticks and finer rings. Under it (Rally) or beside it (Track): the g now, as left or right and accelerating or braking, and the best of the drive. A new G-meter tab on the center screen sets the range (0.8 to 2.0 g, 1.2 by default) and the trail length, holds the two swap switches ("swap accel / brake" is now "Brake on top"), shows the bests of the drive with a Reset button, and has a live copy of the meter.
