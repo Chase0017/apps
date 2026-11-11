@@ -4,7 +4,8 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 10 2026
 
-- **Cluster Themes 0.14.1:** fixes the Dyno theme blacking out the cluster. Dyno drew every tile with one large shader over the whole cluster, and on the car that made the cluster's display drop and restart every few seconds, sometimes leaving it black. Each tile is now its own small layer over a plain black background, and Dyno draws steadily. If your cluster is stuck black, lock the car for a couple of minutes and it comes back.
+- **Cluster Themes 0.14.2, HUD Widgets 0.12.2:** Dyno rebuilt so it no longer blacks out the cluster. 0.14.1 split the tiles into smaller layers, but the car still restarted the cluster, so the trouble was the tile drawing itself. The tile frames now use the same drawing as the GT3 theme, which runs fine on the car, and each bar is its own small layer. A tile no longer turns red over its warning limit; its number flashes red instead.
+- **Cluster Themes 0.14.1:** a first try at fixing the Dyno theme blacking out the cluster. Dyno drew every tile with one large shader over the whole cluster, and on the car that made the cluster's display drop and restart every few seconds, sometimes leaving it black. Each tile is now its own small layer over a plain black background, and Dyno draws steadily. If your cluster is stuck black, lock the car for a couple of minutes and it comes back.
 - **Cluster Themes 0.14.1, HUD Widgets 0.12.1:** the layout check writes each warning once instead of on every reload, so the apps' logs keep their history.
 
 ## Nov 9 2026

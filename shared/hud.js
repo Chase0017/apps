@@ -1915,8 +1915,16 @@ class HudApp {
             x.c.uniform(x.ref, 'u_value', [q]);
             x.c.uniform(x.ref, 'u_flash', [this.flash ? 1 : 0]);
         } else if (w.type === 'arc' || w.type === 'meter') {
-            const raw = this._raw(w.signal);
-            const v = isNum(raw) ? Math.min(1, Math.max(0, (raw - w.min) / (w.max - w.min))) : 0;
+            // a meter with a "slot" (Dyno) shows the bar of whatever sensor that readout slot shows (TILE_BAR)
+            let sig = w.signal, mn = w.min, mx = w.max, ab = false;
+            if (w.slot) {
+                const sn = this.slotSensor(this.activeName, w.slot, this.layoutSlots);
+                const bar = sn ? TILE_BAR[sn.id] : null;
+                sig = bar ? bar.raw : null; mn = bar ? bar.min : 0; mx = bar ? (bar.max === 'rpm' ? this._barMax() : bar.max) : 1; ab = !!(bar && bar.abs);
+            }
+            let raw = sig ? this._raw(sig) : null;
+            if (ab && isNum(raw)) raw = Math.abs(raw);
+            const v = isNum(raw) && mx !== mn ? Math.min(1, Math.max(0, (raw - mn) / (mx - mn))) : 0;
             const q = Math.round(v * 200) / 200;
             const pk = w.peak ? this._peakHold(x, q, now, w.peak) : -1;
             const key = q + '|' + pk;
