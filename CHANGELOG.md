@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 11 2026
 
+- **Cluster Themes 0.14.5, HUD Widgets 0.12.5:** a cluster theme and a HUD layout can show at the same time. cluster-render 0.5.1 and newer give the cluster its own screen, so the two apps no longer ask you to turn one off. On older cluster-render, where only one can show, they still take turns as before. Both apps also get new icons (sources in tools/icons/).
 - **Cluster Themes 0.14.4, HUD Widgets 0.12.4:** two new settings. Time zone (clock): the head unit's clock runs on UTC, so the clock could show 5 to 7 hours off; pick your offset from UTC (for example UTC-5 for New York in winter) and the clock shows your time. Automatic keeps the old behaviour. Fuel: the gauge now asks the engine unit for the fuel level in % (standard OBD), which is right on any car; where the engine unit doesn't answer, it works it out from the litres the car reports and a new Fuel tank size setting (65 L on an X3, 59 L on a 3 Series). On cars with drive modes the apps don't know yet (M cars' Efficient, Sport and Sport+), the Settings page now shows the value the car sends, so it can be added.
 
 ## Nov 10 2026

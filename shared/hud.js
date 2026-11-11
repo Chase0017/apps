@@ -332,6 +332,16 @@ function driveModeOf(raw) {
     return null;
 }
 
+/**
+ * The panel's and the HUD's scene ids from cluster-render's status text ("target panel: slot 0x203 scene 0x10004f8
+ * 1920x720: ..."), as numbers in hex; null when either line is missing (an older service, the bench).
+ */
+function sceneIdsOf(text) {
+    const id = (t) => { const m = String(text).match(new RegExp('target ' + t + ':[^\\n]*?scene (0x[0-9a-fA-F]+)')); return m ? '0x' + parseInt(m[1], 16).toString(16) : null; };
+    const panel = id('panel'), hud = id('hud');
+    return panel && hud ? { panel, hud } : null;
+}
+
 function rgb(c) { return [c[0] / 255, c[1] / 255, c[2] / 255]; }
 
 /**
@@ -428,7 +438,11 @@ class HudApp {
         this.mapShown = false;           // "mapUp" when the layout was built
         // the screen shared with the other app (screen.js): stepping aside while the driver gave it to the other one
         this.screen = new Screen(this.target === 'panel' ? 'cluster' : 'hud', ctx.dataDir, this.log,
-            () => !!(this.started && this.activeName && this.activeName !== 'off'), () => this._guard('screen', () => this._rebuild()));
+            () => !!(this.started && this.activeName && this.activeName !== 'off'), () => this._guard('screen', () => this._rebuild()),
+            () => this.scenesApart === true);
+        // cluster-render 0.5.1+ gives the panel its own scene id, so the cluster and the HUD can show at once; null until
+        // its status says (sceneIdsOf), false while they share one (older versions, or a panel fallen back after the guard)
+        this.scenesApart = null;
         this.testAt = null;              // the shift-light test's start (Date.now()), while it runs
         this.nightOn = false;            // the layout was built with the night colours (nightDim)
 
@@ -670,7 +684,17 @@ class HudApp {
             this._statusSoon();
         });
         c.on('budget', (capKb, maxKb, reason) => this.log.info('budget' + tag + ' ' + capKb + '/' + maxKb + ' kb/s (' + reason + ')'));
-        c.on('status', (text) => this.log.info('cluster-render status: ' + text));
+        c.on('status', (text) => {
+            this.log.info('cluster-render status: ' + text);
+            const ids = sceneIdsOf(text);
+            if (!ids) return;
+            const apart = ids.panel !== ids.hud;
+            if (apart === this.scenesApart) return;
+            this.scenesApart = apart;
+            this.log.info(apart ? 'cluster and HUD on their own scenes (panel ' + ids.panel + ', hud ' + ids.hud + '): both apps can show at once'
+                : 'cluster and HUD share scene ' + ids.panel + ': one app at a time');
+            this.screen.beat();
+        });
     }
 
     start() {
@@ -682,6 +706,7 @@ class HudApp {
         this.themeTimer = setInterval(() => this._guard('theme check', () => {
             if (this._themeName() !== this.themeName || this._nightDim() !== this.nightOn) this._rebuild();
             this._status();
+            if (this.client.ready) this.client.status();      // the scene ids (scenesApart) can change: guard, update
         }), 60000);
         this.statusTimer = setInterval(() => this._guard('status', () => this._status()), 5000);
         this._status();
