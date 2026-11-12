@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 12 2026
 
+- **Cluster Themes 0.14.9 (chase0017-apps fork):** Apex's shift lights are 6 a side instead of 9, and half as big again (48 px across instead of 32): two green, a yellow, two red and a blue by the camera.
 - **Cluster Themes 0.14.8 (chase0017-apps fork):** Apex is centred on the screen (the side columns sit the same distance from each edge and the middle boxes are centred), and at the shift point the whole rev bar, the gear and the rpm now flash red together with the shift lights, about 2.5 times a second. New layout option `shiftBlink` (one flash clock for every widget) and shiftbar option `shiftFlash`.
 - **Cluster Themes 0.14.7 (chase0017-apps fork):** new **Apex** theme, a GT race dash for 2022+ cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, and at the shift point every light, the gear and the rpm turn red and the lights flash. Gear (D3 / S3 / M3), drive mode and traction control in the middle; speed, rpm and fuel on the left; boost, water and oil on the right. Traction control shows `--` until its signal is found on the car. Shift lights take two new options, `mirror` and `blink`. The layout check now also warns about the driver camera, BMW's turn arrows and its PARK light (measured from photos of a 2023 X3 M40i). New `tools/layout-preview/`: a browser preview of a cluster layout on Windows (serve the repo root, open `/tools/layout-preview/?layout=apex`).
 
