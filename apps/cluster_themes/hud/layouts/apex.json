@@ -55,7 +55,7 @@
       "default": "timing"
     }
   ],
-  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear number (P R N, else just the number: BMW shows D / S / M itself, bottom right) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; intake (short, top) and oil pressure in the left gap, ignition timing (short, top) and AFR in the right gap. Mirrored about the panel's middle (x 960) with a 16 px gap between all boxes: the right column starts at x 1598, just clear of BMW's black box (x 1406-1597, y 342-419, which this 2022+ cluster draws: it cut AFR off on the car, Nov 12 2026), so both outer columns are 204 wide; the short top boxes end above the black box, AFR starts below it. The gap boxes' frames are a second see-through boxes layer on connection 1 since one boxes layer holds 12.",
+  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear number (P R N, else just the number: BMW shows D / S / M itself, bottom right) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; intake (short, top) and oil pressure in the left gap, ignition timing (short, top) and AFR in the right gap. Mirrored about the panel's middle (x 960) with a 16 px gap between all boxes: the right column starts at x 1598, just clear of BMW's black box (x 1406-1597, y 342-419, which this 2022+ cluster draws: it cut AFR off on the car, Nov 12 2026), so both outer columns are 204 wide; the short top boxes (a slimmer 24 px header, the top row starts at y 245 for them) end above the black box, AFR starts below it. The gap boxes' frames are a second see-through boxes layer on connection 1 since one boxes layer holds 12.",
   "widgets": [
     {
       "id": "frame",
@@ -71,9 +71,9 @@
         {
           "id": "speed_box",
           "x": 118,
-          "y": 255,
+          "y": 245,
           "w": 204,
-          "h": 200,
+          "h": 210,
           "head": 36,
           "radius": 4
         },
@@ -98,9 +98,9 @@
         {
           "id": "gear_box",
           "x": 640,
-          "y": 255,
+          "y": 245,
           "w": 640,
-          "h": 325,
+          "h": 335,
           "head": 36,
           "radius": 4
         },
@@ -125,9 +125,9 @@
         {
           "id": "boost_box",
           "x": 1598,
-          "y": 255,
+          "y": 245,
           "w": 204,
-          "h": 200,
+          "h": 210,
           "head": 36,
           "radius": 4,
           "toggle": "showBoost"
@@ -159,9 +159,9 @@
       "z": 1,
       "conn": 1,
       "x": 338,
-      "y": 255,
+      "y": 245,
       "w": 1244,
-      "h": 325,
+      "h": 335,
       "color": [
         0,
         0,
@@ -172,10 +172,10 @@
         {
           "id": "m9_box",
           "x": 338,
-          "y": 255,
+          "y": 245,
           "w": 286,
-          "h": 84,
-          "head": 0,
+          "h": 95,
+          "head": 24,
           "radius": 4
         },
         {
@@ -190,10 +190,10 @@
         {
           "id": "m10_box",
           "x": 1296,
-          "y": 255,
+          "y": 245,
           "w": 286,
-          "h": 84,
-          "head": 0,
+          "h": 95,
+          "head": 24,
           "radius": 4
         },
         {
@@ -278,7 +278,7 @@
       "type": "text",
       "z": 5,
       "x": 134,
-      "y": 260,
+      "y": 250,
       "w": 176,
       "h": 27,
       "text": "{{slotHead:1}} {{slotUnit:1}}",
@@ -366,7 +366,7 @@
       "type": "text",
       "z": 5,
       "x": 656,
-      "y": 260,
+      "y": 250,
       "w": 610,
       "h": 27,
       "text": "GEAR",
@@ -441,7 +441,7 @@
       "type": "text",
       "z": 5,
       "x": 1614,
-      "y": 260,
+      "y": 250,
       "w": 176,
       "h": 27,
       "text": "{{slotHead:4}} {{slotUnit:4}}",
@@ -609,32 +609,21 @@
       "id": "m9_head",
       "type": "text",
       "z": 5,
-      "x": 352,
-      "y": 265,
-      "w": 110,
+      "x": 354,
+      "y": 244,
+      "w": 258,
       "h": 27,
-      "text": "{{slotHead:9}}",
-      "font": "head"
-    },
-    {
-      "id": "m9_unit",
-      "type": "text",
-      "z": 5,
-      "x": 352,
-      "y": 298,
-      "w": 110,
-      "h": 27,
-      "text": "{{slotUnit:9}}",
+      "text": "{{slotHead:9}} {{slotUnit:9}}",
       "font": "head",
-      "color": "dim"
+      "color": "ink"
     },
     {
       "id": "m9",
       "type": "text",
       "z": 5,
-      "x": 424,
-      "y": 262,
-      "w": 192,
+      "x": 346,
+      "y": 269,
+      "w": 270,
       "h": 70,
       "text": "{{slot:9}}{{slotSuffix:9}}",
       "font": "value",
@@ -648,32 +637,21 @@
       "id": "m10_head",
       "type": "text",
       "z": 5,
-      "x": 1310,
-      "y": 265,
-      "w": 110,
+      "x": 1312,
+      "y": 244,
+      "w": 258,
       "h": 27,
-      "text": "{{slotHead:10}}",
-      "font": "head"
-    },
-    {
-      "id": "m10_unit",
-      "type": "text",
-      "z": 5,
-      "x": 1310,
-      "y": 298,
-      "w": 110,
-      "h": 27,
-      "text": "{{slotUnit:10}}",
+      "text": "{{slotHead:10}} {{slotUnit:10}}",
       "font": "head",
-      "color": "dim"
+      "color": "ink"
     },
     {
       "id": "m10",
       "type": "text",
       "z": 5,
-      "x": 1382,
-      "y": 262,
-      "w": 192,
+      "x": 1304,
+      "y": 269,
+      "w": 270,
       "h": 70,
       "text": "{{slot:10}}{{slotSuffix:10}}",
       "font": "value",
