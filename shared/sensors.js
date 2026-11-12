@@ -25,6 +25,7 @@ const LIST = [
     // from the engine unit over read-only UDS (app.json config.dme.afr / oilPressure): '--' until a candidate answers
     { id: 'afr', name: 'Air-fuel ratio (wideband, gasoline)', cat: 'Engine', head: 'AFR', tok: 'afr', unit: () => '' },
     { id: 'oilP', name: 'Oil pressure', cat: 'Engine', head: 'OIL PRESS', tok: 'oilP', unit: P },
+    { id: 'timing', name: 'Ignition timing (before TDC)', cat: 'Engine', head: 'TIMING', tok: 'timing', unit: () => 'BTDC', suffix: '°' },
     { id: 'oil', name: 'Oil temperature', cat: 'Temps', head: 'OIL', tok: 'oil', unit: T, suffix: '°' },
     { id: 'coolant', name: 'Coolant temperature', cat: 'Temps', head: 'COOLANT', tok: 'coolant', unit: T, suffix: '°' },
     { id: 'intake', name: 'Intake air temperature', cat: 'Temps', head: 'INTAKE', tok: 'intake', unit: T, suffix: '°' },

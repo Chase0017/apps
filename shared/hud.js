@@ -184,7 +184,7 @@
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
  * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
- * {{afr}} (air-fuel ratio, lambda x 14.7, config.dme.afr) {{oilP}} (oil pressure above outside air, config.dme.oilPressure)
+ * {{afr}} (air-fuel ratio, lambda x 14.7, config.dme.afr) {{oilP}} (oil pressure above outside air, config.dme.oilPressure) {{timing}} (ignition timing, degrees before TDC, config.dme.timing: OBD PID 0x0E as M Vitals reads it)
  * {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
  * 0-60 run started) {{avgSpeed}} (average moving speed this drive, from its first minute) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
  * {{runLabel}} (0-60 MPH, 0-100 KM/H): runs.js. {{warm}}: WARMING UP while the oil is under 80 C, then ENGINE WARM.
@@ -422,6 +422,7 @@ class HudApp {
         this.intakeDme = null; this.intakeDmeAt = 0;  // C, intake air from the engine unit (config.dme.intake)
         this.afrDme = null; this.afrDmeAt = 0;        // air-fuel ratio (lambda x 14.7) from the engine unit (config.dme.afr)
         this.oilPDme = null; this.oilPDmeAt = 0;      // bar, oil pressure from the engine unit (config.dme.oilPressure)
+        this.timingDme = null; this.timingDmeAt = 0;  // degrees before TDC, ignition timing (config.dme.timing, as M Vitals reads it)
         this.needsIntake = false;        // a shown widget uses the intake temperature
         this.hvSoc = null; this.hvSocAt = 0;  // %, a plug-in hybrid's battery charge (HV_SOC)
         this.needsHv = false;            // a shown widget uses it
@@ -524,6 +525,7 @@ class HudApp {
         this.needsIntake = /intake/.test(j);
         this.needsAfr = /afr/.test(j);
         this.needsOilP = /oilP/.test(j);
+        this.needsTiming = /timing/.test(j);
         this.needsHv = /hvSoc/.test(j);
         this.needsFuel = /fuel/i.test(j);
     }
@@ -777,7 +779,8 @@ class HudApp {
         const hasIntake = !!(dme && Array.isArray(dme.intake) && dme.intake.length);
         const hasAfr = !!(dme && Array.isArray(dme.afr) && dme.afr.length);
         const hasOilP = !!(dme && Array.isArray(dme.oilPressure) && dme.oilPressure.length);
-        let afrAsk = 0, oilPAsk = 0;
+        const hasTiming = !!(dme && Array.isArray(dme.timing) && dme.timing.length);
+        let afrAsk = 0, oilPAsk = 0, timingAsk = 0;
         let rd = null, busy = false, baro = 101.3, baroAt = 0, intakeAsk = 0, hvAsk = 0, hvMiss = 0, fuelAsk = 0, fuelMiss = 0;
         try {
             // the kit's read-only link: anything but a read (22 / OBD 01) is refused before it leaves the head unit.
@@ -797,7 +800,8 @@ class HudApp {
             const wantFuel = this.needsFuel && now - fuelAsk >= (fuelMiss >= 3 ? FUEL_RETRY_MS : FUEL_EVERY_MS);
             const wantAfr = hasAfr && this.needsAfr && now - afrAsk >= 400;          // mixture moves fast: as often as the loop runs
             const wantOilP = hasOilP && this.needsOilP && now - oilPAsk >= 1000;
-            if (busy || this.car.data().demo || (!wantBoost && !wantIntake && !wantHv && !wantFuel && !wantAfr && !wantOilP)) return;
+            const wantTiming = hasTiming && this.needsTiming && now - timingAsk >= 400;   // moves with load: as often as the loop runs
+            if (busy || this.car.data().demo || (!wantBoost && !wantIntake && !wantHv && !wantFuel && !wantAfr && !wantOilP && !wantTiming)) return;
             busy = true;
             (async () => {
                 if (wantFuel) {
@@ -829,6 +833,11 @@ class HudApp {
                     afrAsk = now;
                     const v = await rd.value('afr', dme.afr);
                     if (isNum(v)) { this.afrDme = v; this.afrDmeAt = Date.now(); }
+                }
+                if (wantTiming) {
+                    timingAsk = now;
+                    const v = await rd.value('timing', dme.timing);
+                    if (isNum(v)) { this.timingDme = v; this.timingDmeAt = Date.now(); }
                 }
                 // the outside air pressure (kPa), for boost and oil pressure: both read absolute
                 if ((wantBoost || wantOilP) && now - baroAt > 60000 && Array.isArray(dme.baro)) {
@@ -1064,8 +1073,8 @@ class HudApp {
         const rd = this.dmeReader, dme = this.config.dme;
         if (!rd || !dme || this.car.data().demo) return '';
         const out = [];
-        [['oil pressure', 'oilP', 'oilPressure'], ['AFR', 'afr', 'afr'], ['intake', 'intake', 'intake']].forEach(([name, raw, list]) => {
-            const need = raw === 'oilP' ? this.needsOilP : raw === 'afr' ? this.needsAfr : this.needsIntake;
+        [['oil pressure', 'oilP', 'oilPressure'], ['AFR', 'afr', 'afr'], ['intake', 'intake', 'intake'], ['timing', 'timing', 'timing']].forEach(([name, raw, list]) => {
+            const need = raw === 'oilP' ? this.needsOilP : raw === 'afr' ? this.needsAfr : raw === 'timing' ? this.needsTiming : this.needsIntake;
             if (!need || isNum(this._raw(raw)) || !Array.isArray(dme[list])) return;
             const tried = dme[list].map((c) => {
                 const r = rd.raws[rd.key(c)];
@@ -1348,6 +1357,7 @@ class HudApp {
             return this.car.data().demo ? 31 : null;
         }
         if (name === 'afr') return isNum(this.afrDme) && Date.now() - this.afrDmeAt < 5000 ? this.afrDme : this.car.data().demo ? 14.7 : null;
+        if (name === 'timing') return isNum(this.timingDme) && Date.now() - this.timingDmeAt < 5000 ? this.timingDme : this.car.data().demo ? 18.5 : null;
         if (name === 'oilP') return isNum(this.oilPDme) && Date.now() - this.oilPDmeAt < 10000 ? this.oilPDme : this.car.data().demo ? 4.1 : null;
         if (name === 'rpm' && isNum(this.rpmF)) return this.rpmF;
         if (name === 'hvSoc') return isNum(this.hvSoc) && Date.now() - this.hvSocAt < HV_STALE_MS ? this.hvSoc : this.car.data().demo ? 64 : null;
@@ -1425,6 +1435,7 @@ class HudApp {
             case 'u:pressure': return us ? 'psi' : 'bar';
             case 'intake': { const v = this._raw('intake'); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
             case 'afr': return fix(this._raw('afr'), 1);
+            case 'timing': return fix(this._raw('timing'), 1);
             case 'oilP': { const v = this._raw('oilP'); return us ? fix(isNum(v) ? v * 14.5038 : v, 0) : fix(v, 1); }
             case 'boostPeak': { const v = this.boostPeak; return us ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
             case 'run': { const v = this.runs.shown(Date.now()); return isNum(v) ? v.toFixed(this.runs.state === 'run' ? 1 : 2) : '0.00'; }

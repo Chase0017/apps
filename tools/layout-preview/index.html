@@ -106,7 +106,7 @@ function text(x, y, w, h, s, f, col, align, xoff) {
 // ---- demo data ----
 const SLOT = { speed: ['SPEED', 'MPH', '', '47'], rpm: ['RPM', '', '', null], fuel: ['FUEL', '%', '', '62'],
   boost: ['BOOST', 'PSI', '', '14.2'], coolant: ['COOLANT', '°F', '°', '199'], oil: ['OIL', '°F', '°', '221'],
-  oilP: ['OIL PRESS', 'PSI', '', '58'], afr: ['AFR', '', '', '14.7'], intake: ['INTAKE', '°F', '°', '97'], torque: ['TORQUE', 'LB-FT', '', '312'] };
+  oilP: ['OIL PRESS', 'PSI', '', '58'], afr: ['AFR', '', '', '14.7'], intake: ['INTAKE', '°F', '°', '97'], torque: ['TORQUE', 'LB-FT', '', '312'], timing: ['TIMING', 'BTDC', '°', '18.5'] };
 function state() {
   const rpm = Number($('rpm').value);
   return { rpm, now: rpm >= SHIFT_AT, gear: $('gear').value, mode: $('mode').value };

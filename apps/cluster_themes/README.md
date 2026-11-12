@@ -11,9 +11,10 @@ to the LCI cluster.
   outside in (green, yellow, red, blue). At the shift point every light, the whole rev bar, the gear and the rpm flash
   red together.
 - **Rev bar** across the top with its scale, under the camera and BMW's turn arrows.
-- **Left:** speed, rpm, fuel. **Right:** boost, coolant, oil temperature.
-- **Beside the gear:** intake air and oil pressure on the left, torque and AFR on the right, above and below the solid
-  black box BMW draws there.
+- **Left:** speed, rpm, fuel. **Right:** boost, coolant, oil temperature. Mirrored about the middle, 16 px between
+  every box.
+- **Beside the gear:** intake air and oil pressure on the left, ignition timing (degrees before TDC, OBD PID 0x0E as
+  M Vitals reads it) and AFR on the right, above and below the solid black box BMW draws there.
 - **Middle:** the gear number (BMW shows D / S / M itself, bottom right), drive mode and traction control
   (DSC ON / DTC / DSC OFF).
 - **Colours:** the gear and rpm turn red while the engine is off; coolant turns yellow above 113 °C (235 °F) and flashes
@@ -26,7 +27,7 @@ bottom. `shared/visible.js` holds those areas and warns about any widget under o
 
 ## Data
 
-Read only, nothing is written to the car. Oil pressure, AFR (lambda x 14.7), intake air and boost come from the engine
+Read only, nothing is written to the car. Oil pressure, AFR (lambda x 14.7), intake air, ignition timing and boost come from the engine
 unit (DME8FF_R identifiers, as cauliflowermossgrape's Live Data reads them, with standard OBD as the fallback);
 traction control from the car's stability control signal. While a readout has no value, the status row on the app's
 page says what each identifier answered.
