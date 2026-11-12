@@ -221,11 +221,13 @@ const LIGHTS = `// Shift lights for a cluster-render "effect" layer (GLSL ES 1.0
 // The last u_tail lights are blue instead (the GT3 dash look; 0 = none). u_round 1 = round lights.
 //   u_size px, u_n count, u_lit count (0..u_n), u_tail count, u_strobe 0/1, u_green/u_yellow/u_red/u_blue rgb,
 //   u_off (alpha when off), u_mirror 0/1 (fill from the right end; the right bank of a split pair).
-//   u_strobe 2 = the dark half of a blink at the shift point (all red at u_off).
+//   u_strobe 2 = the dark half of a blink at the shift point (all red at u_off). u_rise px: the row ramps up
+//   as it fills (the first light u_rise lower than the last; each light is u_size.y - u_rise tall).
 precision mediump float;
 varying vec2 v_uv;
 uniform vec2 u_size;
 uniform float u_mirror;
+uniform float u_rise;
 uniform float u_n;
 uniform float u_lit;
 uniform float u_tail;
@@ -246,16 +248,20 @@ void main() {
     float inSeg = px - idx * slot;
     float segW = slot - gapPx;
     if (inSeg > segW || idx >= u_n) { gl_FragColor = vec4(0.0); return; }
-    vec2 hs = vec2(segW, u_size.y) * 0.5;
+    // u_mirror 1: the row fills from the right end leftward (the right bank of a split pair)
+    float li = u_mirror > 0.5 ? u_n - 1.0 - idx : idx;
+    // u_rise px: the row climbs as it fills: the first light sits u_rise lower than the last (0 = a flat row)
+    float segH = u_size.y - u_rise;
+    py -= u_rise * (1.0 - li / max(1.0, u_n - 1.0));
+    if (py < -1.0 || py > segH + 1.0) { gl_FragColor = vec4(0.0); return; }
+    vec2 hs = vec2(segW, segH) * 0.5;
     vec2 p = vec2(inSeg, py) - hs;
     float r = u_round > 0.5 ? min(hs.x, hs.y) : min(4.0, hs.y);
     if (u_round > 0.5) hs = vec2(r);
-    p = vec2(inSeg, py) - vec2(segW, u_size.y) * 0.5;
+    p = vec2(inSeg, py) - vec2(segW, segH) * 0.5;
     vec2 q = abs(p) - (hs - vec2(r));
     float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
     float cover = clamp(0.5 - d, 0.0, 1.0);
-    // u_mirror 1: the row fills from the right end leftward (the right bank of a split pair)
-    float li = u_mirror > 0.5 ? u_n - 1.0 - idx : idx;
     float nMain = max(1.0, u_n - u_tail);
     float f = li / max(1.0, nMain - 1.0);
     vec3 col = li >= nMain ? u_blue : (f < 0.42 ? u_green : (f < 0.75 ? u_yellow : u_red));

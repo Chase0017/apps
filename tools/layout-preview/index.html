@@ -38,7 +38,7 @@ const out = $('out'), ctx = out.getContext('2d');
 const gl = document.createElement('canvas').getContext('webgl', { premultipliedAlpha: false, preserveDrawingBuffer: true });
 
 async function cjs(url) {        // load a CommonJS file from shared/ (they only use module.exports)
-  const src = await (await fetch(url)).text();
+  const src = await (await fetch(url + '?' + Date.now())).text();
   const module = { exports: {} };
   new Function('module', 'exports', 'require', src)(module, module.exports, () => ({}));
   return module.exports;
@@ -143,7 +143,7 @@ async function draw() {
       const n = w.count || 12, from = Math.min(w.from ?? 3000, SHIFT_AT - 500);
       const lit = Math.floor(Math.min(1, Math.max(0, (st.rpm - from) / (SHIFT_AT - from))) * n);
       const strobe = phase(w.blink === true ? 100 : (w.blink > 0 ? w.blink : lay));
-      effect(w, 'lights', { u_size: [w.w, w.h], u_n: [n], u_tail: [w.tail || 0], u_round: [w.round ? 1 : 0], u_mirror: [w.mirror ? 1 : 0],
+      effect(w, 'lights', { u_size: [w.w, w.h], u_n: [n], u_tail: [w.tail || 0], u_round: [w.round ? 1 : 0], u_mirror: [w.mirror ? 1 : 0], u_rise: [w.rise > 0 ? Math.min(w.h - 4, w.rise) : 0],
         u_green: rgb(TH.LIGHTS.green), u_yellow: rgb(TH.LIGHTS.yellow), u_red: rgb(TH.LIGHTS.red), u_blue: rgb(TH.LIGHTS.blue),
         u_off: [w.off ?? 0.14], u_lit: [lit], u_strobe: [strobe] });
     } else if (w.type === 'shiftbar') {
@@ -188,7 +188,7 @@ function carView() {
 
 async function load() {
   const name = $('layout').value || 'apex';
-  layout = await (await fetch('../../apps/cluster_themes/hud/layouts/' + name + '.json')).json();
+  layout = await (await fetch('../../apps/cluster_themes/hud/layouts/' + name + '.json?' + Date.now())).json();
   theme = TH.THEMES[layout.theme] || TH.THEMES.gt3;
   const warns = VIS.check(layout.widgets.filter((w) => w.toggle !== 'mapUp'), 'panel');
   $('ok').textContent = warns.length ? '' : 'Visibility check: nothing under the camera, arrows, hood, box, belt or PARK light.';

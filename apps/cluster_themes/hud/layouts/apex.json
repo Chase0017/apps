@@ -35,7 +35,7 @@
       "default": "oil"
     }
   ],
-  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear (P R N, D3 / S3 / M3) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light and the PARK light over the top right. No map window. Widget reference: shared/hud.js header.",
+  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear (P R N, D3 / S3 / M3) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light and the PARK light over the top right. No map window. Widget reference: shared/hud.js header.",
   "widgets": [
     {
       "id": "frame",
@@ -137,29 +137,31 @@
       "type": "lights",
       "z": 2,
       "x": 420,
-      "y": 46,
+      "y": 20,
       "w": 320,
-      "h": 50,
+      "h": 78,
       "count": 6,
       "tail": 1,
       "round": true,
       "off": 0.12,
-      "from": 3000
+      "from": 3000,
+      "rise": 30
     },
     {
       "id": "lights_r",
       "type": "lights",
       "z": 2,
       "x": 1200,
-      "y": 46,
+      "y": 20,
       "w": 320,
-      "h": 50,
+      "h": 78,
       "count": 6,
       "tail": 1,
       "round": true,
       "off": 0.12,
       "from": 3000,
-      "mirror": true
+      "mirror": true,
+      "rise": 30
     },
     {
       "id": "revs",

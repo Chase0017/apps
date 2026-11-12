@@ -35,6 +35,21 @@ const HUD_WINDOW = { x: 120, y: 100, w: 560, h: 280 };
  *  its segmented rev band (x ~125..335, y ~245..280, Nov 9 photos). Every layout keeps it clear: [x0, y0, x1, y1]. */
 const HUD_BMW = [120, 235, 350, 380];
 
+/** A ramped row of shift lights ("rise"), one rect per light where the lights shader draws it (shaders.js LIGHTS). */
+function lightRects(w) {
+    const n = w.count || 12, gap = 6, slot = (w.w + gap) / n, segW = slot - gap;
+    const rise = Math.max(0, Math.min(w.h - 4, w.rise)), segH = w.h - rise;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+        const li = w.mirror ? n - 1 - i : i;
+        const top = rise * (1 - li / Math.max(1, n - 1));
+        const d = w.round ? Math.min(segW, segH) : 0;
+        out.push({ id: w.id + '.' + (i + 1), x: w.x + i * slot + (d ? (segW - d) / 2 : 0), y: w.y + top + (d ? (segH - d) / 2 : 0),
+            w: d || segW, h: d || segH });
+    }
+    return out;
+}
+
 /** The first visible y at x on the panel (interpolated along HOOD). */
 function hoodY(x) {
     if (x <= HOOD[0][0]) return HOOD[0][1];
@@ -63,6 +78,7 @@ function check(widgets, target) {
     widgets.forEach((w) => {
         const sub = w && (w.boxes || w.tiles);
         if (Array.isArray(sub)) sub.forEach((b) => { if (b) all.push(Object.assign({}, b, { id: w.id + '.' + b.id })); });
+        else if (w && w.type === 'lights' && w.rise > 0) lightRects(w).forEach((b) => all.push(b));
         else all.push(w);
     });
     all.forEach((w) => {

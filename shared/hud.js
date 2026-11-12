@@ -154,7 +154,8 @@
  * scale: "over" as revbar; "redFrom": true draws the numbers from the redline on in red.
  * lights: "count" (12), "from" rpm (3000) where the first light comes on, "tail" (0): the last "tail" lights are blue
  *   (the GT3 look); "round": true for dots; "mirror": true fills from the right end (the right bank of a split
- *   pair, so two banks close in on the middle); "blink": true (or ms per half period) flashes the row red at the
+ *   pair, so two banks close in on the middle); "rise": px the row climbs as it fills (a ramp; each light is
+ *   h - rise tall); "blink": true (or ms per half period) flashes the row red at the
  *   shift point instead of holding it solid;
  * Layout "shiftBlink": ms per half flash at the shift point, shared by every widget so they flash together: the
  *   lights (unless their own "blink"), a shiftbar with "shiftFlash": true (the whole bar red, then dark) and text
@@ -1829,6 +1830,7 @@ class HudApp {
             c.uniform(ref, 'u_tail', [w.tail || 0]);
             c.uniform(ref, 'u_round', [w.round ? 1 : 0]);
             c.uniform(ref, 'u_mirror', [w.mirror ? 1 : 0]);
+            c.uniform(ref, 'u_rise', [isNum(w.rise) ? Math.max(0, Math.min(w.h - 4, w.rise)) : 0]);
             c.uniform(ref, 'u_green', rgb(LIGHTS.green));
             c.uniform(ref, 'u_yellow', rgb(LIGHTS.yellow));
             c.uniform(ref, 'u_red', rgb(LIGHTS.red));
