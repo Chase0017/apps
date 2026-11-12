@@ -9,7 +9,8 @@ shared/           the cluster-render drawing engine both apps use; an app lists 
                   in app.json "shared" and the build copies them in
 kit/              cauliflowermossgrape's MGU App Kit (MIT, kit/LICENSE): runtime/ ships inside each app,
                   tools/ builds it. One change from upstream: kit/tools/build.py copies the app.json
-                  "shared" files (marked "bimmer-lab addition")
+                  "shared" files (marked "bimmer-lab addition"); and, in the chase0017-apps fork, the newer kit's
+                  autostart (app.json "autostart", impl.background in mgu.js, mguAppStartType in build.py)
 bench/            Mac test bench (fake cluster-render + the kit's stub head unit), see bench/README.md
 tools/            bake_fonts.py re-bakes each app's fonts from tools/fonts-src (needs Pillow)
 scripts/          deploy.sh pushes layout files to the car over SSH
