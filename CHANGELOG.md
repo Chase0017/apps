@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 12 2026
 
+- **Cluster Themes 0.15.1 (chase0017-apps fork):** Apex's side columns move in from the screen edges so BMW's warning lights no longer land on them: the brake, tyre pressure, ABS and traction lights down the left edge, and the steering light on the top right. The layout check now knows those, and BMW's gear letter, too (measured from a 2023 X3 M40i photo with them lit). The preview tool now uses the same smaller-font fallback as the car.
 - **Cluster Themes 0.15.0 (chase0017-apps fork):** Apex's shift lights ramp up toward the camera, each bank climbing 30 px from its outer light to its inner one, which also lifts the inner lights further clear of BMW's turn arrows. New lights option `rise`; the layout check tests each light of a ramped row where it is drawn.
 - **Cluster Themes 0.14.9 (chase0017-apps fork):** Apex's shift lights are 6 a side instead of 9, and half as big again (48 px across instead of 32): two green, a yellow, two red and a blue by the camera.
 - **Cluster Themes 0.14.8 (chase0017-apps fork):** Apex is centred on the screen (the side columns sit the same distance from each edge and the middle boxes are centred), and at the shift point the whole rev bar, the gear and the rpm now flash red together with the shift lights, about 2.5 times a second. New layout option `shiftBlink` (one flash clock for every widget) and shiftbar option `shiftFlash`.

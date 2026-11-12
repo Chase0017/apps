@@ -159,9 +159,16 @@ async function draw() {
         const left = Math.round(Math.max(0, Math.min(w.w - lw, i / (n - 1) * w.w - lw / 2)));
         text(w.x, w.y, w.w, w.h, s, f, (w.redFrom && i * 1000 >= REDLINE ? theme.hot : theme[w.color || 'dim']), 'left', left); }
     } else if (w.type === 'text') {
-      const f = await font(w.font);
+      const s = token(w.text, st, layout.slots || []);
       const col = w.hotWhen === 'now' && phase(lay) === 1 ? theme.hot : (theme[w.color || 'fg'] || theme.fg);
-      text(w.x, w.y, w.w, w.h, token(w.text, st, layout.slots || []), f, col, w.align);
+      // "fit" as hud.js: a smaller font on the same baseline when the text is too wide or has a missing glyph
+      let f = await font(w.font), dy = 0;
+      const fits = (g) => [...s].every((ch) => ch === ' ' || g.glyphs[ch]) && [...s].reduce((a, ch) => a + (g.glyphs[ch] || { advance: 0 }).advance, 0) <= w.w;
+      if (w.fit && !fits(f)) {
+        let g = null; for (const n of w.fit) { const c = await font(n); if (fits(c)) { g = c; break; } }
+        g = g || await font(w.fit[w.fit.length - 1]); dy = f.baseline - g.baseline; f = g;
+      }
+      text(w.x, w.y + dy, w.w, w.h - dy, s, f, col, w.align);
     }
   }
   if ($('car').checked) carView();
@@ -182,6 +189,8 @@ function carView() {
     ctx.lineTo(back, m + 12); ctx.lineTo((x0 + x1) / 2, m + 12); ctx.lineTo((x0 + x1) / 2, y1 - 8); ctx.closePath(); ctx.fill(); });
   const [b0, b1, b2, b3] = VIS.BLACK_BOX; ctx.fillStyle = '#000'; ctx.fillRect(b0, b1, b2 - b0, b3 - b1);
   ctx.fillStyle = '#e33'; const [e0, e1, e2, e3] = VIS.BELT; ctx.fillRect(e0 + 10, e1 + 6, e2 - e0 - 20, e3 - e1 - 12);
+  ctx.strokeStyle = '#fa3'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+  (VIS.WARNINGS || []).forEach(([, [x0, y0, x1, y1]]) => ctx.strokeRect(x0, y0, x1 - x0, y1 - y0)); ctx.setLineDash([]);
   if (VIS.PARK) { ctx.font = 'bold 28px sans-serif'; ctx.fillText('PARK', VIS.PARK[0] + 4, VIS.PARK[3] - 14); }
   ctx.restore();
 }

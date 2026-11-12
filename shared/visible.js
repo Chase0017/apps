@@ -27,7 +27,14 @@ const CAMERA = [750, 0, 1190, 132];
 /** BMW's green turn-signal arrows, drawn over us either side of the camera: [x0, y0, x1, y1] each (same photos). */
 const ARROWS = [[695, 100, 775, 168], [1160, 100, 1235, 168]];
 /** BMW's red PARK (parking brake) light, drawn over us top right (same photos, rough): [x0, y0, x1, y1]. */
-const PARK = [1830, 200, 1910, 252];
+const PARK = [1830, 185, 1910, 252];
+/** More of BMW's warning lights drawn over us (2023 X3 M40i photo with them lit, Nov 12 2026; about +-20 px):
+ *  [name, [x0, y0, x1, y1]]. */
+const WARNINGS = [
+    ['brake, tyre pressure, ABS and traction lights', [0, 220, 112, 462]],
+    ['steering warning light', [1844, 258, 1920, 320]],
+    ['gear letter (P)', [1395, 660, 1440, 705]],
+];
 /** The part of the 800x480 HUD target seen through the windshield: BMW's own height-adjust frame (car photo Nov 7,
  *  measured Nov 9 2026) spans x 117..681, y ~85..395. The Nov 5 grid photo's right edge (x 600) was the phone's angle. */
 const HUD_WINDOW = { x: 120, y: 100, w: 560, h: 280 };
@@ -108,6 +115,10 @@ function check(widgets, target) {
             ARROWS.forEach((a, i) => {
                 if (overlaps(w, a)) out.push(id + ': under BMW\'s ' + (i ? 'right' : 'left') + ' turn arrow x' + a[0] + '-' + a[2] + ' y' + a[1] + '-' + a[3]);
             });
+            WARNINGS.forEach((wn) => {
+                const r = wn[1];
+                if (overlaps(w, r)) out.push(id + ': under BMW\'s ' + wn[0] + ' x' + r[0] + '-' + r[2] + ' y' + r[1] + '-' + r[3]);
+            });
             if (overlaps(w, PARK)) {
                 out.push(id + ': under BMW\'s PARK light x' + PARK[0] + '-' + PARK[2] + ' y' + PARK[1] + '-' + PARK[3]);
             }
@@ -130,4 +141,4 @@ function check(widgets, target) {
     return out;
 }
 
-module.exports = { HOOD, BLACK_BOX, BELT, CAMERA, ARROWS, PARK, HUD_WINDOW, HUD_BMW, hoodY, check };
+module.exports = { HOOD, BLACK_BOX, BELT, CAMERA, ARROWS, PARK, WARNINGS, HUD_WINDOW, HUD_BMW, hoodY, check };
