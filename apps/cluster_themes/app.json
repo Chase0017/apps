@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s, Cruise or Dyno (BMW-coloured readout tiles), with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -1012,7 +1012,7 @@
     },
     "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. utcOffsetMinutes: as in HUD Widgets (the clock box). tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65). engine: the peak crank torque (Nm) and power (kW) the {{torquePct}} and {{powerPct}} tokens count from (an M40i: 500 Nm, 285 kW / 382 hp).",
     "dme": {
-      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car. AFR (config.dme.afr): standard OBD wideband O2 PIDs, lambda x 14.7, unverified on this car.",
+      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car. Oil pressure (config.dme.oilPressure, absolute bar; the outside air pressure from baro is subtracted), AFR (config.dme.afr, lambda x 14.7) and the first intake / baro candidates: BMW's own DME8FF_R identifiers, as cauliflowermossgrape's Live Data reads them; the OBD ones stay as fallbacks.",
       "ecu": 18,
       "boost": [
         {
@@ -1058,6 +1058,16 @@
       ],
       "baro": [
         {
+          "did": "4201",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.00390625,
+          "offset": 0,
+          "min": 50,
+          "max": 115,
+          "note": "IPUMG, ambient pressure, u16 x 0.0390625 hPa -> kPa. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
           "did": "F433",
           "bytes": 1,
           "at": 0,
@@ -1079,6 +1089,16 @@
         }
       ],
       "intake": [
+        {
+          "did": "580F",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.75,
+          "offset": -48,
+          "min": -35,
+          "max": 150,
+          "note": "ITANS, intake air temperature, u8 x 0.75 - 48 C. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
         {
           "did": "F40F",
           "bytes": 1,
@@ -1111,6 +1131,26 @@
         }
       ],
       "afr": [
+        {
+          "did": "5889",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0035888671875,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "ILAG1, lambda actual bank 1, u16 x 1/4096, times 14.7 for gasoline AFR. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "5640",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.003588858,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "LAMBDA_SONDE_IST, lambda from the probe, as 5889. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
         {
           "did": "F434",
           "bytes": 2,
@@ -1152,8 +1192,29 @@
           "note": "OBD service 01 PID 0x24 (same as F424)"
         }
       ],
-      "oilPressure": [],
-      "oilPressureComment": "Oil pressure in bar. Standard OBD has no oil pressure PID; the B58's is a BMW-specific identifier not found yet. Add a candidate here (same shape as boost) once one is known, and the OIL PRESS readout starts showing it."
+      "oilPressure": [
+        {
+          "did": "4436",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "I_DRUCK_OEL_IST_ABS, oil pressure actual (absolute), u16 hPa -> bar. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "586F",
+          "bytes": 2,
+          "at": 0,
+          "signed": true,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "OELDRUCK, oil pressure, s16 hPa -> bar (absolute, as Live Data reads it). DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        }
+      ]
     },
     "tankLitres": 65,
     "engine": {

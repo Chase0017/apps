@@ -180,7 +180,7 @@
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
  * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
- * {{afr}} (air-fuel ratio, lambda x 14.7, config.dme.afr) {{oilP}} (oil pressure, config.dme.oilPressure: none known yet)
+ * {{afr}} (air-fuel ratio, lambda x 14.7, config.dme.afr) {{oilP}} (oil pressure above outside air, config.dme.oilPressure)
  * {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
  * 0-60 run started) {{avgSpeed}} (average moving speed this drive, from its first minute) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
  * {{runLabel}} (0-60 MPH, 0-100 KM/H): runs.js. {{warm}}: WARMING UP while the oil is under 80 C, then ENGINE WARM.
@@ -821,17 +821,18 @@ class HudApp {
                     const v = await rd.value('afr', dme.afr);
                     if (isNum(v)) { this.afrDme = v; this.afrDmeAt = Date.now(); }
                 }
+                // the outside air pressure (kPa), for boost and oil pressure: both read absolute
+                if ((wantBoost || wantOilP) && now - baroAt > 60000 && Array.isArray(dme.baro)) {
+                    baroAt = now;
+                    const bp = await rd.value('baro', dme.baro);
+                    if (isNum(bp)) baro = bp;
+                }
                 if (wantOilP) {
                     oilPAsk = now;
-                    const v = await rd.value('oilPressure', dme.oilPressure);
-                    if (isNum(v)) { this.oilPDme = v; this.oilPDmeAt = Date.now(); }
+                    const v = await rd.value('oilPressure', dme.oilPressure);        // absolute bar
+                    if (isNum(v)) { this.oilPDme = Math.max(0, v - baro / 100); this.oilPDmeAt = Date.now(); }
                 }
                 if (!wantBoost) return;
-                if (now - baroAt > 60000 && Array.isArray(dme.baro)) {
-                    baroAt = now;
-                    const b = await rd.value('baro', dme.baro);
-                    if (isNum(b)) baro = b;
-                }
                 const m = await rd.value('boost', dme.boost);
                 if (isNum(m)) { this.boostDme = (m - baro) / 100; this.boostDmeAt = Date.now(); }
             })().catch((e) => this.log.info('engine unit boost: ' + (e && e.message || e))).then(() => { busy = false; });
