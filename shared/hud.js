@@ -592,6 +592,17 @@ class HudApp {
 
     _setupVehicleData() {
         const extra = {
+            // traction / stability control (cauliflowermossgrape's live_data, MIT, reads the same struct): the ASC and
+            // DSC (FDR) function qualifiers. Which value means DSC ON / DTC / DSC OFF isn't known yet: names are read
+            // as words, numbers show raw on the TRACTION readout until config.dscStates maps them (_dscText)
+            'de.bmw.chassis.VehicleStabilizationManagement': {
+                StabilizationManagement: (v) => {
+                    const fdr = v && v.qualifierFunctionFDR, asc = v && v.qualifierFunctionASC;
+                    const key = String(fdr) + '/' + String(asc);
+                    if (key !== this.dscRaw) { this.dscRaw = key; this.log.info('stability control: FDR ' + fdr + ', ASC ' + asc); }
+                    this.dscFdr = fdr; this.dscAsc = asc; this.dscAt = Date.now();
+                },
+            },
             // fuel and range (cauliflowermossgrape's live_data, MIT): litres (255 = none) and km (4095 = none)
             'de.bmw.infotainment.KombiIF': {
                 statusRangeTankStatus: (v) => {
@@ -1099,6 +1110,23 @@ class HudApp {
         return half && Math.floor(now / half) % 2 === 1 ? 2 : 1;
     }
 
+    /** DSC ON / DTC / DSC OFF from the stability control qualifiers: app.json config.dscStates ("<FDR>/<ASC>" ->
+     *  text) first; enum names by their words (DEAKTIV / PASSIV / OFF / AUS = switched off); else the raw pair
+     *  ("RAW 2/0"), so a photo of each mode tells us the mapping. '--' while the car sends nothing. */
+    _dscText() {
+        if (this.dscAt === undefined || Date.now() - this.dscAt > 30000) return '--';
+        const map = (this.config && this.config.dscStates) || {};
+        const key = String(this.dscFdr) + '/' + String(this.dscAsc);
+        if (typeof map[key] === 'string') return map[key];
+        const off = (x) => typeof x === 'string' && /DEAKTIV|PASSIV|OFF|AUS/i.test(x);
+        if (typeof this.dscFdr === 'string' || typeof this.dscAsc === 'string') {
+            if (off(this.dscFdr)) return 'DSC OFF';
+            if (off(this.dscAsc)) return 'DTC';
+            return 'DSC ON';
+        }
+        return ('RAW ' + key).toUpperCase().replace(/[^A-Z0-9/ .-]/g, ' ').slice(0, 16);
+    }
+
     _barMax(w) { return Math.ceil(this.setting('redline') / 1000) * 1000 + ((w && w.over) || 0); }
 
     /** The shift point now ({ rpm, cold }) and whether the rpm is at or past it. */
@@ -1410,9 +1438,8 @@ class HudApp {
                 const d = this.car.data();
                 return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
             }
-            // traction control (DSC ON / DTC / DSC OFF). No signal for it is known yet: this.dscMode stays null and the
-            // readout shows '--' until the field is found on the car and decoded into it.
-            case 'dsc': return this.dscMode || '--';
+            // traction control (DSC ON / DTC / DSC OFF) from VehicleStabilizationManagement (_dscText)
+            case 'dsc': return this._dscText();
             case 'mode': {
                 if (!this.driveMode) return '';
                 const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';

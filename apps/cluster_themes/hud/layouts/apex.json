@@ -55,7 +55,7 @@
       "default": "torque"
     }
   ],
-  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear (P R N, D3 / S3 / M3) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; oil pressure and intake air in the left gap, AFR and torque in the right gap, their frame a second see-through boxes layer on connection 1 since one boxes layer holds 12. The right gap is where the 2020 car's black gear box sits; this 2022+ cluster draws its gear letter at the bottom instead, so those widgets carry overBlackBox (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light, the PARK and steering lights over the top right and the brake / tyre / ABS / traction lights down the left edge. No map window. Widget reference: shared/hud.js header.",
+  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear number (P R N, else just the number: BMW shows D / S / M itself, bottom right) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; oil pressure and intake air in the left gap, AFR and torque in the right gap, their frame a second see-through boxes layer on connection 1 since one boxes layer holds 12. The right gap is where the 2020 car's black gear box sits; this 2022+ cluster draws its gear letter at the bottom instead, so those widgets carry overBlackBox (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light, the PARK and steering lights over the top right and the brake / tyre / ABS / traction lights down the left edge. No map window. Widget reference: shared/hud.js header.",
   "widgets": [
     {
       "id": "frame",
@@ -393,7 +393,7 @@
       "y": 314,
       "w": 620,
       "h": 222,
-      "text": "{{gear}}",
+      "text": "{{gearnum}}",
       "font": "y_gear",
       "align": "center",
       "hotWhen": "now",
