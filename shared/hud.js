@@ -161,7 +161,9 @@
  *   lights (unless their own "blink"), a shiftbar with "shiftFlash": true (the whole bar red, then dark) and text
  *   with "hotWhen": "now" (red, then its own colour).
  * "off" the alpha of an unlit light (0.14).
- * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself).
+ * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself). Coolant also has a yellow
+ * caution level under the warning ("cautionCoolant"), steady in the "caution" role. Text "offRed": true: shift red
+ * while the engine is off.
  * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
  * "nearColor" (fg) while scale label i is the one nearest the value (BMW lights up the label by the needle).
  *
@@ -248,7 +250,7 @@ const PLACE_KEYS = ['hudX', 'hudY', 'hudScale', 'stripClear'];
 // cluster-render has no clip, so the switch squeezes every layer to 662 / 720 of its height about the panel's top.
 const STRIP_TOP = 662;
 // settings that only change what a text shows (the next tick paints it), no rebuild
-const LIVE_KEYS = ['warnOil', 'warnCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong', 'gRange', 'gTrail'];
+const LIVE_KEYS = ['warnOil', 'warnCoolant', 'cautionCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong', 'gRange', 'gTrail'];
 // g (after cauliflowermossgrape's G-Force, MIT, idea only): a sample over G_BAD is a bad reading, not a corner;
 // the rest are averaged over G_AVG_MS so kerbs and potholes don't throw the dot about
 const G_BAD = 3;
@@ -259,6 +261,8 @@ const G_AMBER = [255, 176, 40];         // the dot between 0.5 and 0.8 g
 const G_SECTORS = 48, G_SPREAD = 3, G_TRAIL = 16;
 // warnings (page.js Alerts): a readout of oil / coolant / boost over its limit flashes in the shift red
 const WARN = { oil: 'warnOil', coolant: 'warnCoolant', boost: 'warnBoost' };
+/** a first, yellow level under the warning: steady in the theme's "caution" colour (C) */
+const CAUTION = { coolant: 'cautionCoolant' };
 const WARN_FLASH_MS = 300;
 // a tile's bar (the Dyno theme's "tiles") per sensor (sensors.js id): the raw reading (hud _raw) between min and
 // max, "z" for a zoned bar (blue, dark blue, red past u_at); a sensor not here has no bar. rpm runs to the bar max.
@@ -1109,14 +1113,27 @@ class HudApp {
     _shiftPointRaw() { return this.score.shiftPoint(this.car.data().oil).rpm; }
 
     /** A readout over its warning limit ("warnOil" C, "warnCoolant" C, "warnBoost" bar; 0 = off): which sensor, else null. */
-    _warning(w) {
+    _warning(w) { return this._overLimit(this._sensorOf(w)); }
+    /** Which of oil / coolant / boost a text shows ({{oil}} ..., or a readout slot), else null. */
+    _sensorOf(w) {
         const t = String(w.text || '');
-        let id = null;
-        if (t.indexOf('{{slot:') >= 0 && w.slot) id = (this.slotSensor(this.activeName, w.slot, this.layoutSlots) || {}).id;
-        else if (t.indexOf('{{oil}}') >= 0) id = 'oil';
-        else if (t.indexOf('{{coolant}}') >= 0) id = 'coolant';
-        else if (t.indexOf('{{boost}}') >= 0) id = 'boost';
-        return this._overLimit(id);
+        if (t.indexOf('{{slot:') >= 0 && w.slot) return (this.slotSensor(this.activeName, w.slot, this.layoutSlots) || {}).id;
+        if (t.indexOf('{{oil}}') >= 0) return 'oil';
+        if (t.indexOf('{{coolant}}') >= 0) return 'coolant';
+        if (t.indexOf('{{boost}}') >= 0) return 'boost';
+        return null;
+    }
+    /** Over its caution level ("cautionCoolant" C; 0 = off) but not its warning limit: shown yellow, steady. */
+    _caution(w) {
+        const id = this._sensorOf(w);
+        if (!CAUTION[id]) return false;
+        const lim = this.setting(CAUTION[id]), v = this._raw(id);
+        return isNum(lim) && lim > 0 && isNum(v) && v > lim;
+    }
+    /** The engine isn't running (the car reports under 200 rpm). Not on demo data, nor before the car has sent any. */
+    _engineOff() {
+        const d = this.car.data();
+        return !d.demo && isNum(d.rpm) && d.rpm < 200;
     }
     /** `id` (oil / coolant / boost) if that reading is over its warning limit now, else null. */
     _overLimit(id) {
@@ -2066,7 +2083,10 @@ class HudApp {
             }
             // over its warning limit: the value flashes in the shift red
             // ("warnFlash": false: not on a tile that turns red itself, the Dyno theme's)
-            if (w.warnFlash !== false && this._warning(w) && Math.floor(now / WARN_FLASH_MS) % 2 === 0) role = 'hot';
+            if (w.warnFlash !== false && this._warning(w)) { if (Math.floor(now / WARN_FLASH_MS) % 2 === 0) role = 'hot'; }
+            else if (w.warnFlash !== false && this._caution(w)) role = 'caution';
+            // "offRed": true shows it in the shift red while the engine is off (the gear and rpm on Apex)
+            if (w.offRed && this._engineOff()) role = 'hot';
             const key = s + '|' + role;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;

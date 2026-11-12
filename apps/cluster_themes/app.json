@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s, Cruise or Dyno (BMW-coloured readout tiles), with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
-  "version": "0.16.4",
+  "version": "0.16.5",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -621,11 +621,28 @@
       ]
     },
     {
-      "key": "warnCoolant",
-      "label": "Coolant temperature warning",
+      "key": "cautionCoolant",
+      "label": "Coolant temperature caution (yellow)",
       "type": "number",
       "unit": "°C",
-      "default": 115,
+      "default": 113,
+      "steps": [
+        0,
+        105,
+        108,
+        110,
+        113,
+        115,
+        118,
+        120
+      ]
+    },
+    {
+      "key": "warnCoolant",
+      "label": "Coolant temperature warning (red)",
+      "type": "number",
+      "unit": "°C",
+      "default": 120,
       "steps": [
         0,
         100,

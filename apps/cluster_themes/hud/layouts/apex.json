@@ -342,7 +342,8 @@
       "fit": [
         "small"
       ],
-      "rate": 50
+      "rate": 50,
+      "offRed": true
     },
     {
       "id": "fuel_head",
@@ -396,7 +397,8 @@
       "font": "y_gear",
       "align": "center",
       "hotWhen": "now",
-      "rate": 50
+      "rate": 50,
+      "offRed": true
     },
     {
       "id": "mode_head",

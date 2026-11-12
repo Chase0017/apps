@@ -660,7 +660,7 @@ class Page {
 
 /* ---------- small pieces ---------- */
 const LOOK_KEYS = ['hudLayout', 'inComfort', 'inSport', 'inEco'];
-const WARN_KEYS = ['warnOil', 'warnCoolant', 'warnBoost'];
+const WARN_KEYS = ['warnOil', 'cautionCoolant', 'warnCoolant', 'warnBoost'];
 /** A warning limit as the page shows it, in the display units: "266 °F", "1.2 bar", "Off". */
 function warnText(k, v, us) {
     if (!(v > 0)) return 'Off';
