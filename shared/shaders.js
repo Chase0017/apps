@@ -272,6 +272,111 @@ void main() {
 }
 `;
 
+const MDIAL = `// A BMW M style round gauge (the F90 / F97 M cluster) for a cluster-render "effect" layer (GLSL ES 1.00): a charcoal
+// face lighter at the centre (u_face2 -> u_face), a thin bezel (u_ringW px, u_ring at the top to u_ring2 at the bottom,
+// the shift red while u_hot), bold ticks round u_sweep from u_start (radians, clockwise from 12 o'clock) with the ones
+// from u_redFrom (0..1; above 1: none) and a band under them in u_red, a thin inner ring at u_inner x the radius lit up
+// to the value, a hollow ring hub (u_capR px, u_cap at the lower right to u_tip at the upper left) and a slim needle red
+// at the hub (u_needle) to a white tip (u_tip) with a short counterweight. The numbers are text widgets round it.
+// u_value 0..1 of the sweep. v_uv (0,0) is the top-left; the gauge fills the smaller side of the layer.
+precision mediump float;
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform float u_value;
+uniform float u_start;
+uniform float u_sweep;
+uniform float u_ticks;
+uniform float u_minor;
+uniform float u_redFrom;
+uniform float u_ringW;
+uniform vec3 u_ring;
+uniform vec3 u_ring2;
+uniform vec3 u_tick;
+uniform vec3 u_needle;
+uniform vec3 u_red;
+uniform vec3 u_face;
+uniform vec3 u_face2;
+uniform vec3 u_cap;
+uniform vec3 u_tip;
+uniform float u_capR;
+uniform float u_inner;
+uniform float u_hot;
+
+const float PI = 3.14159265359;
+
+float seg(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+void main() {
+    vec2 p = vec2(v_uv.x - 0.5, 0.5 - v_uv.y) * u_size;   // px from the centre, +y up
+    float R = min(u_size.x, u_size.y) * 0.5 - 1.0;
+    float d = length(p);
+    if (d > R + 0.5) { gl_FragColor = vec4(0.0); return; }
+    float edge = clamp(R + 0.5 - d, 0.0, 1.0);
+    vec3 col = mix(u_face2, u_face, smoothstep(0.0, R, d));
+    // the bezel
+    float bw = u_ringW > 0.0 ? u_ringW : 6.0;
+    if (d > R - bw) {
+        float t = clamp(0.5 - p.y / (2.0 * R), 0.0, 1.0);
+        vec3 ring = mix(u_ring, u_ring2, t);
+        if (u_hot > 0.5) ring = mix(ring, u_red, 0.75);
+        gl_FragColor = vec4(ring, edge);
+        return;
+    }
+    float a = atan(p.x, p.y);
+    float rel = mod(a - u_start + 4.0 * PI, 2.0 * PI);
+    float inSweep = rel <= u_sweep + 0.01 ? 1.0 : 0.0;
+    float frac = rel / u_sweep;
+    float tr = R - bw - 3.0;                         // the ticks' outer end
+    // the red zone: a band along the ticks' outer end
+    if (inSweep > 0.5 && u_redFrom <= 1.0 && frac >= u_redFrom && d < tr && d > tr - 7.0) col = u_red;
+    // ticks
+    float steps = u_ticks * u_minor;
+    float k = floor(frac * steps + 0.5);
+    if (k >= 0.0 && k <= steps && inSweep > 0.5) {
+        float ta = u_start + k / steps * u_sweep;
+        vec2 dir = vec2(sin(ta), cos(ta));
+        bool major = mod(k, u_minor) < 0.5;
+        float len = major ? 34.0 : 17.0, wid = major ? 2.8 : 1.5;
+        float dd = seg(p, dir * (tr - len), dir * tr) - wid;
+        float c = clamp(0.5 - dd, 0.0, 1.0);
+        vec3 tc = u_redFrom <= 1.0 && k / steps >= u_redFrom - 0.001 ? u_red : u_tick;
+        col = mix(col, tc, c);
+    }
+    // the inner ring, lit up to the value
+    float ri = R * (u_inner > 0.0 ? u_inner : 0.6);
+    if (inSweep > 0.5) {
+        float c = clamp(2.0 - abs(d - ri), 0.0, 1.0);
+        vec3 ic = frac <= clamp(u_value, 0.0, 1.0) ? mix(u_tick, u_ring2, 0.25) : vec3(0.24, 0.24, 0.26);
+        col = mix(col, ic, c);
+    }
+    // the hollow hub ring
+    float cr = u_capR > 1.0 ? u_capR : 34.0;
+    float hub = clamp(4.5 - abs(d - (cr - 5.0)), 0.0, 1.0);
+    if (hub > 0.0) {
+        float g = clamp(0.5 + dot(p / max(d, 1.0), vec2(-0.7071, 0.7071)) * 0.6, 0.0, 1.0);
+        col = mix(col, mix(u_cap, u_tip, g), hub);
+    }
+    // the needle over everything: red at the hub to a white tip, lighter edges, a short counterweight
+    float na = u_start + clamp(u_value, 0.0, 1.0) * u_sweep;
+    vec2 nd = vec2(sin(na), cos(na));
+    vec2 q = vec2(dot(p, vec2(nd.y, -nd.x)), dot(p, nd));
+    float L = tr - 8.0, tail = 0.26 * L;
+    if (q.y > -tail && q.y < L) {
+        float t = clamp(q.y / L, 0.0, 1.0);
+        float hw = q.y < 0.0 ? 3.6 : mix(3.8, 1.3, t);
+        float c = clamp(hw + 0.5 - abs(q.x), 0.0, 1.0);
+        vec3 nc = mix(u_needle, u_tip, smoothstep(0.45, 1.0, t));
+        nc = mix(nc, u_tip, clamp(abs(q.x) - (hw - 1.4), 0.0, 1.0) * 0.55);
+        col = mix(col, nc, c);
+    }
+    gl_FragColor = vec4(col, edge);
+}
+`;
+
 const FILL = `// Solid fill for a cluster-render "effect" layer (GLSL ES 1.00): u_color everywhere, except a
 // see-through rounded hole u_hole (x, y, w, h px from the layer's top left; w = 0: no hole), radius u_holeR.
 // On the cluster, an opaque fill hides BMW's own gauges under it; the hole lets the map window show.
@@ -1296,4 +1401,4 @@ void main() {
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, dial: DIAL, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES };
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, dial: DIAL, mdial: MDIAL, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES };

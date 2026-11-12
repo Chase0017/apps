@@ -121,7 +121,7 @@ function token(t, st, slots) {
     }
     return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'DSC ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
       speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: '221',
-      'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT', ready: st.rpm >= 200 ? 'READY' : '' }[k] ?? '{{' + k + '}}';
+      'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT', 'setupT:engine': 'Sport Plus', 'setupT:chassis': 'Comfort', 'setupT:steering': 'Sport Plus', ready: st.rpm >= 200 ? 'READY' : '' }[k] ?? '{{' + k + '}}';
   });
 }
 
@@ -159,10 +159,10 @@ async function draw() {
         u_track: rgba(theme.track), u_flash: [flash], u_value: [Math.round(v * segs * 2) / (segs * 2)] });
     } else if (w.type === 'fill') {
       const c = role(w.color, 'bg'); ctx.fillStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + ((c[3] ?? 255) / 255) + ')'; ctx.fillRect(w.x, w.y, w.w, w.h);
-    } else if (w.type === 'dial') {
+    } else if (w.type === 'dial' || w.type === 'mdial') {
       const rpmDial = w.measure === 'rpm', mx = rpmDial ? (w.max || 8000) : (w.maxUs || 160), ticks = rpmDial ? mx / 1000 : (w.ticksUs || 8);
       const v = rpmDial ? st.rpm / mx : 47 / mx;
-      effect(w, 'dial', { u_size: [w.w, w.h], u_value: [Math.min(1, v)], u_start: [(w.start ?? 225) * Math.PI / 180], u_sweep: [(w.sweep ?? 270) * Math.PI / 180],
+      effect(w, w.type, { u_face2: rgb(role(w.face2 || w.face, 'bg')), u_tip: rgb(role(w.tip, 'fg')), u_inner: [w.inner ?? 0.6], u_size: [w.w, w.h], u_value: [Math.min(1, v)], u_start: [(w.start ?? 225) * Math.PI / 180], u_sweep: [(w.sweep ?? 270) * Math.PI / 180],
         u_ticks: [ticks], u_minor: [w.minor || 4], u_redFrom: [rpmDial ? Math.min(REDLINE, mx - 500) / mx : 2], u_ringW: [w.ringW || 14],
         u_ring: rgb(role(w.ring, 'line')), u_ring2: rgb(role(w.ring2, 'dim')), u_tick: rgb(role(w.tick, 'fg')), u_needle: rgb(role(w.needle, 'hot')),
         u_red: rgb(theme.hot), u_face: rgb(role(w.face, 'bg')), u_cap: rgb(role(w.cap || w.ring2, 'dim')), u_capR: [w.capR ?? 20], u_hot: [rpmDial && st.now ? 1 : 0] });
@@ -170,6 +170,9 @@ async function draw() {
       const demo = { fuel: 0.62, oil: 105 }[w.signal] ?? 0, v = (demo - (w.min || 0)) / ((w.max || 1) - (w.min || 0));
       effect(w, 'arc', { u_size: [w.w, w.h], u_value: [Math.max(0, Math.min(1, v))], u_peak: [-1], u_peakC: rgb(theme.fg), u_color: rgb(role(w.color, 'arc')),
         u_track: rgba(theme.track), u_width: [w.width || 7], u_start: [(w.start ?? 225) * Math.PI / 180], u_sweep: [(w.sweep ?? 270) * Math.PI / 180] });
+    } else if (w.type === 'box') {
+      effect(w, 'box', { u_size: [w.w, w.h], u_fill: rgba(role(w.fill, 'panel')), u_line: rgba(role(w.line, 'line')), u_head: rgba(role(w.headColor, 'head')),
+        u_headH: [w.head || 0], u_border: [w.border ?? 2], u_radius: [w.radius || 0] });
     } else if (w.type === 'stripe') {
       [[79, 180, 255], [47, 91, 216], [232, 38, 45]].forEach((c, i) => { ctx.fillStyle = 'rgb(' + c + ')'; ctx.fillRect(w.x + i * w.w / 3, w.y, w.w / 3, w.h); });
     } else if (w.type === 'icon') {

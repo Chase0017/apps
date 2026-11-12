@@ -107,8 +107,9 @@ const THEMES = {
         rev: { from: [240, 242, 245], to: [240, 242, 245] },
         bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [200, 204, 210, 255], head: [226, 228, 232, 255],
         ink: [12, 12, 14, 255], accent: [226, 30, 36, 255], well: [0, 0, 0, 255],
-        chrome: [214, 218, 224, 255], chrome2: [84, 88, 96, 255], needle: [232, 28, 34, 255], face: [0, 0, 0, 255],   // pure black: BMW's black box over the rev hub blends in
-        capRing: [232, 28, 34, 255],
+        chrome: [206, 210, 216, 255], chrome2: [70, 72, 78, 255], needle: [226, 30, 40, 255],
+        // even near-black faces: BMW's black box over the rev hub disappears into it (a lighter centre showed it)
+        face: [4, 4, 5, 255], face2: [8, 8, 9, 255], capRing: [226, 30, 40, 255], strip: [16, 16, 18, 255], stripLine: [96, 98, 104, 255],
     },
     // Track (layout track.json): the race-dash frame of GT3 with amber headers, tyres and temps round a big gear.
     track: {
