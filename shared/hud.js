@@ -156,6 +156,9 @@
  *   (the GT3 look); "round": true for dots; "mirror": true fills from the right end (the right bank of a split
  *   pair, so two banks close in on the middle); "blink": true (or ms per half period) flashes the row red at the
  *   shift point instead of holding it solid;
+ * Layout "shiftBlink": ms per half flash at the shift point, shared by every widget so they flash together: the
+ *   lights (unless their own "blink"), a shiftbar with "shiftFlash": true (the whole bar red, then dark) and text
+ *   with "hotWhen": "now" (red, then its own colour).
  * "off" the alpha of an unlit light (0.14).
  * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself).
  * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
@@ -440,6 +443,7 @@ class HudApp {
         this.slotPicks = {};             // { layout: { slot id: sensor id } }: the readout slots' picks (page.js Readouts)
         try { this.slotPicks = JSON.parse(fs.readFileSync(this.slotsFile, 'utf8')) || {}; } catch (e) { /* none yet */ }
         this.layoutSlots = [];           // the active layout's "slots"
+        this.shiftBlinkMs = 0;           // the active layout's "shiftBlink" (ms per half flash at the shift point; 0 = solid)
         this.placed = [];                // every layer made for the layout: { c, ref, x, y, w, h } (where the layout puts it)
         this.mapLayout = false;          // the active layout has a map window (a widget with holeWhen "mapUp")
         // the Waze map inside the theme (Cluster Themes, config.waze; waze.js): "mapUp" is on while it shows
@@ -1064,6 +1068,14 @@ class HudApp {
         return isNum(lim) && lim > 0 && isNum(v) && v > lim ? id : null;
     }
 
+    /** Where the shift-point flash is: 0 = under the shift point, 1 = lit (red), 2 = the dark half. half: ms per
+     *  half period, 0 = no flash (lit while at the shift point). Every widget asks with the same clock, so they flash
+     *  together. */
+    _shiftPhase(sp, now, half) {
+        if (!sp.now) return 0;
+        return half && Math.floor(now / half) % 2 === 1 ? 2 : 1;
+    }
+
     _barMax(w) { return Math.ceil(this.setting('redline') / 1000) * 1000 + ((w && w.over) || 0); }
 
     /** The shift point now ({ rpm, cold }) and whether the rpm is at or past it. */
@@ -1474,6 +1486,7 @@ class HudApp {
         this.mapLayout = layout.widgets.some((w) => w.holeWhen === 'mapUp');
         this._wazeWant();
         this.layoutSlots = layout.slots || [];
+        this.shiftBlinkMs = isNum(layout.shiftBlink) && layout.shiftBlink > 0 ? layout.shiftBlink : 0;
         this.layoutTheme = layout.theme && THEMES[layout.theme] ? layout.theme : null;
         this.themeName = this._themeName();
         this.theme = THEMES[this.themeName] || THEMES.classic;
@@ -1963,7 +1976,7 @@ class HudApp {
             if ((w.hotWhen || w.coldWhen) && shiftish) {
                 const sp = this._shift();
                 if (w.coldWhen && sp[w.coldWhen]) role = VERDICT.COLD;
-                if (w.hotWhen && sp[w.hotWhen]) role = 'hot';
+                if (w.hotWhen && sp[w.hotWhen] && !(w.hotWhen === 'now' && this._shiftPhase(sp, now, this.shiftBlinkMs) === 2)) role = 'hot';
             }
             // over its warning limit: the value flashes in the shift red
             // ("warnFlash": false: not on a tile that turns red itself, the Dyno theme's)
@@ -2060,11 +2073,14 @@ class HudApp {
             const segs = w.segments || (w.type === 'revarc' ? 30 : 40);
             const v = isNum(rpm) ? Math.min(1, Math.max(0, rpm / this._barMax())) : 0;
             const q = Math.round(v * segs * 2) / (segs * 2);        // only resend on half-segment steps
-            const key = q + (this.flash ? 'f' : '');
+            // "shiftFlash": at the shift point the whole bar flashes red with the shift lights (layout "shiftBlink")
+            const ph = w.shiftFlash ? this._shiftPhase(this._shift(), now, this.shiftBlinkMs) : 0;
+            const fl = ph === 1 ? 2 : ph === 2 ? 3 : (this.flash ? 1 : 0);
+            const key = q + '|' + fl;
             if (!force && key === x.last) return;
             x.last = key;
             x.c.uniform(x.ref, 'u_value', [q]);
-            x.c.uniform(x.ref, 'u_flash', [this.flash ? 1 : 0]);
+            x.c.uniform(x.ref, 'u_flash', [fl]);
         } else if (w.type === 'arc' || w.type === 'meter') {
             // a meter with a "slot" (Dyno) shows the bar of whatever sensor that readout slot shows (TILE_BAR)
             let sig = w.signal, mn = w.min, mx = w.max, ab = false;
@@ -2158,8 +2174,8 @@ class HudApp {
             const from = Math.min(isNum(w.from) ? w.from : 3000, sp.rpm - 500);
             const lit = isNum(rpm) ? Math.floor(Math.min(1, Math.max(0, (rpm - from) / (sp.rpm - from))) * n) : 0;
             // "blink": ms per half period (true = 100, 5 Hz; the tick is 50 ms); at the shift point the row flashes red
-            const half = w.blink === true ? 100 : (isNum(w.blink) && w.blink > 0 ? w.blink : 0);
-            const strobe = !sp.now ? 0 : (half && Math.floor(now / half) % 2 === 1 ? 2 : 1);
+            const half = w.blink === true ? 100 : (isNum(w.blink) && w.blink > 0 ? w.blink : this.shiftBlinkMs);
+            const strobe = this._shiftPhase(sp, now, half);
             const key = lit + '|' + strobe;
             if (!force && key === x.last) return;
             x.last = key;

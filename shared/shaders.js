@@ -12,7 +12,8 @@ const SHIFTBAR = `// Segmented shift bar for a cluster-render "effect" layer (GL
 //   u_low, u_mid, u_high   zone colours (rgb 0..1)
 //   u_midAt, u_highAt      where the mid and high zones start (0..1 of the bar)
 //   u_track   unlit segment colour (rgba, straight alpha)
-//   u_flash   1 = at the redline: every lit segment shows the high colour
+//   u_flash   1 = at the redline: every lit segment shows the high colour; 2 = shift flash, every segment
+//             red; 3 = shift flash, dark half (every segment unlit)
 // Output is straight alpha. Whether cluster-render blends effect layers as
 // straight or premultiplied alpha is not confirmed yet: check the edges on the car.
 precision mediump float;
@@ -49,6 +50,8 @@ void main() {
     float pos = (idx + 0.5) / u_segs;               // segment centre, 0..1
     bool lit = pos <= u_value;
     vec3 c = pos >= u_highAt ? u_high : (pos >= u_midAt ? u_mid : u_low);
+    if (u_flash > 2.5) { gl_FragColor = vec4(u_track.rgb, u_track.a * cover); return; }   // shift flash, dark half
+    if (u_flash > 1.5) { gl_FragColor = vec4(u_high, cover); return; }                     // shift flash: all red
     if (u_flash > 0.5) c = u_high;
     gl_FragColor = lit ? vec4(c, cover) : vec4(u_track.rgb, u_track.a * cover);
 }
