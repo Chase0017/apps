@@ -98,9 +98,6 @@
  *             widest advance and h = its cell height, logged at creation), and a new value is one uniform
  *             message of glyph codes. "text" tokens as text, "font", "color" role, "align" left | right | center.
  *             Up to 32 cells; only the characters the font has.
- *   mdial     effect layer (shaders.js mdial): the dial's options in BMW's M cluster style (thin bezel, bold ticks, an inner
- *             ring lit to the value, a hollow ring hub, a red-to-white needle); also "face2" (the face's centre), "tip" (the
- *             needle tip and hub highlight) roles and "inner" (the inner ring's radius, 0..1 of the gauge's; 0.6)
  *   dial      effect layer (shaders.js dial): a classic round gauge, the Roadster's: "measure" speed | rpm | signal ("signal",
  *             "max", "ticks"); speed reads 0..160 mph / 0..240 km/h (DIAL_SPEED, labels {{dial:speed:<i>}}), rpm 0.."max"
  *             (8000) with the red band from the redline (_redMarks) and the ring in the shift red at the shift point;
@@ -935,10 +932,17 @@ class HudApp {
     /** The layout the driver picked for now, before anything that makes us step aside. */
     _chosenName() {
         if (this.setting('byMode') === true && this.driveMode && MODE_KEY[this.driveMode]) {
-            const v = this.setting(MODE_KEY[this.driveMode]);
+            const v = this._pick(MODE_KEY[this.driveMode]);
             if (v) return v;
         }
-        return this.setting('hudLayout');
+        return this._pick('hudLayout');
+    }
+    /** A layout setting's value, or its default when the saved one isn't among its options any more (a theme that
+     *  was removed, e.g. the X3 M one, Nov 12 2026): BMW's own for a drive mode, the default theme otherwise. */
+    _pick(key) {
+        const v = this.setting(key), it = this.ctx.settings.item ? this.ctx.settings.item(key) : null;
+        if (it && Array.isArray(it.options) && v && !it.options.some((o) => o[0] === v)) return it.default;
+        return v;
     }
 
     /**
@@ -1499,7 +1503,6 @@ class HudApp {
             }
             // traction control (DSC ON / DTC / DSC OFF) from VehicleStabilizationManagement (_dscText)
             case 'dsc': return this._dscText();
-            case 'ready': { const d = this.car.data(); return isNum(d.rpm) && d.rpm >= 200 ? 'READY' : ''; }   // engine running
             case 'mode': {
                 if (!this.driveMode) return '';
                 const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
@@ -1522,8 +1525,6 @@ class HudApp {
                 if (tok.indexOf('spd:') === 0) { const v = SPEED_SCALE[us ? 'us' : 'metric'][Number(tok.slice(4))]; return v === undefined ? '' : String(v); }   // speed scale labels
                 if (tok.indexOf('temp:') === 0) { const c = Number(tok.slice(5)); return isNum(c) ? String(us ? Math.round((c * 9 / 5 + 32) / 10) * 10 : Math.round(c)) : '--'; }   // gauge labels: °F to the 10
                 if (tok.indexOf('setup:') === 0) { const s = this._setup(); return s ? s[tok.slice(6)] || '' : '--'; }
-                // the same in BMW's own case: "Sport Plus", "Comfort"
-                if (tok.indexOf('setupT:') === 0) { const s = this._setup(); const v = s ? s[tok.slice(7)] || '' : '--'; return v.toLowerCase().replace(/[a-z]/g, (c) => c.toUpperCase()); }
                 if (tok.indexOf('signal:') === 0) { const v = this._raw(tok.slice(7)); return isNum(v) ? (Math.round(v * 10) / 10).toString() : '--'; }
                 return '{{' + tok + '}}';
         }
@@ -1850,7 +1851,7 @@ class HudApp {
             c.uniform(ref, 'u_highAt', [(red - 500) / max]);
             c.uniform(ref, 'u_track', rgba(t.track));
             c.uniform(ref, 'u_flash', [0]);
-        } else if (w.type === 'dial' || w.type === 'mdial') {
+        } else if (w.type === 'dial') {
             const D = this._dialScale(w);
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_start', [(w.start === undefined ? 225 : w.start) * Math.PI / 180]);
@@ -1867,11 +1868,6 @@ class HudApp {
             c.uniform(ref, 'u_face', rgb(color(t, w.face || 'bg')));
             c.uniform(ref, 'u_cap', rgb(color(t, w.cap || w.ring2 || 'dim')));
             c.uniform(ref, 'u_capR', [isNum(w.capR) ? w.capR : 20]);
-            if (w.type === 'mdial') {
-                c.uniform(ref, 'u_face2', rgb(color(t, w.face2 || w.face || 'bg')));
-                c.uniform(ref, 'u_tip', rgb(color(t, w.tip || 'fg')));
-                c.uniform(ref, 'u_inner', [isNum(w.inner) ? w.inner : 0.6]);
-            }
             c.uniform(ref, 'u_hot', [0]);
         } else if (w.type === 'gmeter') {
             const L = color(t, w.line || 'dim');
@@ -2226,7 +2222,7 @@ class HudApp {
             x.last = key;
             x.c.uniform(x.ref, 'u_value', [q]);
             if (w.peak) x.c.uniform(x.ref, 'u_peak', [pk > q ? pk : -1]);
-        } else if (w.type === 'dial' || w.type === 'mdial') {
+        } else if (w.type === 'dial') {
             const D = this._dialScale(w), us = this.setting('units') === 'us';
             let raw = this._raw(w.measure === 'rpm' ? 'rpm' : w.measure === 'speed' ? 'speed' : w.signal);
             if (w.measure === 'speed' && isNum(raw) && us) raw *= 0.621371;

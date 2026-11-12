@@ -48,7 +48,7 @@ const HUD_BMW = [120, 235, 350, 380];
  *  overBlackBox. */
 function roundRects(w) {
     const cx = w.x + w.w / 2, cy = w.y + w.h / 2, half = Math.min(w.w, w.h) / 2;
-    const arc = w.type === 'arc', width = arc ? (w.width || 7) : 4;   // dial and mdial: the whole circle
+    const arc = w.type === 'arc', width = arc ? (w.width || 7) : 4;   // a dial: the whole circle
     const r = arc ? half - width / 2 - 1 : half - 2;
     const start = arc ? (w.start === undefined ? 225 : w.start) : 0, sweep = arc ? (w.sweep === undefined ? 270 : w.sweep) : 360;
     const n = Math.max(8, Math.ceil(Math.abs(sweep) / 4)), out = [];
@@ -104,7 +104,7 @@ function check(widgets, target) {
         const sub = w && (w.boxes || w.tiles);
         if (Array.isArray(sub)) sub.forEach((b) => { if (b) all.push(Object.assign({ overBlackBox: w.overBlackBox }, b, { id: w.id + '.' + b.id })); });
         else if (w && w.type === 'lights' && w.rise > 0) lightRects(w).forEach((b) => all.push(b));
-        else if (w && (w.type === 'dial' || w.type === 'mdial' || w.type === 'arc')) roundRects(w).forEach((b) => all.push(b));
+        else if (w && (w.type === 'dial' || w.type === 'arc')) roundRects(w).forEach((b) => all.push(b));
         else if (w && w.type === 'fill' && !w.hole && w.x <= 0 && w.y <= 0 && w.w >= 1920 && w.h >= 720) return;   // the background: black under BMW's own
         else all.push(w);
     });

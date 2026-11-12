@@ -121,7 +121,7 @@ function token(t, st, slots) {
     }
     return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'DSC ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
       speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: '221',
-      'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT', 'setupT:engine': 'Sport Plus', 'setupT:chassis': 'Comfort', 'setupT:steering': 'Sport Plus', ready: st.rpm >= 200 ? 'READY' : '' }[k] ?? '{{' + k + '}}';
+      'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT' }[k] ?? '{{' + k + '}}';
   });
 }
 
@@ -159,7 +159,7 @@ async function draw() {
         u_track: rgba(theme.track), u_flash: [flash], u_value: [Math.round(v * segs * 2) / (segs * 2)] });
     } else if (w.type === 'fill') {
       const c = role(w.color, 'bg'); ctx.fillStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + ((c[3] ?? 255) / 255) + ')'; ctx.fillRect(w.x, w.y, w.w, w.h);
-    } else if (w.type === 'dial' || w.type === 'mdial') {
+    } else if (w.type === 'dial') {
       const rpmDial = w.measure === 'rpm', mx = rpmDial ? (w.max || 8000) : (w.maxUs || 160), ticks = rpmDial ? mx / 1000 : (w.ticksUs || 8);
       const v = rpmDial ? st.rpm / mx : 47 / mx;
       effect(w, w.type, { u_face2: rgb(role(w.face2 || w.face, 'bg')), u_tip: rgb(role(w.tip, 'fg')), u_inner: [w.inner ?? 0.6], u_size: [w.w, w.h], u_value: [Math.min(1, v)], u_start: [(w.start ?? 225) * Math.PI / 180], u_sweep: [(w.sweep ?? 270) * Math.PI / 180],

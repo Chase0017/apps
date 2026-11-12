@@ -92,12 +92,6 @@ CLUSTER_FONTS = [
     # Cruise: calm, light numbers
     ('c_speed', 'BarlowSemiCondensed-Medium.ttf', 150, DIGITS + '-'),
     ('c_val', 'BarlowSemiCondensed-Medium.ttf', 62, DIGITS + '.:-+°'),
-    # X3 M (pre-LCI F97 M cluster look): dial numbers, the digital speed, the gear, labels and the badge
-    ('x_num', 'BarlowSemiCondensed-SemiBold.ttf', 46, DIGITS),
-    ('x_spd', 'BarlowSemiCondensed-Medium.ttf', 64, DIGITS + '-'),
-    ('x_gear', 'BarlowSemiCondensed-Medium.ttf', 120, DIGITS + 'PRNDSM-'),
-    ('x_lbl', 'BarlowSemiCondensed-Medium.ttf', 26, UPPER + LOWER + DIGITS + '/°%.:+- '),
-    ('x_logo', 'BarlowSemiCondensed-SemiBold.ttf', 46, 'X3M '),
 ]
 FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2

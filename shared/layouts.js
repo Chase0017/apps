@@ -36,7 +36,6 @@ const TYPES = {
     boxes: ['boxes'],
     atext: ['text', 'font'],
     dial: ['measure'],
-    mdial: ['measure'],
     meter: ['signal', 'min', 'max'],
     gmeter: [],
     tiles: ['tiles'],
