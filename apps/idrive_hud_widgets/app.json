@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "HUD Widgets",
   "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -25,7 +25,8 @@
     "waze.js",
     "badges.js",
     "screen.js",
-    "runs.js"
+    "runs.js",
+    "tz.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -490,6 +491,18 @@
       "default": -9999,
       "steps": [
         -9999,
+        10001,
+        10002,
+        10003,
+        10004,
+        10005,
+        10006,
+        10007,
+        10008,
+        10009,
+        10011,
+        10012,
+        10013,
         -720,
         -690,
         -660,
@@ -836,12 +849,8 @@
     "target": "hud",
     "statusName": "HUD",
     "socketPath": "/dev/shm/cluster-render/render.sock",
-    "location": {
-      "lat": 35.2271,
-      "lon": -80.8431
-    },
     "utcOffsetMinutes": null,
-    "_comment": "socketPath: cluster-render's documented default. location: where the Auto theme works out sunrise and sunset (Charlotte, NC). utcOffsetMinutes: leave null to use the head unit's own time zone; set it (e.g. -300 for EST) only if the HUD clock shows the wrong hour on the car. tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65).",
+    "_comment": "socketPath: cluster-render's documented default. utcOffsetMinutes: leave null to use the head unit's own time zone; set it (e.g. -300 for EST) only if the HUD clock shows the wrong hour on the car. tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65).",
     "dme": {
       "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car.",
       "ecu": 18,

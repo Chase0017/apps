@@ -24,6 +24,7 @@ const previews = require('./previews');
 const sensors = require('./sensors');
 const visible = require('./visible');
 const badges = require('./badges');
+const tz = require('./tz');
 
 const W = 1600, H = 520;
 const A = G.withAlpha;
@@ -666,13 +667,8 @@ function warnText(k, v, us) {
     if (k === 'warnBoost') return us ? Math.round(v * 14.5038) + ' psi' : v.toFixed(1) + ' bar';
     return us ? Math.round(v * 9 / 5 + 32) + ' °F' : v + ' °C';
 }
-/** a "timeZone" setting value (minutes from UTC; -9999 = the head unit's own) as the row shows it */
-function tzText(v) {
-    if (v === -9999 || typeof v !== 'number') return 'Automatic';
-    if (v === 0) return 'UTC';
-    const a = Math.abs(v), h = Math.floor(a / 60), m = a % 60;
-    return 'UTC' + (v < 0 ? '-' : '+') + h + (m ? ':' + (m < 10 ? '0' : '') + m : '');
-}
+/** a "timeZone" setting value as the row shows it (shared/tz.js) */
+function tzText(v) { return tz.name(v); }
 function fmtInt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 function label(cv, x, y, s) { cv.text(s.toUpperCase(), x, y, 14, C.label, { font: 'bold', spacing: 2.4, literal: true }); }
 function note(cv, x, y, lines) { lines.forEach((s, i) => cv.text(s, x, y + i * 26, 17, C.dim, { literal: true })); }

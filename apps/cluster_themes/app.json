@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s, Cruise or Dyno (BMW-coloured readout tiles), with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
-  "version": "0.14.5",
+  "version": "0.14.6",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -25,7 +25,8 @@
     "sensors.js",
     "badges.js",
     "screen.js",
-    "runs.js"
+    "runs.js",
+    "tz.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -375,6 +376,18 @@
       "default": -9999,
       "steps": [
         -9999,
+        10001,
+        10002,
+        10003,
+        10004,
+        10005,
+        10006,
+        10007,
+        10008,
+        10009,
+        10011,
+        10012,
+        10013,
         -720,
         -690,
         -660,
@@ -561,6 +574,12 @@
       "label": "Show boost",
       "type": "bool",
       "default": true
+    },
+    {
+      "key": "stripClear",
+      "label": "Leave BMW's bottom strip clear",
+      "type": "bool",
+      "default": false
     },
     {
       "key": "warnOil",
@@ -965,17 +984,13 @@
     "target": "panel",
     "statusName": "Cluster",
     "socketPath": "/dev/shm/cluster-render/render.sock",
-    "location": {
-      "lat": 35.2271,
-      "lon": -80.8431
-    },
     "utcOffsetMinutes": null,
     "waze": {
       "comment": "Show Waze map inside the theme (shared/waze.js): waze-on-cluster's status file (read every second) and its control socket (one short 'start' command, then closed). Paths from waze-on-cluster 0.9.3.",
       "status": "/run/waze-on-cluster/status.json",
       "control": "/dev/shm/waze-on-cluster/ctl.sock"
     },
-    "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. location and utcOffsetMinutes: as in HUD Widgets (the clock box). tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65). engine: the peak crank torque (Nm) and power (kW) the {{torquePct}} and {{powerPct}} tokens count from (an M40i: 500 Nm, 285 kW / 382 hp).",
+    "_comment": "target panel: the whole 1920x720 instrument cluster, drawn over BMW's gauges. socketPath: cluster-render's documented default. utcOffsetMinutes: as in HUD Widgets (the clock box). tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65). engine: the peak crank torque (Nm) and power (kW) the {{torquePct}} and {{powerPct}} tokens count from (an M40i: 500 Nm, 285 kW / 382 hp).",
     "dme": {
       "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car.",
       "ecu": 18,
