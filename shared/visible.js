@@ -42,6 +42,24 @@ const HUD_WINDOW = { x: 120, y: 100, w: 560, h: 280 };
  *  its segmented rev band (x ~125..335, y ~245..280, Nov 9 photos). Every layout keeps it clear: [x0, y0, x1, y1]. */
 const HUD_BMW = [120, 235, 350, 380];
 
+/** A round dial or an arc: small squares along its outer edge (the dial's whole circle; an arc's stroke from "start"
+ *  sweeping "sweep" degrees, clockwise from 12 o'clock), so the check follows the round shape instead of the square
+ *  layer. Shapes inside the dial (BMW's black box over a hub) are not caught: a widget meant to sit over one says
+ *  overBlackBox. */
+function roundRects(w) {
+    const cx = w.x + w.w / 2, cy = w.y + w.h / 2, half = Math.min(w.w, w.h) / 2;
+    const arc = w.type === 'arc', width = arc ? (w.width || 7) : 4;
+    const r = arc ? half - width / 2 - 1 : half - 2;
+    const start = arc ? (w.start === undefined ? 225 : w.start) : 0, sweep = arc ? (w.sweep === undefined ? 270 : w.sweep) : 360;
+    const n = Math.max(8, Math.ceil(Math.abs(sweep) / 4)), out = [];
+    for (let i = 0; i <= n; i++) {
+        const a = (start + sweep * i / n) * Math.PI / 180;
+        const x = cx + r * Math.sin(a), y = cy - r * Math.cos(a);
+        out.push({ id: w.id + '@' + Math.round(start + sweep * i / n) + 'deg', x: x - width / 2, y: y - width / 2, w: width, h: width, overBlackBox: w.overBlackBox });
+    }
+    return out;
+}
+
 /** A ramped row of shift lights ("rise"), one rect per light where the lights shader draws it (shaders.js LIGHTS). */
 function lightRects(w) {
     const n = w.count || 12, gap = 6, slot = (w.w + gap) / n, segW = slot - gap;
@@ -86,6 +104,8 @@ function check(widgets, target) {
         const sub = w && (w.boxes || w.tiles);
         if (Array.isArray(sub)) sub.forEach((b) => { if (b) all.push(Object.assign({ overBlackBox: w.overBlackBox }, b, { id: w.id + '.' + b.id })); });
         else if (w && w.type === 'lights' && w.rise > 0) lightRects(w).forEach((b) => all.push(b));
+        else if (w && (w.type === 'dial' || w.type === 'arc')) roundRects(w).forEach((b) => all.push(b));
+        else if (w && w.type === 'fill' && !w.hole && w.x <= 0 && w.y <= 0 && w.w >= 1920 && w.h >= 720) return;   // the background: black under BMW's own
         else all.push(w);
     });
     all.forEach((w) => {

@@ -947,6 +947,8 @@ uniform vec3 u_needle;
 uniform vec3 u_red;
 uniform vec3 u_face;
 uniform float u_hot;
+uniform vec3 u_cap;      // the centre cap's ring
+uniform float u_capR;    // the cap's radius px
 
 const float PI = 3.14159265359;
 
@@ -1006,8 +1008,9 @@ void main() {
         col = mix(col, u_needle, c);
     }
     // the cap
-    if (d < 20.0) col = mix(vec3(0.16), vec3(0.42), clamp((20.0 - d) / 6.0, 0.0, 1.0) * clamp(0.5 + p.y / 40.0, 0.0, 1.0));
-    if (d < 20.0 && d > 17.5) col = u_ring2;
+    float cr = u_capR > 1.0 ? u_capR : 20.0;
+    if (d < cr) col = mix(vec3(0.16), vec3(0.42), clamp((cr - d) / 6.0, 0.0, 1.0) * clamp(0.5 + p.y / (2.0 * cr), 0.0, 1.0));
+    if (d < cr && d > cr - 2.5 - cr * 0.08) col = u_cap;
     gl_FragColor = vec4(col, edge);
 }
 `;

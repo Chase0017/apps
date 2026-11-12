@@ -92,6 +92,12 @@ CLUSTER_FONTS = [
     # Cruise: calm, light numbers
     ('c_speed', 'BarlowSemiCondensed-Medium.ttf', 150, DIGITS + '-'),
     ('c_val', 'BarlowSemiCondensed-Medium.ttf', 62, DIGITS + '.:-+°'),
+    # X3 M (pre-LCI F97 M cluster look): dial numbers, the digital speed, the gear, labels and the badge
+    ('x_num', 'BarlowSemiCondensed-Medium.ttf', 40, DIGITS),
+    ('x_spd', 'BarlowSemiCondensed-Medium.ttf', 64, DIGITS + '-'),
+    ('x_gear', 'BarlowSemiCondensed-Medium.ttf', 120, DIGITS + 'PRNDSM-'),
+    ('x_lbl', 'BarlowSemiCondensed-Medium.ttf', 26, UPPER + LOWER + DIGITS + '/°%.:+- '),
+    ('x_logo', 'BarlowSemiCondensed-SemiBold.ttf', 46, 'X3M '),
 ]
 FONTS = {'idrive_hud_widgets': HUD_FONTS, 'cluster_themes': CLUSTER_FONTS}
 PAD = 2
@@ -151,16 +157,21 @@ def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck=''
         glyphs[c] = {'x': gx, 'y': gy, 'w': img.width, 'h': img.height, 'ox': ox, 'advance': adv}
     meta = {'source': file, 'size': size, 'cellHeight': height, 'baseline': PAD - top, 'glyphs': glyphs,
             'width': ATLAS_W, 'height': atlas_h, 'alpha': base64.b64encode(atlas.tobytes()).decode('ascii')}
-    with open(os.path.join(out, name + '.json'), 'w') as f:
+    with open(os.path.join(out, name + '.json'), 'w', encoding='utf-8') as f:   # the ° glyph key: UTF-8 on every OS
         json.dump(meta, f, separators=(',', ':'), ensure_ascii=False)
     print('%-6s %3dpx  cell height %3d  atlas %dx%d  %d glyphs' % (name, size, height, ATLAS_W, atlas_h, len(glyphs)))
 
 
 if __name__ == '__main__':
     import sys
+    # --only name,name: bake just those fonts (leaves the others' files as they are)
+    only = None
+    if len(sys.argv) > 2 and sys.argv[1] == '--only':
+        only = set(sys.argv[2].split(',')); sys.argv[1:3] = []
     for app in sys.argv[1:] or sorted(FONTS):
         out = os.path.join(APPS, app, 'hud', 'fonts')
         os.makedirs(out, exist_ok=True)
         print(app)
         for spec in FONTS[app]:
-            bake(out, *spec)
+            if only is None or spec[0] in only:
+                bake(out, *spec)

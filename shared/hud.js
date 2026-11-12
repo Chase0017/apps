@@ -101,6 +101,8 @@
  *   dial      effect layer (shaders.js dial): a classic round gauge, the Roadster's: "measure" speed | rpm | signal ("signal",
  *             "max", "ticks"); speed reads 0..160 mph / 0..240 km/h (DIAL_SPEED, labels {{dial:speed:<i>}}), rpm 0.."max"
  *             (8000) with the red band from the redline (_redMarks) and the ring in the shift red at the shift point;
+ *             speed takes a layout's own scale with "maxUs" / "maxMetric" and "ticksUs" / "ticksMetric"; "cap" role and
+ *             "capR" px for the centre cap's ring (20);
  *             "start" / "sweep" degrees (225 / 270), "minor" ticks per step (4), "ringW" px (14), roles "ring" (line)
  *             fading to "ring2" (dim), "tick" (fg), "needle" (hot), "face" (bg). The numbers are text widgets.
  *   meter     effect layer (shaders.js meter): a segmented bar, "signal" between "min" and "max" (raw units: km/h, C,
@@ -1231,7 +1233,13 @@ class HudApp {
 
     /** A dial's scale: { max, ticks } in display units (speed: DIAL_SPEED by the units setting; rpm: "max", 8000). */
     _dialScale(w) {
-        if (w.measure === 'speed') return DIAL_SPEED[this.setting('units') === 'us' ? 'us' : 'metric'];
+        if (w.measure === 'speed') {
+            const us = this.setting('units') === 'us';
+            // a layout's own scale: "maxUs" / "maxMetric" with "ticksUs" / "ticksMetric" (the X3 M's 0..200 mph)
+            const mx = us ? w.maxUs : w.maxMetric, tk = us ? w.ticksUs : w.ticksMetric;
+            if (isNum(mx) && mx > 0) return { max: mx, ticks: isNum(tk) && tk > 0 ? tk : 8 };
+            return DIAL_SPEED[us ? 'us' : 'metric'];
+        }
         if (w.measure === 'rpm') { const max = w.max || 8000; return { max, ticks: max / 1000 }; }
         return { max: w.max || 1, ticks: w.ticks || 8 };
     }
@@ -1488,6 +1496,7 @@ class HudApp {
             }
             // traction control (DSC ON / DTC / DSC OFF) from VehicleStabilizationManagement (_dscText)
             case 'dsc': return this._dscText();
+            case 'ready': { const d = this.car.data(); return isNum(d.rpm) && d.rpm >= 200 ? 'READY' : ''; }   // engine running
             case 'mode': {
                 if (!this.driveMode) return '';
                 const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
@@ -1851,6 +1860,8 @@ class HudApp {
             c.uniform(ref, 'u_needle', rgb(color(t, w.needle || 'hot')));
             c.uniform(ref, 'u_red', rgb(t.hot));
             c.uniform(ref, 'u_face', rgb(color(t, w.face || 'bg')));
+            c.uniform(ref, 'u_cap', rgb(color(t, w.cap || w.ring2 || 'dim')));
+            c.uniform(ref, 'u_capR', [isNum(w.capR) ? w.capR : 20]);
             c.uniform(ref, 'u_hot', [0]);
         } else if (w.type === 'gmeter') {
             const L = color(t, w.line || 'dim');

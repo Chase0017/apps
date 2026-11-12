@@ -97,6 +97,19 @@ const THEMES = {
         ink: [12, 12, 14, 255], accent: [255, 120, 40, 255], well: [0, 0, 0, 255],
         chrome: [222, 226, 232, 255], chrome2: [96, 100, 108, 255], needle: [255, 96, 32, 255], face: [6, 6, 8, 255],
     },
+    // X3 M (layout x3m.json): the pre-LCI F97 X3 M's own M cluster: dark grey dial faces, chrome rings, white numbers,
+    // red needles and cap rings; small fuel and oil temperature arcs outside the dials.
+    x3m: {
+        name: 'X3 M',
+        fg: [240, 242, 245, 255], dim: [150, 154, 162, 255], track: [255, 255, 255, 46], arc: [240, 242, 245, 255],
+        glow: 0, stripe: true,
+        bar: { low: [240, 242, 245], mid: [255, 170, 60], high: [255, 42, 42], midAt: 'shift' },
+        rev: { from: [240, 242, 245], to: [240, 242, 245] },
+        bg: [0, 0, 0, 255], panel: [0, 0, 0, 255], line: [200, 204, 210, 255], head: [226, 228, 232, 255],
+        ink: [12, 12, 14, 255], accent: [226, 30, 36, 255], well: [0, 0, 0, 255],
+        chrome: [214, 218, 224, 255], chrome2: [84, 88, 96, 255], needle: [232, 28, 34, 255], face: [0, 0, 0, 255],   // pure black: BMW's black box over the rev hub blends in
+        capRing: [232, 28, 34, 255],
+    },
     // Track (layout track.json): the race-dash frame of GT3 with amber headers, tyres and temps round a big gear.
     track: {
         name: 'Track',

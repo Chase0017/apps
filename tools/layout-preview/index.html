@@ -119,7 +119,9 @@ function token(t, st, slots) {
       const s = sl(id), v = s[3] === null ? String(Math.round(st.rpm / 50) * 50) : s[3];
       return { slot: v, slotHead: s[0], slotUnit: s[1], slotSuffix: s[2], slotHeadU: s[0] + (s[2] ? '' : (s[1] ? ' ' + s[1] : '')) }[kind];
     }
-    return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: '--', badge: 'BMW X3 M40i', rpm: String(st.rpm) }[k] ?? '{{' + k + '}}';
+    return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'DSC ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
+      speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: '221',
+      'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT', ready: st.rpm >= 200 ? 'READY' : '' }[k] ?? '{{' + k + '}}';
   });
 }
 
@@ -132,7 +134,8 @@ async function draw() {
   const lay = layout.shiftBlink > 0 ? layout.shiftBlink : 0;
   const phase = (half) => !st.now ? 0 : (half && Math.floor(t / half) % 2 === 1 ? 2 : 1);   // as hud.js _shiftPhase
   for (const w of layout.widgets) {
-    if (w.toggle === 'mapUp') continue;
+    if (w.toggle === 'mapUp' || w.toggle === 'units=metric') continue;     // the preview runs in US units
+    const role = (r, d) => (Array.isArray(r) ? r : theme[r || d] || theme.fg);
     if (w.type === 'boxes') {
       const rects = [], styles = [];
       for (let i = 0; i < 12; i++) { const b = w.boxes[i];
@@ -154,6 +157,24 @@ async function draw() {
       effect(w, 'shiftbar', { u_size: [w.w, w.h], u_segs: [segs], u_low: rgb(theme.bar.low), u_mid: rgb(theme.bar.mid), u_high: rgb(theme.bar.high),
         u_midAt: [theme.bar.midAt === 'shift' ? (REDLINE - 1500) / max : theme.bar.midAt], u_highAt: [(REDLINE - 500) / max],
         u_track: rgba(theme.track), u_flash: [flash], u_value: [Math.round(v * segs * 2) / (segs * 2)] });
+    } else if (w.type === 'fill') {
+      const c = role(w.color, 'bg'); ctx.fillStyle = 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + ((c[3] ?? 255) / 255) + ')'; ctx.fillRect(w.x, w.y, w.w, w.h);
+    } else if (w.type === 'dial') {
+      const rpmDial = w.measure === 'rpm', mx = rpmDial ? (w.max || 8000) : (w.maxUs || 160), ticks = rpmDial ? mx / 1000 : (w.ticksUs || 8);
+      const v = rpmDial ? st.rpm / mx : 47 / mx;
+      effect(w, 'dial', { u_size: [w.w, w.h], u_value: [Math.min(1, v)], u_start: [(w.start ?? 225) * Math.PI / 180], u_sweep: [(w.sweep ?? 270) * Math.PI / 180],
+        u_ticks: [ticks], u_minor: [w.minor || 4], u_redFrom: [rpmDial ? Math.min(REDLINE, mx - 500) / mx : 2], u_ringW: [w.ringW || 14],
+        u_ring: rgb(role(w.ring, 'line')), u_ring2: rgb(role(w.ring2, 'dim')), u_tick: rgb(role(w.tick, 'fg')), u_needle: rgb(role(w.needle, 'hot')),
+        u_red: rgb(theme.hot), u_face: rgb(role(w.face, 'bg')), u_cap: rgb(role(w.cap || w.ring2, 'dim')), u_capR: [w.capR ?? 20], u_hot: [rpmDial && st.now ? 1 : 0] });
+    } else if (w.type === 'arc') {
+      const demo = { fuel: 0.62, oil: 105 }[w.signal] ?? 0, v = (demo - (w.min || 0)) / ((w.max || 1) - (w.min || 0));
+      effect(w, 'arc', { u_size: [w.w, w.h], u_value: [Math.max(0, Math.min(1, v))], u_peak: [-1], u_peakC: rgb(theme.fg), u_color: rgb(role(w.color, 'arc')),
+        u_track: rgba(theme.track), u_width: [w.width || 7], u_start: [(w.start ?? 225) * Math.PI / 180], u_sweep: [(w.sweep ?? 270) * Math.PI / 180] });
+    } else if (w.type === 'stripe') {
+      [[79, 180, 255], [47, 91, 216], [232, 38, 45]].forEach((c, i) => { ctx.fillStyle = 'rgb(' + c + ')'; ctx.fillRect(w.x + i * w.w / 3, w.y, w.w / 3, w.h); });
+    } else if (w.type === 'icon') {
+      const c = role(w.color, 'fg'); ctx.strokeStyle = 'rgb(' + c.slice(0, 3) + ')'; ctx.lineWidth = 2;   // the car draws icons.js; a stand-in here
+      ctx.beginPath(); ctx.arc(w.x + w.w / 2, w.y + w.h / 2, w.w / 2 - 3, 0, Math.PI * 2); ctx.stroke();
     } else if (w.type === 'scale') {
       const f = await font(w.font), n = max / 1000 + 1;
       for (let i = 0; i < n; i++) { const s = String(i); let lw = 0; for (const ch of s) lw += f.glyphs[ch].advance;
@@ -188,8 +209,8 @@ function carView() {
   ctx.fillStyle = '#5f5'; VIS.ARROWS.forEach(([x0, y0, x1, y1], i) => { const m = (y0 + y1) / 2, tip = i ? x1 : x0, back = i ? x0 : x1;
     ctx.beginPath(); ctx.moveTo(tip, m); ctx.lineTo((x0 + x1) / 2, y0 + 8); ctx.lineTo((x0 + x1) / 2, m - 12); ctx.lineTo(back, m - 12);
     ctx.lineTo(back, m + 12); ctx.lineTo((x0 + x1) / 2, m + 12); ctx.lineTo((x0 + x1) / 2, y1 - 8); ctx.closePath(); ctx.fill(); });
-  // the 2020 cluster's black gear box; a 2022+ layout (overBlackBox) is drawn without it
-  if (!layout.widgets.some((w) => w.overBlackBox)) { const [b0, b1, b2, b3] = VIS.BLACK_BOX; ctx.fillStyle = '#000'; ctx.fillRect(b0, b1, b2 - b0, b3 - b1); }
+  // BMW's solid black gear box (the 2023 X3 draws it too)
+  { const [b0, b1, b2, b3] = VIS.BLACK_BOX; ctx.fillStyle = '#000'; ctx.fillRect(b0, b1, b2 - b0, b3 - b1); }
   ctx.fillStyle = '#e33'; const [e0, e1, e2, e3] = VIS.BELT; ctx.fillRect(e0 + 10, e1 + 6, e2 - e0 - 20, e3 - e1 - 12);
   ctx.strokeStyle = '#fa3'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
   (VIS.WARNINGS || []).forEach(([, [x0, y0, x1, y1]]) => ctx.strokeRect(x0, y0, x1 - x0, y1 - y0)); ctx.setLineDash([]);
