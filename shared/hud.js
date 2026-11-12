@@ -153,7 +153,9 @@
  * at the shift point; "coldWhen": "cold" turns it blue while the cold guard lowers the shift point.
  * scale: "over" as revbar; "redFrom": true draws the numbers from the redline on in red.
  * lights: "count" (12), "from" rpm (3000) where the first light comes on, "tail" (0): the last "tail" lights are blue
- *   (the GT3 look); "round": true for dots;
+ *   (the GT3 look); "round": true for dots; "mirror": true fills from the right end (the right bank of a split
+ *   pair, so two banks close in on the middle); "blink": true (or ms per half period) flashes the row red at the
+ *   shift point instead of holding it solid;
  * "off" the alpha of an unlit light (0.14).
  * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself).
  * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
@@ -1369,6 +1371,9 @@ class HudApp {
                 const d = this.car.data();
                 return (d.stage === 'D' || (!d.stage && isNum(d.gear))) && isNum(d.gear) && d.gear > 0 ? String(d.gear) : '';
             }
+            // traction control (DSC ON / DTC / DSC OFF). No signal for it is known yet: this.dscMode stays null and the
+            // readout shows '--' until the field is found on the car and decoded into it.
+            case 'dsc': return this.dscMode || '--';
             case 'mode': {
                 if (!this.driveMode) return '';
                 const base = this.driveMode === 'sport' ? 'SPORT' : this.driveMode === 'eco' ? 'ECO PRO' : 'COMFORT';
@@ -1810,6 +1815,7 @@ class HudApp {
             c.uniform(ref, 'u_n', [w.count || 12]);
             c.uniform(ref, 'u_tail', [w.tail || 0]);
             c.uniform(ref, 'u_round', [w.round ? 1 : 0]);
+            c.uniform(ref, 'u_mirror', [w.mirror ? 1 : 0]);
             c.uniform(ref, 'u_green', rgb(LIGHTS.green));
             c.uniform(ref, 'u_yellow', rgb(LIGHTS.yellow));
             c.uniform(ref, 'u_red', rgb(LIGHTS.red));
@@ -2151,11 +2157,14 @@ class HudApp {
             // the lights fill from "from" rpm (3000) up to the shift point; a "from" at or past it means the last 500 rpm
             const from = Math.min(isNum(w.from) ? w.from : 3000, sp.rpm - 500);
             const lit = isNum(rpm) ? Math.floor(Math.min(1, Math.max(0, (rpm - from) / (sp.rpm - from))) * n) : 0;
-            const key = lit + '|' + sp.now;
+            // "blink": ms per half period (true = 100, 5 Hz; the tick is 50 ms); at the shift point the row flashes red
+            const half = w.blink === true ? 100 : (isNum(w.blink) && w.blink > 0 ? w.blink : 0);
+            const strobe = !sp.now ? 0 : (half && Math.floor(now / half) % 2 === 1 ? 2 : 1);
+            const key = lit + '|' + strobe;
             if (!force && key === x.last) return;
             x.last = key;
             x.c.uniform(x.ref, 'u_lit', [lit]);
-            x.c.uniform(x.ref, 'u_strobe', [sp.now ? 1 : 0]);
+            x.c.uniform(x.ref, 'u_strobe', [strobe]);
         }
     }
 

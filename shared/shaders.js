@@ -217,10 +217,12 @@ const LIGHTS = `// Shift lights for a cluster-render "effect" layer (GLSL ES 1.0
 // on (they fill from a start rpm up to the shift point); u_strobe 1 = at the shift point: all red.
 // The last u_tail lights are blue instead (the GT3 dash look; 0 = none). u_round 1 = round lights.
 //   u_size px, u_n count, u_lit count (0..u_n), u_tail count, u_strobe 0/1, u_green/u_yellow/u_red/u_blue rgb,
-//   u_off (alpha when off)
+//   u_off (alpha when off), u_mirror 0/1 (fill from the right end; the right bank of a split pair).
+//   u_strobe 2 = the dark half of a blink at the shift point (all red at u_off).
 precision mediump float;
 varying vec2 v_uv;
 uniform vec2 u_size;
+uniform float u_mirror;
 uniform float u_n;
 uniform float u_lit;
 uniform float u_tail;
@@ -249,11 +251,14 @@ void main() {
     vec2 q = abs(p) - (hs - vec2(r));
     float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
     float cover = clamp(0.5 - d, 0.0, 1.0);
+    // u_mirror 1: the row fills from the right end leftward (the right bank of a split pair)
+    float li = u_mirror > 0.5 ? u_n - 1.0 - idx : idx;
     float nMain = max(1.0, u_n - u_tail);
-    float f = idx / max(1.0, nMain - 1.0);
-    vec3 col = idx >= nMain ? u_blue : (f < 0.42 ? u_green : (f < 0.75 ? u_yellow : u_red));
-    bool on = idx < u_lit;
-    if (u_strobe > 0.5) { col = u_red; on = true; }
+    float f = li / max(1.0, nMain - 1.0);
+    vec3 col = li >= nMain ? u_blue : (f < 0.42 ? u_green : (f < 0.75 ? u_yellow : u_red));
+    bool on = li < u_lit;
+    if (u_strobe > 1.5) { col = u_red; on = false; }        // blink, dark half
+    else if (u_strobe > 0.5) { col = u_red; on = true; }
     gl_FragColor = vec4(col, cover * (on ? 1.0 : u_off));
 }
 `;

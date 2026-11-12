@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 2,
+  "name": "Apex",
+  "theme": "gt3",
+  "slots": [
+    { "id": "1", "where": "left box, top", "default": "speed" },
+    { "id": "2", "where": "left box, middle", "default": "rpm" },
+    { "id": "3", "where": "left box, bottom", "default": "fuel" },
+    { "id": "4", "where": "right box, top", "default": "boost" },
+    { "id": "5", "where": "right box, middle", "default": "coolant" },
+    { "id": "6", "where": "right box, bottom", "default": "oil" }
+  ],
+  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in and flash red at the shift point; the rev bar runs under the camera and BMW's turn arrows. Gear (P R N, D3 / S3 / M3) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light and the PARK light over the top right. No map window. Widget reference: shared/hud.js header.",
+  "widgets": [
+    {
+      "id": "frame",
+      "type": "boxes",
+      "class": "content",
+      "z": 1,
+      "x": 0, "y": 0, "w": 1920, "h": 720,
+      "color": "bg",
+      "boxes": [
+        { "id": "speed_box", "x": 140, "y": 255, "w": 320, "h": 200, "head": 36, "radius": 4 },
+        { "id": "rpm_box", "x": 140, "y": 470, "w": 320, "h": 110, "head": 36, "radius": 4 },
+        { "id": "fuel_box", "x": 140, "y": 595, "w": 320, "h": 107, "head": 36, "radius": 4 },
+        { "id": "gear_box", "x": 640, "y": 255, "w": 740, "h": 325, "head": 36, "radius": 4 },
+        { "id": "mode_box", "x": 640, "y": 595, "w": 360, "h": 107, "head": 36, "radius": 4 },
+        { "id": "dsc_box", "x": 1020, "y": 595, "w": 360, "h": 107, "head": 36, "radius": 4 },
+        { "id": "boost_box", "x": 1610, "y": 255, "w": 280, "h": 200, "head": 36, "radius": 4, "toggle": "showBoost" },
+        { "id": "water_box", "x": 1610, "y": 470, "w": 280, "h": 110, "head": 36, "radius": 4 },
+        { "id": "oil_box", "x": 1610, "y": 595, "w": 280, "h": 107, "head": 36, "radius": 4 }
+      ]
+    },
+    {
+      "id": "lights_l",
+      "type": "lights",
+      "z": 2,
+      "x": 400, "y": 56, "w": 340, "h": 40,
+      "count": 9, "tail": 2, "round": true, "off": 0.12, "from": 3000, "blink": 200
+    },
+    {
+      "id": "lights_r",
+      "type": "lights",
+      "z": 2,
+      "x": 1200, "y": 56, "w": 340, "h": 40,
+      "count": 9, "tail": 2, "round": true, "off": 0.12, "from": 3000, "blink": 200, "mirror": true
+    },
+    {
+      "id": "revs",
+      "type": "shiftbar",
+      "z": 2,
+      "x": 200, "y": 178, "w": 1520, "h": 34,
+      "segments": 60
+    },
+    {
+      "id": "revs_scale",
+      "type": "scale",
+      "z": 2,
+      "x": 200, "y": 216, "w": 1520, "h": 26,
+      "font": "scale", "color": "dim", "redFrom": true
+    },
+    {
+      "id": "badge",
+      "type": "text",
+      "z": 5,
+      "x": 150, "y": 134, "w": 270, "h": 34,
+      "text": "{{badge}}", "font": "badge", "color": "dim"
+    },
+
+    { "id": "speed_head", "type": "text", "z": 5, "x": 156, "y": 260, "w": 290, "h": 27,
+      "text": "{{slotHead:1}} {{slotUnit:1}}", "font": "head", "color": "ink" },
+    { "id": "speed", "type": "text", "z": 5, "x": 150, "y": 318, "w": 222, "h": 93,
+      "text": "{{slot:1}}", "font": "big", "align": "right", "slot": "1", "fit": ["value", "small"] },
+    { "id": "speed_unit", "type": "text", "z": 5, "x": 380, "y": 372, "w": 70, "h": 37,
+      "text": "{{slotUnit:1}}", "font": "unit", "color": "dim" },
+
+    { "id": "rpm_head", "type": "text", "z": 5, "x": 156, "y": 475, "w": 290, "h": 27,
+      "text": "{{slotHead:2}} {{slotUnit:2}}", "font": "head", "color": "ink" },
+    { "id": "rpm", "type": "text", "z": 5, "x": 152, "y": 506, "w": 296, "h": 70,
+      "text": "{{slot:2}}", "font": "value", "align": "right", "hotWhen": "now", "slot": "2", "fit": ["small"] },
+
+    { "id": "fuel_head", "type": "text", "z": 5, "x": 156, "y": 600, "w": 290, "h": 27,
+      "text": "{{slotHeadU:3}}", "font": "head", "color": "ink" },
+    { "id": "fuel", "type": "text", "z": 5, "x": 152, "y": 628, "w": 296, "h": 70,
+      "text": "{{slot:3}}{{slotSuffix:3}}", "font": "value", "align": "right", "slot": "3", "fit": ["small"] },
+
+    { "id": "gear_head", "type": "text", "z": 5, "x": 656, "y": 260, "w": 700, "h": 27,
+      "text": "GEAR", "font": "head", "color": "ink" },
+    { "id": "gear", "type": "text", "z": 5, "x": 660, "y": 314, "w": 700, "h": 222,
+      "text": "{{gear}}", "font": "y_gear", "align": "center", "hotWhen": "now" },
+
+    { "id": "mode_head", "type": "text", "z": 5, "x": 656, "y": 600, "w": 330, "h": 27,
+      "text": "DRIVE MODE", "font": "head", "color": "ink" },
+    { "id": "mode", "type": "text", "z": 5, "x": 656, "y": 645, "w": 330, "h": 37,
+      "text": "{{mode}}", "font": "unit", "align": "center" },
+
+    { "id": "dsc_head", "type": "text", "z": 5, "x": 1036, "y": 600, "w": 330, "h": 27,
+      "text": "TRACTION", "font": "head", "color": "ink" },
+    { "id": "dsc", "type": "text", "z": 5, "x": 1036, "y": 645, "w": 330, "h": 37,
+      "text": "{{dsc}}", "font": "unit", "align": "center" },
+
+    { "id": "boost_head", "type": "text", "z": 5, "x": 1626, "y": 260, "w": 250, "h": 27,
+      "text": "{{slotHead:4}} {{slotUnit:4}}", "font": "head", "color": "ink", "toggle": "showBoost" },
+    { "id": "boost", "type": "text", "z": 5, "x": 1618, "y": 318, "w": 206, "h": 93,
+      "text": "{{slot:4}}", "font": "big", "align": "right", "toggle": "showBoost", "slot": "4", "fit": ["value", "small"] },
+    { "id": "boost_unit", "type": "text", "z": 5, "x": 1830, "y": 372, "w": 56, "h": 37,
+      "text": "{{slotUnit:4}}", "font": "unit", "color": "dim", "toggle": "showBoost" },
+
+    { "id": "water_head", "type": "text", "z": 5, "x": 1626, "y": 475, "w": 250, "h": 27,
+      "text": "{{slotHeadU:5}}", "font": "head", "color": "ink" },
+    { "id": "water", "type": "text", "z": 5, "x": 1622, "y": 506, "w": 256, "h": 70,
+      "text": "{{slot:5}}{{slotSuffix:5}}", "font": "value", "align": "right", "slot": "5", "fit": ["small"] },
+
+    { "id": "oil_head", "type": "text", "z": 5, "x": 1626, "y": 600, "w": 250, "h": 27,
+      "text": "{{slotHeadU:6}}", "font": "head", "color": "ink" },
+    { "id": "oil", "type": "text", "z": 5, "x": 1622, "y": 628, "w": 256, "h": 70,
+      "text": "{{slot:6}}{{slotSuffix:6}}", "font": "value", "align": "right", "slot": "6", "fit": ["small"] }
+  ]
+}
