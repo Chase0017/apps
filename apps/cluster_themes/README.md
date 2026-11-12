@@ -16,7 +16,7 @@ to the LCI cluster.
 - **Beside the gear:** intake air and oil pressure on the left, ignition timing (degrees before TDC, OBD PID 0x0E as
   M Vitals reads it) and AFR on the right, above and below the solid black box BMW draws there.
 - **Middle:** the gear number (BMW shows D / S / M itself, bottom right), drive mode and traction control
-  (DSC ON / DTC / DSC OFF).
+  (ON / DTC / OFF).
 - **Colours:** the gear and rpm turn red while the engine is off; coolant turns yellow above 113 °C (235 °F) and flashes
   red above 120 °C (248 °F), oil and boost flash red over their limits (Alerts tab).
 - Every readout box can show another sensor (Readouts tab).

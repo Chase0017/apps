@@ -1168,7 +1168,7 @@ class HudApp {
         return half && Math.floor(now / half) % 2 === 1 ? 2 : 1;
     }
 
-    /** DSC ON / DTC / DSC OFF from the stability control qualifiers: app.json config.dscStates ("<FDR>/<ASC>" ->
+    /** ON / DTC / OFF from the stability control qualifiers: app.json config.dscStates ("<FDR>/<ASC>" ->
      *  text) first; enum names by their words (DEAKTIV / PASSIV / OFF / AUS = switched off); else the raw pair
      *  ("RAW 2/0"), so a photo of each mode tells us the mapping. '--' while the car sends nothing. */
     _dscText() {
@@ -1181,14 +1181,14 @@ class HudApp {
         const f = this.dscFdr;
         if (isNum(f) && Object.keys(map).length) {
             if (f & 0x800) return 'DTC';
-            if ((f & 0xC0) === 0xC0) return 'DSC OFF';
-            if (f & 0x20) return 'DSC ON';
+            if ((f & 0xC0) === 0xC0) return 'OFF';
+            if (f & 0x20) return 'ON';
         }
         const off = (x) => typeof x === 'string' && /DEAKTIV|PASSIV|OFF|AUS/i.test(x);
         if (typeof this.dscFdr === 'string' || typeof this.dscAsc === 'string') {
-            if (off(this.dscFdr)) return 'DSC OFF';
+            if (off(this.dscFdr)) return 'OFF';
             if (off(this.dscAsc)) return 'DTC';
-            return 'DSC ON';
+            return 'ON';
         }
         return ('RAW ' + key).toUpperCase().replace(/[^A-Z0-9/ .-]/g, ' ').slice(0, 16);
     }

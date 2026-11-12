@@ -119,7 +119,7 @@ function token(t, st, slots) {
       const s = sl(id), v = s[3] === null ? String(Math.round(st.rpm / 50) * 50) : s[3];
       return { slot: v, slotHead: s[0], slotUnit: s[1], slotSuffix: s[2], slotHeadU: s[0] + (s[2] ? '' : (s[1] ? ' ' + s[1] : '')) }[kind];
     }
-    return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'DSC ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
+    return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
       speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: '221',
       'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT' }[k] ?? '{{' + k + '}}';
   });
