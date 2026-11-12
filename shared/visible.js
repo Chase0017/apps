@@ -106,7 +106,7 @@ function check(widgets, target) {
                 const worst = under.reduce((a, b) => (b.d > a.d ? b : a));
                 out.push(id + ': ' + worst.what + ' ' + worst.d + ' px under the hood');
             }
-            if (!w.overBlackBox && overlaps(w, BLACK_BOX)) {   // overBlackBox: a 2022+ layout (that cluster draws no such box)
+            if (!w.overBlackBox && overlaps(w, BLACK_BOX)) {   // overBlackBox: skip (the 2023 X3 draws it too, so only for a car that does not)
                 out.push(id + ': overlaps BMW\'s gear box x' + BLACK_BOX[0] + '-' + BLACK_BOX[2] + ' y' + BLACK_BOX[1] + '-' + BLACK_BOX[3]);
             }
             if (overlaps(w, CAMERA)) {

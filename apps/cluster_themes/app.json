@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s, Cruise or Dyno (BMW-coloured readout tiles), with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
-  "version": "0.16.3",
+  "version": "0.16.4",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -1221,7 +1221,11 @@
       "torqueNm": 500,
       "powerKw": 285
     },
-    "dscStates": {},
-    "dscStatesComment": "TRACTION readout: \"<FDR>/<ASC>\" qualifier pair (as the readout shows it raw, e.g. RAW 2/0) -> the text to show, e.g. {\"2/0\": \"DSC ON\"}. Fill in from a photo of each mode."
+    "dscStates": {
+      "32/32": "DSC ON",
+      "2080/2080": "DTC",
+      "224/224": "DSC OFF"
+    },
+    "dscStatesComment": "TRACTION readout: \"<FDR>/<ASC>\" qualifier pair -> text. Measured on a 2023 X3 M40i (Nov 12 2026): 32 DSC on, 2080 (0x820) DTC, 224 (0xE0) DSC off. A pair not listed is read by its bits (hud.js _dscText)."
   }
 }

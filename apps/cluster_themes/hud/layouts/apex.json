@@ -36,26 +36,26 @@
     },
     {
       "id": "7",
-      "where": "left gap, top",
+      "where": "left gap, bottom",
       "default": "oilP"
     },
     {
       "id": "8",
-      "where": "right gap, top",
+      "where": "right gap, bottom",
       "default": "afr"
     },
     {
       "id": "9",
-      "where": "left gap, bottom",
+      "where": "left gap, top (small)",
       "default": "intake"
     },
     {
       "id": "10",
-      "where": "right gap, bottom",
+      "where": "right gap, top (small)",
       "default": "torque"
     }
   ],
-  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear number (P R N, else just the number: BMW shows D / S / M itself, bottom right) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; oil pressure and intake air in the left gap, AFR and torque in the right gap, their frame a second see-through boxes layer on connection 1 since one boxes layer holds 12. The right gap is where the 2020 car's black gear box sits; this 2022+ cluster draws its gear letter at the bottom instead, so those widgets carry overBlackBox (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light, the PARK and steering lights over the top right and the brake / tyre / ABS / traction lights down the left edge. No map window. Widget reference: shared/hud.js header.",
+  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear number (P R N, else just the number: BMW shows D / S / M itself, bottom right) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; intake (small, top) and oil pressure in the left gap, torque (small, top) and AFR in the right gap, either side of BMW's black box (x 1406-1597, y 342-419, which this 2022+ cluster draws too: it cut AFR off on the car, Nov 12 2026); their frame is a second see-through boxes layer on connection 1 since one boxes layer holds 12 (every one a readout slot).",
   "widgets": [
     {
       "id": "frame",
@@ -170,43 +170,42 @@
       ],
       "boxes": [
         {
-          "id": "m7_box",
-          "x": 378,
-          "y": 255,
-          "w": 246,
-          "h": 200,
-          "head": 36,
-          "radius": 4
-        },
-        {
           "id": "m9_box",
           "x": 378,
-          "y": 470,
+          "y": 255,
           "w": 246,
-          "h": 110,
+          "h": 84,
           "head": 36,
           "radius": 4
         },
         {
-          "id": "m8_box",
-          "x": 1296,
-          "y": 255,
+          "id": "m7_box",
+          "x": 378,
+          "y": 428,
           "w": 246,
-          "h": 200,
+          "h": 152,
           "head": 36,
           "radius": 4
         },
         {
           "id": "m10_box",
           "x": 1296,
-          "y": 470,
+          "y": 255,
           "w": 246,
-          "h": 110,
+          "h": 84,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "m8_box",
+          "x": 1296,
+          "y": 428,
+          "w": 246,
+          "h": 152,
           "head": 36,
           "radius": 4
         }
-      ],
-      "overBlackBox": true
+      ]
     },
     {
       "id": "lights_l",
@@ -548,24 +547,48 @@
       ]
     },
     {
-      "id": "m7_head",
+      "id": "m9_head",
       "type": "text",
       "z": 5,
       "x": 394,
       "y": 260,
       "w": 218,
       "h": 27,
+      "text": "{{slotHeadU:9}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "m9",
+      "type": "text",
+      "z": 5,
+      "x": 390,
+      "y": 292,
+      "w": 222,
+      "h": 45,
+      "text": "{{slot:9}}{{slotSuffix:9}}",
+      "font": "small",
+      "align": "right",
+      "slot": "9"
+    },
+    {
+      "id": "m7_head",
+      "type": "text",
+      "z": 5,
+      "x": 394,
+      "y": 433,
+      "w": 218,
+      "h": 27,
       "text": "{{slotHead:7}} {{slotUnit:7}}",
       "font": "head",
-      "color": "ink",
-      "overBlackBox": true
+      "color": "ink"
     },
     {
       "id": "m7",
       "type": "text",
       "z": 5,
       "x": 386,
-      "y": 318,
+      "y": 478,
       "w": 164,
       "h": 93,
       "text": "{{slot:7}}{{slotSuffix:7}}",
@@ -575,71 +598,63 @@
       "fit": [
         "value",
         "small"
-      ],
-      "overBlackBox": true
+      ]
     },
     {
       "id": "m7_unit",
       "type": "text",
       "z": 5,
       "x": 554,
-      "y": 372,
+      "y": 532,
       "w": 62,
       "h": 37,
       "text": "{{slotUnit:7}}",
       "font": "unit",
-      "color": "dim",
-      "overBlackBox": true
+      "color": "dim"
     },
     {
-      "id": "m9_head",
-      "type": "text",
-      "z": 5,
-      "x": 394,
-      "y": 475,
-      "w": 218,
-      "h": 27,
-      "text": "{{slotHeadU:9}}",
-      "font": "head",
-      "color": "ink",
-      "overBlackBox": true
-    },
-    {
-      "id": "m9",
-      "type": "text",
-      "z": 5,
-      "x": 390,
-      "y": 506,
-      "w": 222,
-      "h": 70,
-      "text": "{{slot:9}}{{slotSuffix:9}}",
-      "font": "value",
-      "align": "right",
-      "slot": "9",
-      "fit": [
-        "small"
-      ],
-      "overBlackBox": true
-    },
-    {
-      "id": "m8_head",
+      "id": "m10_head",
       "type": "text",
       "z": 5,
       "x": 1312,
       "y": 260,
       "w": 218,
       "h": 27,
+      "text": "{{slotHeadU:10}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "m10",
+      "type": "text",
+      "z": 5,
+      "x": 1308,
+      "y": 292,
+      "w": 222,
+      "h": 45,
+      "text": "{{slot:10}}{{slotSuffix:10}}",
+      "font": "small",
+      "align": "right",
+      "slot": "10"
+    },
+    {
+      "id": "m8_head",
+      "type": "text",
+      "z": 5,
+      "x": 1312,
+      "y": 433,
+      "w": 218,
+      "h": 27,
       "text": "{{slotHead:8}} {{slotUnit:8}}",
       "font": "head",
-      "color": "ink",
-      "overBlackBox": true
+      "color": "ink"
     },
     {
       "id": "m8",
       "type": "text",
       "z": 5,
       "x": 1304,
-      "y": 318,
+      "y": 478,
       "w": 164,
       "h": 93,
       "text": "{{slot:8}}{{slotSuffix:8}}",
@@ -649,51 +664,19 @@
       "fit": [
         "value",
         "small"
-      ],
-      "overBlackBox": true
+      ]
     },
     {
       "id": "m8_unit",
       "type": "text",
       "z": 5,
       "x": 1472,
-      "y": 372,
+      "y": 532,
       "w": 62,
       "h": 37,
       "text": "{{slotUnit:8}}",
       "font": "unit",
-      "color": "dim",
-      "overBlackBox": true
-    },
-    {
-      "id": "m10_head",
-      "type": "text",
-      "z": 5,
-      "x": 1312,
-      "y": 475,
-      "w": 218,
-      "h": 27,
-      "text": "{{slotHeadU:10}}",
-      "font": "head",
-      "color": "ink",
-      "overBlackBox": true
-    },
-    {
-      "id": "m10",
-      "type": "text",
-      "z": 5,
-      "x": 1308,
-      "y": 506,
-      "w": 222,
-      "h": 70,
-      "text": "{{slot:10}}{{slotSuffix:10}}",
-      "font": "value",
-      "align": "right",
-      "slot": "10",
-      "fit": [
-        "small"
-      ],
-      "overBlackBox": true
+      "color": "dim"
     }
   ]
 }

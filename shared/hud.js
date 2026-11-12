@@ -389,6 +389,8 @@ function changes(was, now, w, h) {
 }
 function rgba(c) { return [c[0] / 255, c[1] / 255, c[2] / 255, (c[3] === undefined ? 255 : c[3]) / 255]; }
 function isNum(v) { return typeof v === 'number' && isFinite(v); }
+/** an engine-unit candidate's name, as kit/dids.js labels it: 'F40F' or 'OBD 0F' */
+function DidReader_label(c) { return c.obd ? 'OBD ' + String(c.obd).toUpperCase() : c.did; }
 
 class HudApp {
     constructor(ctx) {
@@ -779,6 +781,7 @@ class HudApp {
             const link = new ReadOnlyDiag(this.ctx.signals, this.log, { silentAfter: Infinity });
             Promise.resolve().then(() => link.init()).catch((e) => this.log.info('engine unit link not available: ' + (e && e.message || e)));
             rd = new DidReader(link, { ecu: (dme && dme.ecu) || 18 });
+            this.dmeReader = rd;
         } catch (e) { this.log.info('engine unit boost off: ' + (e && e.message || e)); return; }
         this.dmeTimer = setInterval(() => this._guard('engine unit boost', () => {
             const now = Date.now();
@@ -1042,9 +1045,28 @@ class HudApp {
         return this.label + ' on' + mode + ': ' + name + ' layout, ' + theme + ' theme' + auto + layers + demo + drawn;
     }
 
+    /** While a shown engine-unit readout has no value: what each of its identifiers answered ("4436 NRC 31", "586F
+     *  out of range 0B B8 ..."), on the status row, so a photo of the page says why. '' when all is well. */
+    _dmeNote() {
+        const rd = this.dmeReader, dme = this.config.dme;
+        if (!rd || !dme || this.car.data().demo) return '';
+        const out = [];
+        [['oil pressure', 'oilP', 'oilPressure'], ['AFR', 'afr', 'afr'], ['intake', 'intake', 'intake']].forEach(([name, raw, list]) => {
+            const need = raw === 'oilP' ? this.needsOilP : raw === 'afr' ? this.needsAfr : this.needsIntake;
+            if (!need || isNum(this._raw(raw)) || !Array.isArray(dme[list])) return;
+            const tried = dme[list].map((c) => {
+                const r = rd.raws[rd.key(c)];
+                return DidReader_label(c) + ' ' + (!r ? 'not asked yet' : r.ok ? 'ok' : (r.why || '?') + (r.bytes && r.why === 'out of range' ? ' ' + r.bytes : ''));
+            });
+            out.push(name + ': ' + tried.join(', '));
+        });
+        return out.length ? '; no ' + out.join('; ') : '';
+    }
+
     _status() {
         // the Waze map's state rides along while that setting is on (and redraws the page's Map tab when it changes)
-        const s = this.statusText() + (this.waze && this.setting('mapInTheme') === true ? '; Waze: ' + this.waze.info().text : '');
+        const s = this.statusText() + (this.waze && this.setting('mapInTheme') === true ? '; Waze: ' + this.waze.info().text : '')
+            + this._dmeNote();
         if (s === this.lastStatus) return;
         this.lastStatus = s;
         this.statusListeners.forEach((fn) => { try { fn(s); } catch (e) { this.log.warn('status listener: ' + e); } });
@@ -1119,6 +1141,14 @@ class HudApp {
         const map = (this.config && this.config.dscStates) || {};
         const key = String(this.dscFdr) + '/' + String(this.dscAsc);
         if (typeof map[key] === 'string') return map[key];
+        // a pair not listed (a flag added while it intervenes): the bits of the DSC qualifier as measured on a 2023 X3
+        // (32 = 0x20 on, 2080 = 0x820 DTC, 224 = 0xE0 off): 0x800 = DTC, 0xC0 both set = off, 0x20 = on
+        const f = this.dscFdr;
+        if (isNum(f) && Object.keys(map).length) {
+            if (f & 0x800) return 'DTC';
+            if ((f & 0xC0) === 0xC0) return 'DSC OFF';
+            if (f & 0x20) return 'DSC ON';
+        }
         const off = (x) => typeof x === 'string' && /DEAKTIV|PASSIV|OFF|AUS/i.test(x);
         if (typeof this.dscFdr === 'string' || typeof this.dscAsc === 'string') {
             if (off(this.dscFdr)) return 'DSC OFF';
