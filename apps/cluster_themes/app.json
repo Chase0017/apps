@@ -1,8 +1,8 @@
 {
   "id": "cluster_themes",
   "title": "Cluster Themes",
-  "description": "Redraws the instrument cluster: Apex (camera-safe GT dash), GT3 race dash, M-style, Sport, Minimal, Roadster, Track, Drag, Rally, Retro 80s, Cruise or Dyno (BMW-coloured readout tiles), with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
-  "version": "0.17.3",
+  "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
+  "version": "0.18.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -102,69 +102,18 @@
       "key": "hudLayout",
       "label": "Theme (when not by drive mode)",
       "type": "choice",
-      "default": "gt3",
+      "default": "apex",
       "options": [
+        [
+          "apex",
+          "Apex (GT3 race dash)"
+        ],
         [
           "off",
           "Off (BMW's own cluster)"
-        ],
-        [
-          "apex",
-          "Apex (camera-safe GT)"
-        ],
-        [
-          "gt3",
-          "GT3"
-        ],
-        [
-          "m",
-          "M"
-        ],
-        [
-          "sport",
-          "Sport"
-        ],
-        [
-          "minimal",
-          "Minimal"
-        ],
-        [
-          "roadster",
-          "Roadster"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "drag",
-          "Drag"
-        ],
-        [
-          "rally",
-          "Rally"
-        ],
-        [
-          "retro80s",
-          "Retro 80s"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "dyno",
-          "Dyno"
-        ],
-        [
-          "grid",
-          "Calibration grid"
-        ],
-        [
-          "mapcal",
-          "Map calibration"
         ]
-      ]
+      ],
+      "reset": 1
     },
     {
       "key": "byMode",
@@ -176,187 +125,52 @@
       "key": "inComfort",
       "label": "In Comfort",
       "type": "choice",
-      "default": "off",
+      "default": "apex",
       "options": [
+        [
+          "apex",
+          "Apex (GT3 race dash)"
+        ],
         [
           "off",
           "Off (BMW's own cluster)"
-        ],
-        [
-          "apex",
-          "Apex (camera-safe GT)"
-        ],
-        [
-          "gt3",
-          "GT3"
-        ],
-        [
-          "m",
-          "M"
-        ],
-        [
-          "sport",
-          "Sport"
-        ],
-        [
-          "minimal",
-          "Minimal"
-        ],
-        [
-          "roadster",
-          "Roadster"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "drag",
-          "Drag"
-        ],
-        [
-          "rally",
-          "Rally"
-        ],
-        [
-          "retro80s",
-          "Retro 80s"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "dyno",
-          "Dyno"
         ]
-      ]
+      ],
+      "reset": 1
     },
     {
       "key": "inSport",
       "label": "In Sport",
       "type": "choice",
-      "default": "gt3",
+      "default": "apex",
       "options": [
+        [
+          "apex",
+          "Apex (GT3 race dash)"
+        ],
         [
           "off",
           "Off (BMW's own cluster)"
-        ],
-        [
-          "apex",
-          "Apex (camera-safe GT)"
-        ],
-        [
-          "gt3",
-          "GT3"
-        ],
-        [
-          "m",
-          "M"
-        ],
-        [
-          "sport",
-          "Sport"
-        ],
-        [
-          "minimal",
-          "Minimal"
-        ],
-        [
-          "roadster",
-          "Roadster"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "drag",
-          "Drag"
-        ],
-        [
-          "rally",
-          "Rally"
-        ],
-        [
-          "retro80s",
-          "Retro 80s"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "dyno",
-          "Dyno"
         ]
-      ]
+      ],
+      "reset": 1
     },
     {
       "key": "inEco",
       "label": "In Eco Pro",
       "type": "choice",
-      "default": "off",
+      "default": "apex",
       "options": [
+        [
+          "apex",
+          "Apex (GT3 race dash)"
+        ],
         [
           "off",
           "Off (BMW's own cluster)"
-        ],
-        [
-          "apex",
-          "Apex (camera-safe GT)"
-        ],
-        [
-          "gt3",
-          "GT3"
-        ],
-        [
-          "m",
-          "M"
-        ],
-        [
-          "sport",
-          "Sport"
-        ],
-        [
-          "minimal",
-          "Minimal"
-        ],
-        [
-          "roadster",
-          "Roadster"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "drag",
-          "Drag"
-        ],
-        [
-          "rally",
-          "Rally"
-        ],
-        [
-          "retro80s",
-          "Retro 80s"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "dyno",
-          "Dyno"
         ]
-      ]
-    },
-    {
-      "key": "mapInTheme",
-      "label": "Show Waze map inside the theme",
-      "type": "bool",
-      "default": false
+      ],
+      "reset": 1
     },
     {
       "key": "units",
@@ -672,70 +486,6 @@
       ]
     },
     {
-      "key": "gFlipLat",
-      "label": "G-meter: swap left / right",
-      "type": "bool",
-      "default": false
-    },
-    {
-      "key": "gFlipLong",
-      "label": "G-meter: brake on top",
-      "type": "bool",
-      "default": false
-    },
-    {
-      "key": "gRange",
-      "label": "G-meter range",
-      "type": "choice",
-      "default": 1.2,
-      "options": [
-        [
-          0.8,
-          "0.8 g"
-        ],
-        [
-          1.0,
-          "1.0 g"
-        ],
-        [
-          1.2,
-          "1.2 g"
-        ],
-        [
-          1.5,
-          "1.5 g"
-        ],
-        [
-          2.0,
-          "2.0 g"
-        ]
-      ]
-    },
-    {
-      "key": "gTrail",
-      "label": "G-meter trail",
-      "type": "choice",
-      "default": 2,
-      "options": [
-        [
-          0,
-          "Off"
-        ],
-        [
-          1,
-          "1 s"
-        ],
-        [
-          2,
-          "2 s"
-        ],
-        [
-          4,
-          "4 s"
-        ]
-      ]
-    },
-    {
       "key": "nightDim",
       "label": "Night colours",
       "type": "choice",
@@ -1014,6 +764,22 @@
         [
           "off",
           "Off"
+        ]
+      ]
+    },
+    {
+      "key": "theme",
+      "label": "Colour theme (center screen)",
+      "type": "choice",
+      "default": "ice",
+      "options": [
+        [
+          "ice",
+          "Ice White"
+        ],
+        [
+          "m_tricolour",
+          "M Tricolour"
         ]
       ]
     }

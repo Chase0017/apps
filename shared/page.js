@@ -28,9 +28,11 @@ const tz = require('./tz');
 
 const W = 1600, H = 520;
 const A = G.withAlpha;
+// Ice White (the kit's "ice" theme, as cauliflowermossgrape's M Vitals): near-black panels, white text, a pale ice
+// accent; "blue" is the accent fill (selected chips, switches, buttons) and "ink" the text drawn on it
 const C = {
-    bg: '#05070a', glow: '#0d1a2e', text: '#eef2f8', dim: '#8a96a8', label: '#6f7b8f', line: '#ffffff12',
-    blue: '#2b7fff', blueHi: '#5aa2ff', blueDeep: '#1c69d4', live: '#7fd3a0', off: '#c3cad6',
+    bg: '#050607', glow: '#15181d', text: '#ffffff', dim: '#9aa0a8', label: '#7a8089', line: '#ffffff14',
+    blue: '#e9f2ff', blueHi: '#ffffff', blueDeep: '#c9d3df', live: '#e9f2ff', off: '#c3cad6', ink: '#0b0d10',
 };
 const RAIL = { x: 16, y: 54, w: 252, h: 66, gap: 8 };
 const RAIL7 = { x: 16, y: 54, w: 252, h: 58, gap: 6 };     // seven tabs or more: a little shorter, so they fit
@@ -50,7 +52,7 @@ const TAB = {
 };
 
 // the kit's own chrome (header, bar, Settings sheet) in BMW blue, to match the page
-Object.assign(themes.THEMES.m_tricolour, { sel: C.blue, selText: '#ffffff', accent2: C.blueHi, bg: C.bg });
+Object.assign(themes.THEMES.ice, { sel: C.blue, selText: C.ink, bg: C.bg });
 
 class Page {
     constructor(ctx, hud, cfg) {
@@ -140,7 +142,7 @@ class Page {
         const bottom = G.pageBottom(cv);
         const h = bottom + 8;
         cv.clear(C.bg);
-        cv.gradientRect(0, 0, W, h, [[0, C.glow], [0.55, '#070a10'], [1, C.bg]]);
+        cv.gradientRect(0, 0, W, h, [[0, C.glow], [0.55, '#08090b'], [1, C.bg]]);
         const on = this.hud.activeName && this.hud.activeName !== 'off';
         const demo = this.hud.car && this.hud.car.data().demo;
         G.frame(cv, this.theme(), [], -1, [
@@ -320,7 +322,7 @@ class Page {
             const sel = sl.id === this.slot, sn = this.hud.slotSensor(lay, sl.id, slots);
             glass(cv, x, y, sw, rh, sel);
             cv.circle(x + 26, y + rh / 2, 14, sel ? C.blue : A(C.blue, 0.75));
-            cv.text(String(i + 1), x + 26, y + rh / 2 + 6, 15, '#ffffff', { align: 'center', font: 'bold', literal: true });
+            cv.text(String(i + 1), x + 26, y + rh / 2 + 6, 15, C.ink, { align: 'center', font: 'bold', literal: true });
             if (two) {
                 cv.text(sn ? sn.head : '--', x + 50, y + rh / 2 - 1, 17, '#ffffff', { font: 'bold', literal: true });
                 cv.text(sl.where || '', x + 50, y + rh / 2 + 16, 13, C.dim, { literal: true });
@@ -458,7 +460,7 @@ class Page {
         this.rowBox(cv, CX, y, w, 'Test the shift lights', 56);
         const bt = testing ? 'Running' : moving ? 'Stop the car first' : 'Run test', bw = cv.textWidth(bt, 16, { font: 'bold', literal: true }) + 40;
         cv.roundRect(CX + w - bw - 14, y + 10, bw, 36, 18, testing || moving ? '#ffffff12' : C.blue);
-        cv.text(bt, CX + w - 14 - bw / 2, y + 34, 16, testing || moving ? C.dim : '#ffffff', { align: 'center', font: 'bold', literal: true });
+        cv.text(bt, CX + w - 14 - bw / 2, y + 34, 16, testing || moving ? C.dim : C.ink, { align: 'center', font: 'bold', literal: true });
         if (!testing && !moving) {
             cv.target(CX, y, w, 56, () => {
                 if (this.hud.testShift()) { this.kick(); setTimeout(() => this.kick(), 4000); }
@@ -582,7 +584,7 @@ class Page {
         this.rowBox(cv, x, y, w, name, h);
         const on = this.get(key) === true, tx = x + w - 84, ty = y + h / 2 - 16;
         cv.roundRect(tx, ty, 66, 32, 16, on ? C.blue : '#ffffff1f');
-        cv.circle(on ? tx + 50 : tx + 16, ty + 16, 12, on ? '#ffffff' : '#c9d1dc');
+        cv.circle(on ? tx + 50 : tx + 16, ty + 16, 12, on ? C.ink : '#c9d1dc');
         cv.target(x, y, w, h, () => this.set(key, !on), 'set:' + key, 14);
         return y + h + (h < 56 ? 6 : 8);
     }
@@ -648,7 +650,7 @@ class Page {
         const bh = 52, by = y + h - bh - 24;
         const yw = cv.textWidth(q.yes, 18, { font: 'bold', literal: true }) + 56, yx = x + w - 32 - yw;
         cv.roundRect(yx, by, yw, bh, bh / 2, C.blue);
-        cv.text(q.yes, yx + yw / 2, by + 33, 18, '#ffffff', { align: 'center', font: 'bold', literal: true });
+        cv.text(q.yes, yx + yw / 2, by + 33, 18, C.ink, { align: 'center', font: 'bold', literal: true });
         cv.target(yx, by, yw, bh, () => { this.confirm = null; q.run(); this.kick(); }, 'confirm:yes', bh / 2);
         const nw = 150, nx = yx - 16 - nw;
         cv.roundRect(nx, by, nw, bh, bh / 2, '#ffffff14');
@@ -684,7 +686,7 @@ function glass(cv, x, y, w, h, sel) {
 function chip(cv, x, y, text, on, run, key) {
     const w = cv.textWidth(text, 16, { font: 'bold', literal: true }) + 30, h = 36;
     cv.roundRect(x, y, w, h, h / 2, on ? C.blue : '#ffffff12');
-    cv.text(text, x + w / 2, y + 24, 16, on ? '#ffffff' : C.off, { align: 'center', font: 'bold', literal: true });
+    cv.text(text, x + w / 2, y + 24, 16, on ? C.ink : C.off, { align: 'center', font: 'bold', literal: true });
     cv.target(x, y, w, h, run, key, h / 2);
     return w;
 }
@@ -692,7 +694,7 @@ function chip(cv, x, y, text, on, run, key) {
 function miniChip(cv, x, y, text, on, run, key) {
     const w = cv.textWidth(text, 13, { font: 'bold', literal: true }) + 18, h = 28;
     cv.roundRect(x, y, w, h, h / 2, on ? C.blue : '#ffffff12');
-    cv.text(text, x + w / 2, y + 19, 13, on ? '#ffffff' : C.off, { align: 'center', font: 'bold', literal: true });
+    cv.text(text, x + w / 2, y + 19, 13, on ? C.ink : C.off, { align: 'center', font: 'bold', literal: true });
     cv.target(x, y, w, h, run, key, h / 2);
     return w;
 }
