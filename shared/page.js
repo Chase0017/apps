@@ -117,7 +117,7 @@ class Page {
         this.confirm = {
             title: scr.otherName + ' is on',
             lines: cluster
-                ? ['A cluster theme and the HUD can\'t show at the same time.', 'Turn HUD Widgets off so ' + this.layoutName(v) + ' shows?']
+                ? ['A cluster theme and the HUD can\'t show at the same time.', 'Turn Apex HUD off so ' + this.layoutName(v) + ' shows?']
                 : ['The HUD and a cluster theme can\'t show at the same time.', 'Turn the cluster theme off so ' + this.layoutName(v) + ' shows?'],
             yes: cluster ? 'Turn HUD off' : 'Turn theme off',
             run: () => { scr.claim(); this.set(key, v); },

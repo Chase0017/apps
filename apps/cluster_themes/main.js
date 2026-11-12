@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Cluster Themes: redraws the iDrive 7 instrument cluster (the 1920x720 "panel" target) through cluster-render.
+ * Apex Cluster (bimmer-lab's Cluster Themes, chase0017-apps fork): redraws the iDrive 7 instrument cluster (the 1920x720 "panel" target) through cluster-render.
  *
  * The center screen is the app's own page (shared/page.js, a canvas screen): the themes with their
  * pictures, which drive mode shows which, and the settings. Each choice is saved in the app's data/settings.json

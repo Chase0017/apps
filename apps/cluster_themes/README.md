@@ -1,7 +1,8 @@
-# Cluster Themes (Apex)
+# Apex Cluster
 
 Redraws the whole instrument cluster of a 2022+ BMW X3 (iDrive 7, the LCI cluster with the driver attention camera)
-as **Apex**, a GT3-style race dash. Built on bimmer-lab's Cluster Themes (MIT); this fork keeps one theme and fits it
+as **Apex**, a GT3-style race dash. Built on bimmer-lab's Cluster Themes (MIT), with its sibling **Apex HUD** on the
+windshield; this fork keeps one theme and fits it
 to the LCI cluster.
 
 ## Apex

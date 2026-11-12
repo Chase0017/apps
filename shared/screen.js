@@ -1,6 +1,6 @@
 'use strict';
 /**
- * screen.js - Cluster Themes and HUD Widgets share one screen (cluster-render shows the cluster panel and the HUD
+ * screen.js - Apex Cluster and Apex HUD (Cluster Themes and HUD Widgets) share one screen (cluster-render shows the cluster panel and the HUD
  * under one scene, never both at once), so the two apps tell each other what they show.
  *
  * Each app writes <dir>/<me>.json about every 2 s: { on, claim, at }. "on": it is drawing a theme or layout now.
@@ -22,7 +22,7 @@ const path = require('path');
 const DIR = '/dev/shm/bimmer-lab';
 const BEAT_MS = 2000;
 const FRESH_MS = 7000;           // the other app's file older than this: it isn't running
-const NAMES = { cluster: 'Cluster Themes', hud: 'HUD Widgets' };
+const NAMES = { cluster: 'Apex Cluster', hud: 'Apex HUD' };
 
 class Screen {
     /**

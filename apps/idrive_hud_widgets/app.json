@@ -1,11 +1,12 @@
 {
   "id": "idrive_hud_widgets",
-  "title": "HUD Widgets",
-  "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD, in Classic, M or Night themes",
-  "version": "0.12.6",
+  "title": "Apex HUD",
+  "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD; Redline (shift lights and shift score) in Sport. Starts with the car.",
+  "version": "0.13.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
+  "autostart": true,
   "shared": [
     "hud.js",
     "hud_text.js",
@@ -69,7 +70,7 @@
     {
       "name": "MAIN",
       "kind": "canvas",
-      "title": "HUD Widgets",
+      "title": "Apex HUD",
       "buttons": [
         [
           "BTN_SETTINGS",
@@ -201,7 +202,7 @@
       "key": "inSport",
       "label": "In Sport (off by default: BMW's Sport HUD takes the middle)",
       "type": "choice",
-      "default": "off",
+      "default": "redline",
       "options": [
         [
           "off",
@@ -247,7 +248,8 @@
           "retro",
           "Retro"
         ]
-      ]
+      ],
+      "reset": 1
     },
     {
       "key": "inEco",
@@ -841,6 +843,22 @@
         [
           "off",
           "Off"
+        ]
+      ]
+    },
+    {
+      "key": "theme",
+      "label": "Colour theme (center screen)",
+      "type": "choice",
+      "default": "ice",
+      "options": [
+        [
+          "ice",
+          "Ice White"
+        ],
+        [
+          "m_tricolour",
+          "M Tricolour"
         ]
       ]
     }
