@@ -84,7 +84,7 @@ function check(widgets, target) {
     const all = [];
     widgets.forEach((w) => {
         const sub = w && (w.boxes || w.tiles);
-        if (Array.isArray(sub)) sub.forEach((b) => { if (b) all.push(Object.assign({}, b, { id: w.id + '.' + b.id })); });
+        if (Array.isArray(sub)) sub.forEach((b) => { if (b) all.push(Object.assign({ overBlackBox: w.overBlackBox }, b, { id: w.id + '.' + b.id })); });
         else if (w && w.type === 'lights' && w.rise > 0) lightRects(w).forEach((b) => all.push(b));
         else all.push(w);
     });
@@ -106,7 +106,7 @@ function check(widgets, target) {
                 const worst = under.reduce((a, b) => (b.d > a.d ? b : a));
                 out.push(id + ': ' + worst.what + ' ' + worst.d + ' px under the hood');
             }
-            if (overlaps(w, BLACK_BOX)) {
+            if (!w.overBlackBox && overlaps(w, BLACK_BOX)) {   // overBlackBox: a 2022+ layout (that cluster draws no such box)
                 out.push(id + ': overlaps BMW\'s gear box x' + BLACK_BOX[0] + '-' + BLACK_BOX[2] + ' y' + BLACK_BOX[1] + '-' + BLACK_BOX[3]);
             }
             if (overlaps(w, CAMERA)) {
