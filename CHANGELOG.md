@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 12 2026
 
+- **Cluster Themes 0.16.0 (chase0017-apps fork):** Apex gets a middle row of four more readouts between RPM and coolant: oil pressure, AFR, intake air and engine torque (each a readout slot). The gear box is shorter to make room. New readouts **AFR** (air-fuel ratio, read from the engine unit's wideband O2 sensor over standard OBD, lambda x 14.7; unverified on this car) and **Oil pressure** (no source known yet: the B58's is a BMW-specific identifier, so it shows `--` until one is added to config.dme.oilPressure).
 - **Cluster Themes 0.15.1 (chase0017-apps fork):** Apex's side columns move in from the screen edges so BMW's warning lights no longer land on them: the brake, tyre pressure, ABS and traction lights down the left edge, and the steering light on the top right. The layout check now knows those, and BMW's gear letter, too (measured from a 2023 X3 M40i photo with them lit). The preview tool now uses the same smaller-font fallback as the car.
 - **Cluster Themes 0.15.0 (chase0017-apps fork):** Apex's shift lights ramp up toward the camera, each bank climbing 30 px from its outer light to its inner one, which also lifts the inner lights further clear of BMW's turn arrows. New lights option `rise`; the layout check tests each light of a ramped row where it is drawn.
 - **Cluster Themes 0.14.9 (chase0017-apps fork):** Apex's shift lights are 6 a side instead of 9, and half as big again (48 px across instead of 32): two green, a yellow, two red and a blue by the camera.

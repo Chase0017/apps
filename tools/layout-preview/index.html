@@ -105,7 +105,8 @@ function text(x, y, w, h, s, f, col, align, xoff) {
 
 // ---- demo data ----
 const SLOT = { speed: ['SPEED', 'MPH', '', '47'], rpm: ['RPM', '', '', null], fuel: ['FUEL', '%', '', '62'],
-  boost: ['BOOST', 'PSI', '', '14.2'], coolant: ['COOLANT', '°F', '°', '199'], oil: ['OIL', '°F', '°', '221'] };
+  boost: ['BOOST', 'PSI', '', '14.2'], coolant: ['COOLANT', '°F', '°', '199'], oil: ['OIL', '°F', '°', '221'],
+  oilP: ['OIL PRESS', 'PSI', '', '58'], afr: ['AFR', '', '', '14.7'], intake: ['INTAKE', '°F', '°', '97'], torque: ['TORQUE', 'LB-FT', '', '312'] };
 function state() {
   const rpm = Number($('rpm').value);
   return { rpm, now: rpm >= SHIFT_AT, gear: $('gear').value, mode: $('mode').value };
@@ -137,7 +138,7 @@ async function draw() {
       for (let i = 0; i < 12; i++) { const b = w.boxes[i];
         rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
         styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.headColor === 'accent' ? 1 : 0); }
-      effect(w, 'boxes', { u_size: [w.w, w.h], u_bg: rgba(theme.bg), u_hole: [0, 0, 0, 0], u_holeR: [0], u_n: [Math.min(12, w.boxes.length)],
+      effect(w, 'boxes', { u_size: [w.w, w.h], u_bg: rgba(Array.isArray(w.color) ? w.color : theme[w.color || 'bg']), u_hole: [0, 0, 0, 0], u_holeR: [0], u_n: [Math.min(12, w.boxes.length)],
         u_box: rects, u_boxStyle: styles, u_fill: rgba(theme.panel), u_line: rgba(theme.line), u_head: rgba(theme.head), u_accent: rgba(theme.accent) });
     } else if (w.type === 'lights') {
       const n = w.count || 12, from = Math.min(w.from ?? 3000, SHIFT_AT - 500);

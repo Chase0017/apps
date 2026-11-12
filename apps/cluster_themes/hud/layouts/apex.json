@@ -33,9 +33,29 @@
       "id": "6",
       "where": "right box, bottom",
       "default": "oil"
+    },
+    {
+      "id": "7",
+      "where": "middle row, oil pressure",
+      "default": "oilP"
+    },
+    {
+      "id": "8",
+      "where": "middle row, afr",
+      "default": "afr"
+    },
+    {
+      "id": "9",
+      "where": "middle row, intake",
+      "default": "intake"
+    },
+    {
+      "id": "10",
+      "where": "middle row, torque",
+      "default": "torque"
     }
   ],
-  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear (P R N, D3 / S3 / M3) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light, the PARK and steering lights over the top right and the brake / tyre / ABS / traction lights down the left edge. No map window. Widget reference: shared/hud.js header.",
+  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear (P R N, D3 / S3 / M3) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; a middle row of oil pressure, AFR, intake air and torque between rpm and water, its frame a second see-through boxes layer on connection 1 since one boxes layer holds 12 (every one a readout slot). Clear of the camera, the turn arrows, the hood curve, BMW's black box, its belt light, the PARK and steering lights over the top right and the brake / tyre / ABS / traction lights down the left edge. No map window. Widget reference: shared/hud.js header.",
   "widgets": [
     {
       "id": "frame",
@@ -80,7 +100,7 @@
           "x": 640,
           "y": 255,
           "w": 640,
-          "h": 325,
+          "h": 200,
           "head": 36,
           "radius": 4
         },
@@ -127,6 +147,61 @@
           "y": 595,
           "w": 244,
           "h": 107,
+          "head": 36,
+          "radius": 4
+        }
+      ]
+    },
+    {
+      "id": "strip",
+      "type": "boxes",
+      "class": "content",
+      "z": 1,
+      "conn": 1,
+      "x": 378,
+      "y": 470,
+      "w": 1204,
+      "h": 110,
+      "color": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "boxes": [
+        {
+          "id": "m7_box",
+          "x": 378,
+          "y": 470,
+          "w": 289,
+          "h": 110,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "m8_box",
+          "x": 683,
+          "y": 470,
+          "w": 289,
+          "h": 110,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "m9_box",
+          "x": 988,
+          "y": 470,
+          "w": 289,
+          "h": 110,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "m10_box",
+          "x": 1293,
+          "y": 470,
+          "w": 289,
+          "h": 110,
           "head": 36,
           "radius": 4
         }
@@ -314,11 +389,11 @@
       "type": "text",
       "z": 5,
       "x": 650,
-      "y": 314,
+      "y": 311,
       "w": 620,
-      "h": 222,
+      "h": 125,
       "text": "{{gear}}",
-      "font": "y_gear",
+      "font": "r_gear",
       "align": "center",
       "hotWhen": "now",
       "rate": 50
@@ -467,6 +542,118 @@
       "font": "value",
       "align": "right",
       "slot": "6",
+      "fit": [
+        "small"
+      ]
+    },
+    {
+      "id": "m7_head",
+      "type": "text",
+      "z": 5,
+      "x": 394,
+      "y": 475,
+      "w": 260,
+      "h": 27,
+      "text": "{{slotHeadU:7}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "m7",
+      "type": "text",
+      "z": 5,
+      "x": 390,
+      "y": 506,
+      "w": 265,
+      "h": 70,
+      "text": "{{slot:7}}{{slotSuffix:7}}",
+      "font": "value",
+      "align": "right",
+      "slot": "7",
+      "fit": [
+        "small"
+      ]
+    },
+    {
+      "id": "m8_head",
+      "type": "text",
+      "z": 5,
+      "x": 699,
+      "y": 475,
+      "w": 260,
+      "h": 27,
+      "text": "{{slotHeadU:8}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "m8",
+      "type": "text",
+      "z": 5,
+      "x": 695,
+      "y": 506,
+      "w": 265,
+      "h": 70,
+      "text": "{{slot:8}}{{slotSuffix:8}}",
+      "font": "value",
+      "align": "right",
+      "slot": "8",
+      "fit": [
+        "small"
+      ]
+    },
+    {
+      "id": "m9_head",
+      "type": "text",
+      "z": 5,
+      "x": 1004,
+      "y": 475,
+      "w": 260,
+      "h": 27,
+      "text": "{{slotHeadU:9}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "m9",
+      "type": "text",
+      "z": 5,
+      "x": 1000,
+      "y": 506,
+      "w": 265,
+      "h": 70,
+      "text": "{{slot:9}}{{slotSuffix:9}}",
+      "font": "value",
+      "align": "right",
+      "slot": "9",
+      "fit": [
+        "small"
+      ]
+    },
+    {
+      "id": "m10_head",
+      "type": "text",
+      "z": 5,
+      "x": 1309,
+      "y": 475,
+      "w": 260,
+      "h": 27,
+      "text": "{{slotHeadU:10}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "m10",
+      "type": "text",
+      "z": 5,
+      "x": 1305,
+      "y": 506,
+      "w": 265,
+      "h": 70,
+      "text": "{{slot:10}}{{slotSuffix:10}}",
+      "font": "value",
+      "align": "right",
+      "slot": "10",
       "fit": [
         "small"
       ]

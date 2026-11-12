@@ -22,6 +22,9 @@ const LIST = [
     { id: 'power', name: 'Power', cat: 'Engine', head: 'POWER', tok: 'power', unit: (us) => (us ? 'HP' : 'KW') },
     { id: 'torquePct', name: 'Torque, % of max', cat: 'Engine', head: 'TORQUE', tok: 'torquePct', unit: () => '%' },
     { id: 'powerPct', name: 'Power, % of max', cat: 'Engine', head: 'POWER', tok: 'powerPct', unit: () => '%' },
+    // from the engine unit over read-only UDS (app.json config.dme.afr / oilPressure): '--' until a candidate answers
+    { id: 'afr', name: 'Air-fuel ratio (wideband, gasoline)', cat: 'Engine', head: 'AFR', tok: 'afr', unit: () => '' },
+    { id: 'oilP', name: 'Oil pressure', cat: 'Engine', head: 'OIL PRESS', tok: 'oilP', unit: P },
     { id: 'oil', name: 'Oil temperature', cat: 'Temps', head: 'OIL', tok: 'oil', unit: T, suffix: '°' },
     { id: 'coolant', name: 'Coolant temperature', cat: 'Temps', head: 'COOLANT', tok: 'coolant', unit: T, suffix: '°' },
     { id: 'intake', name: 'Intake air temperature', cat: 'Temps', head: 'INTAKE', tok: 'intake', unit: T, suffix: '°' },
