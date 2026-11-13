@@ -15,9 +15,11 @@
 <div class="bar">
   Scene <select id="scene"><option value="street">Street, warm</option><option value="pull">Full-throttle pull</option><option value="cold">Cold start</option><option value="track">Hot track lap (trouble)</option><option value="none">No data yet</option></select>
   Units <select id="units"><option value="us">US</option><option value="metric">Metric</option></select>
+  Temperature <select id="tu"><option value="">Follow Units</option><option value="f">°F</option><option value="c">°C</option></select>
+  Pressure <select id="pu"><option value="">Follow Units</option><option value="psi">psi</option><option value="bar">bar</option></select>
 </div>
 <canvas id="c" width="1600" height="520"></canvas>
-<script src="../../apps/apex_telemetry/draw.js?v=15"></script>
+<script src="../../apps/apex_telemetry/draw.js?v=17"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let FONT = null;   // [{ size, glyphs, atlas: Uint8Array, atlasW, atlasH }]
@@ -106,7 +108,7 @@ function scene(name) {
   const g = $('c').getContext('2d'), cv = makeCv(g);
   const paint = () => {
     const s = scene($('scene').value); s.demo = false;
-    ApexTelemetryDraw.draw(cv, s, { us: $('units').value === 'us', tyreWarn: 54, tyreHot: 66, frame, why: (k) => ({ hpfp: 'F423 NRC 31, F459 NRC 31, OBD 23 NO REPLY', egs: '6000 NO REPLY', chargeBefore: '59D4 NRC 31' })[k] || '' });
+    ApexTelemetryDraw.draw(cv, s, { us: $('units').value === 'us', tempF: $('tu').value ? $('tu').value === 'f' : undefined, psi: $('pu').value ? $('pu').value === 'psi' : undefined, tyreWarn: 54, tyreHot: 66, frame, why: (k) => ({ hpfp: 'F423 NRC 31, F459 NRC 31, OBD 23 NO REPLY', egs: '6000 NO REPLY', chargeBefore: '59D4 NRC 31' })[k] || '' });
     requestAnimationFrame(paint);
   };
   paint();

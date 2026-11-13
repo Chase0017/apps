@@ -20,6 +20,8 @@ to the LCI cluster.
 - **Colours:** the gear and rpm turn red while the engine is off; coolant turns yellow above 113 °C (235 °F) and flashes
   red above 120 °C (248 °F), oil and boost flash red over their limits (Alerts tab).
 - Every readout box can show another sensor (Readouts tab).
+- Units: **Units (all)** for US or metric, or each on its own on the Settings tab: speed and distance, temperature,
+  pressure (psi with °C works).
 
 Everything clears what BMW draws over the cluster on this car: the camera pod, the turn arrows, the brake / tyre / ABS /
 traction lights down the left edge, the steering and PARK lights top right, the belt light and the gear letter at the

@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 13 2026
 
+- **Apex Cluster 0.20.0, Apex HUD 0.14.0, Apex Telemetry 0.5.0:** a unit setting for each measure: **Speed and distance** (mph, mi / km/h, km), **Temperature** (°F / °C) and **Pressure** (psi / bar), each "Follow Units" by default, so psi with °C (or any mix) works. **Units (all)** still sets them together; torque and power follow it. Telemetry's boost numbers are a little smaller in bar (two decimals).
 - **Apex Telemetry 0.4.2:** fuel rail, low fuel, load, gearbox and the intercooler read again. On the car only boost came through: the engine unit was asked for whichever value was due first, and boost (every 250 ms) was due again by the time each boost read finished, so nothing after it was ever asked. Now the most overdue value goes next, a value with no answer 3 times in a row is asked every 15 s, and a candidate that gets no reply gives up after 1.2 s instead of 4. A box without a value shows what the engine unit answered (e.g. F423 NRC 31).
 - **Apex Telemetry 0.4.1:** boost control is white while fine and red when boost stays 3 psi off target for 0.75 s (no yellow, no green; a spool-up's lag doesn't count).
 - **Apex Telemetry 0.4.0:** tyres show no colour while fine. Pressure against the car's target: blue 3 psi under, yellow 3 psi over, red 5 psi over. Temperature: yellow from 130 °F, red from 150 °F (settings Tyre warm / Tyre hot, reset once to these), nothing for cold (the Tyre cold setting is gone); the stripe and the wheel on the car light only when warm or hot.

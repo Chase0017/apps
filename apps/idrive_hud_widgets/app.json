@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "Apex HUD",
   "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD; Redline (shift lights and shift score) in Sport. Starts with the car.",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -456,7 +456,7 @@
     },
     {
       "key": "units",
-      "label": "Units",
+      "label": "Units (all)",
       "type": "choice",
       "default": "us",
       "options": [
@@ -467,6 +467,66 @@
         [
           "metric",
           "km/h, °C, bar"
+        ]
+      ]
+    },
+    {
+      "key": "unitSpeed",
+      "label": "Speed and distance",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "mph",
+          "mph, mi"
+        ],
+        [
+          "kmh",
+          "km/h, km"
+        ]
+      ]
+    },
+    {
+      "key": "unitTemp",
+      "label": "Temperature",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "f",
+          "°F"
+        ],
+        [
+          "c",
+          "°C"
+        ]
+      ]
+    },
+    {
+      "key": "unitPress",
+      "label": "Pressure",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "psi",
+          "psi"
+        ],
+        [
+          "bar",
+          "bar"
         ]
       ]
     },

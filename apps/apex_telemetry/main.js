@@ -32,11 +32,13 @@ mgu.run({
             return;
         }
         const num = (k, d) => { const v = Number(settings.get(k)); return isFinite(v) ? v : d; };
+        // each measure's own unit setting; "Follow Units" (auto) takes the Units setting
+        const unit = (k, yes, no) => { const v = settings.get(k); return v === yes ? true : v === no ? false : settings.get('units') !== 'metric'; };
         const loop = ctx.loop('MAIN', 5, () => {
             tel.wanted();
             const cv = ctx.canvas(W, H);
             D.draw(cv, tel.snapshot(), {
-                us: settings.get('units') !== 'metric',
+                us: unit('unitSpeed', 'mph', 'kmh'), tempF: unit('unitTemp', 'f', 'c'), psi: unit('unitPress', 'psi', 'bar'),
                 tyreWarn: num('tyreWarn', 54), tyreHot: num('tyreHot', 66),
                 frame: (c, badges) => G.frame(c, ctx.theme(), [], -1, badges),
                 why: (k) => tel.why(k),

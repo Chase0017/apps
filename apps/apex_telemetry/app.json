@@ -2,7 +2,7 @@
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
   "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
@@ -72,7 +72,7 @@
   "settings": [
     {
       "key": "units",
-      "label": "Units",
+      "label": "Units (all)",
       "type": "choice",
       "default": "us",
       "options": [
@@ -83,6 +83,66 @@
         [
           "metric",
           "km/h, °C, bar"
+        ]
+      ]
+    },
+    {
+      "key": "unitSpeed",
+      "label": "Speed and distance",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "mph",
+          "mph, mi"
+        ],
+        [
+          "kmh",
+          "km/h, km"
+        ]
+      ]
+    },
+    {
+      "key": "unitTemp",
+      "label": "Temperature",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "f",
+          "°F"
+        ],
+        [
+          "c",
+          "°C"
+        ]
+      ]
+    },
+    {
+      "key": "unitPress",
+      "label": "Pressure",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "psi",
+          "psi"
+        ],
+        [
+          "bar",
+          "bar"
         ]
       ]
     },

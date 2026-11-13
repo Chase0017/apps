@@ -45,7 +45,8 @@ Read only, nothing is written to the car.
 
 ## Settings
 
-Units (US / metric), Tyre warm (yellow) from, Tyre hot (red) from, Demo data, Colour theme. All under **All settings**.
+Units (all: US / metric), and each on its own: Speed and distance (mph / km/h), Temperature (°F / °C), Pressure
+(psi / bar), each following Units until set. Tyre warm (yellow) from, Tyre hot (red) from, Demo data, Colour theme. All under **All settings**.
 
 ## Working on it
 

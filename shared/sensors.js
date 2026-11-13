@@ -52,4 +52,7 @@ const LIST = [
 const BY_ID = {};
 LIST.forEach((s) => { BY_ID[s.id] = s; });
 
+// dim: the unit setting a sensor follows (hud.js unitUs): temperatures, pressures, speed and distance; the rest 'units'
+LIST.forEach((x) => { x.dim = x.unit === T ? 'temp' : x.unit === P ? 'press' : /^(speed|range|avgSpeed)$/.test(x.id) ? 'speed' : 'units'; });
+
 module.exports = { CATS, LIST, get: (id) => BY_ID[id] || null };

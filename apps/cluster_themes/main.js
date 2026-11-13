@@ -42,7 +42,7 @@ mgu.run({
             title: ctx.spec.title, what: 'cluster',
             look: { name: 'Themes', style: 'hero', tags: { apex: 'GT3 race dash' } },
             tabs: ['look', 'readouts', 'badge', 'alerts', 'settings'],
-            settings: ['units', 'clock', 'timeZone', 'tankLitres', 'redline', 'shiftBefore', 'coldGuard', 'showBoost', 'nightDim', 'stripClear', 'demo'],
+            settings: ['units', 'unitSpeed', 'unitTemp', 'unitPress', 'clock', 'timeZone', 'tankLitres', 'redline', 'shiftBefore', 'coldGuard', 'showBoost', 'nightDim', 'stripClear', 'demo'],
         }).start();
     },
 });

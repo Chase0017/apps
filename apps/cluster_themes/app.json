@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Apex Cluster",
   "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
-  "version": "0.19.3",
+  "version": "0.20.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -174,7 +174,7 @@
     },
     {
       "key": "units",
-      "label": "Units",
+      "label": "Units (all)",
       "type": "choice",
       "default": "us",
       "options": [
@@ -185,6 +185,66 @@
         [
           "metric",
           "km/h, °C, bar"
+        ]
+      ]
+    },
+    {
+      "key": "unitSpeed",
+      "label": "Speed and distance",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "mph",
+          "mph, mi"
+        ],
+        [
+          "kmh",
+          "km/h, km"
+        ]
+      ]
+    },
+    {
+      "key": "unitTemp",
+      "label": "Temperature",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "f",
+          "°F"
+        ],
+        [
+          "c",
+          "°C"
+        ]
+      ]
+    },
+    {
+      "key": "unitPress",
+      "label": "Pressure",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Follow Units"
+        ],
+        [
+          "psi",
+          "psi"
+        ],
+        [
+          "bar",
+          "bar"
         ]
       ]
     },

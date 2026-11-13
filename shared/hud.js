@@ -184,7 +184,8 @@
  * {{gFwd}} ("0.31 ACC", "0.31 BRK") {{gBest}} (the most g this drive) {{gMax}} (the G-meter's range, "1.2") {{signal:<car.data() key>}} (raw, 1 decimal).
  * Redline (shift_score.js): {{rpm10}} (rpm to 10) {{shiftAt}} {{lastShift}} {{lastGears}} (4 > 5)
  * {{verdict}} {{shiftPrompt}} (SHIFT at the shift point) {{coldNote}} (only while the oil is cold).
- * Units follow the "units" setting: us = mph, °F, psi; metric = km/h, °C, bar.
+ * Units: "units" (us = mph, °F, psi; metric = km/h, °C, bar) sets them all; "unitSpeed" (speed, distance), "unitTemp" and
+ * "unitPress" each override theirs (unitUs()). Torque and power follow "units".
  * {{afr}} (air-fuel ratio, lambda x 14.7, config.dme.afr) {{oilP}} (oil pressure above outside air, config.dme.oilPressure) {{timing}} (ignition timing, degrees before TDC, config.dme.timing: OBD PID 0x0E as M Vitals reads it)
  * {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
  * 0-60 run started) {{avgSpeed}} (average moving speed this drive, from its first minute) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
@@ -530,12 +531,19 @@ class HudApp {
         this.needsHv = /hvSoc/.test(j);
         this.needsFuel = /fuel/i.test(j);
     }
+    /** Whether a measure shows in US units: 'speed' (mph, mi), 'temp' (°F), 'press' (psi). Each has its own setting
+     *  (unitSpeed / unitTemp / unitPress), whose "Follow Units" (or a value it doesn't know) takes the "units" setting. */
+    unitUs(dim) {
+        const v = this.setting({ speed: 'unitSpeed', temp: 'unitTemp', press: 'unitPress' }[dim]);
+        if (v === 'mph' || v === 'f' || v === 'psi') return true;
+        if (v === 'kmh' || v === 'c' || v === 'bar') return false;
+        return this.setting('units') === 'us';
+    }
     /** A sensor's value now, as its slot shows it ('--' without one). */
     sensorValue(sn) { return sn ? this._token(sn.tok) : '--'; }
     sensorUnit(sn) {
         if (!sn) return '';
-        const us = this.setting('units') === 'us';
-        return sn.unit ? sn.unit(us) : this._token('ampm');
+        return sn.unit ? sn.unit(this.unitUs(sn.dim || 'units')) : this._token('ampm');
     }
 
     /* ---------------- the HUD's place ---------------- */
@@ -1252,7 +1260,7 @@ class HudApp {
     /** A dial's scale: { max, ticks } in display units (speed: DIAL_SPEED by the units setting; rpm: "max", 8000). */
     _dialScale(w) {
         if (w.measure === 'speed') {
-            const us = this.setting('units') === 'us';
+            const us = this.unitUs('speed');
             // a layout's own scale: "maxUs" / "maxMetric" with "ticksUs" / "ticksMetric" (the X3 M's 0..200 mph)
             const mx = us ? w.maxUs : w.maxMetric, tk = us ? w.ticksUs : w.ticksMetric;
             if (isNum(mx) && mx > 0) return { max: mx, ticks: isNum(tk) && tk > 0 ? tk : 8 };
@@ -1403,7 +1411,7 @@ class HudApp {
         if (kind === 'rpm') { const r = this._raw('rpm'); return isNum(r) ? Math.round(r / 1000) : null; }
         const v = this._raw('speed');
         if (!isNum(v)) return null;
-        const us = this.setting('units') === 'us';
+        const us = this.unitUs('speed');
         return Math.round(scaleFrac(us ? v * 0.621371 : v, SPEED_SCALE[us ? 'us' : 'metric']) * 8);
     }
 
@@ -1416,7 +1424,7 @@ class HudApp {
 
     /** {{token}} -> display text. */
     _token(tok) {
-        const us = this.setting('units') === 'us';
+        const us = this.setting('units') === 'us', sp = this.unitUs('speed'), tf = this.unitUs('temp'), ps = this.unitUs('press');   // us: torque, power
         const fix = (v, n) => (isNum(v) ? v.toFixed(n) : '--');
         if (tok.indexOf('slot') === 0 && tok.indexOf(':') > 0) {
             const kind = tok.slice(0, tok.indexOf(':')), sn = this.slotSensor(this.activeName, tok.slice(kind.length + 1), this.layoutSlots);
@@ -1427,40 +1435,40 @@ class HudApp {
             if (kind === 'slotUnit') return this.sensorUnit(sn);
             if (kind === 'slotSuffix') return sn && sn.suffix ? sn.suffix : '';
         }
-        if (tok.indexOf('tyreP:') === 0) { const v = this._tyre('p', tok.slice(6)); return isNum(v) ? (us ? fix(v * 14.5038, 0) : fix(v, 1)) : '--'; }
-        if (tok.indexOf('tyreT:') === 0) { const v = this._tyre('t', tok.slice(6)); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
+        if (tok.indexOf('tyreP:') === 0) { const v = this._tyre('p', tok.slice(6)); return isNum(v) ? (ps ? fix(v * 14.5038, 0) : fix(v, 1)) : '--'; }
+        if (tok.indexOf('tyreT:') === 0) { const v = this._tyre('t', tok.slice(6)); return isNum(v) ? String(Math.round(tf ? v * 9 / 5 + 32 : v)) : '--'; }
         if (tok.indexOf('dial:speed:') === 0) {     // a speed dial's label i ({{dial:speed:<i>}}): DIAL_SPEED's steps
-            const D = DIAL_SPEED[us ? 'us' : 'metric'];
+            const D = DIAL_SPEED[sp ? 'us' : 'metric'];
             return String(Math.round(D.max / D.ticks * Number(tok.slice(11))));
         }
         switch (tok) {
-            case 'u:pressure': return us ? 'psi' : 'bar';
-            case 'intake': { const v = this._raw('intake'); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
+            case 'u:pressure': return ps ? 'psi' : 'bar';
+            case 'intake': { const v = this._raw('intake'); return fix(isNum(v) ? (tf ? v * 9 / 5 + 32 : v) : v, 0); }
             case 'afr': return fix(this._raw('afr'), 1);
             case 'timing': return fix(this._raw('timing'), 1);
-            case 'oilP': { const v = this._raw('oilP'); return us ? fix(isNum(v) ? v * 14.5038 : v, 0) : fix(v, 1); }
-            case 'boostPeak': { const v = this.boostPeak; return us ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
+            case 'oilP': { const v = this._raw('oilP'); return ps ? fix(isNum(v) ? v * 14.5038 : v, 0) : fix(v, 1); }
+            case 'boostPeak': { const v = this.boostPeak; return ps ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
             case 'run': { const v = this.runs.shown(Date.now()); return isNum(v) ? v.toFixed(this.runs.state === 'run' ? 1 : 2) : '0.00'; }
-            case 'runBest': { const v = this.runs.best[us ? 'us' : 'metric']; return v > 0 ? v.toFixed(2) : '-.--'; }
+            case 'runBest': { const v = this.runs.best[sp ? 'us' : 'metric']; return v > 0 ? v.toFixed(2) : '-.--'; }
             case 'runState': return this.runs.word();
-            case 'runLabel': return us ? '0-60 MPH' : '0-100 KM/H';
+            case 'runLabel': return sp ? '0-60 MPH' : '0-100 KM/H';
             case 'warm': { const o = this._raw('oil'); return isNum(o) ? (o < 80 ? 'WARMING UP' : 'ENGINE WARM') : ''; }
             case 'badge': return badges.text(this.setting('badge'), this.setting('badgeBMW') === true);
-            case 'speed': { const v = this._raw('speed'); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
-            case 'u:speed': return us ? 'MPH' : 'KM/H';
-            case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (us ? v * 9 / 5 + 32 : v) : v, 0); }
-            case 'boost': { const v = this._raw('boost'); return us ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
-            case 'u:boost': return us ? 'PSI' : 'BAR';
-            case 'u:temp': return us ? '°F' : '°C';
-            case 'u:speedLc': return us ? 'mph' : 'km/h';
-            case 'u:distLc': return us ? 'mi' : 'km';
-            case 'u:dist': return us ? 'MI' : 'KM';
-            case 'avgSpeed': { const v = this._avgSpeed(); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
-            case 'range': { const v = this._raw('range'); return fix(isNum(v) ? (us ? v * 0.621371 : v) : v, 0); }
+            case 'speed': { const v = this._raw('speed'); return fix(isNum(v) ? (sp ? v * 0.621371 : v) : v, 0); }
+            case 'u:speed': return sp ? 'MPH' : 'KM/H';
+            case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (tf ? v * 9 / 5 + 32 : v) : v, 0); }
+            case 'boost': { const v = this._raw('boost'); return ps ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
+            case 'u:boost': return ps ? 'PSI' : 'BAR';
+            case 'u:temp': return tf ? '°F' : '°C';
+            case 'u:speedLc': return sp ? 'mph' : 'km/h';
+            case 'u:distLc': return sp ? 'mi' : 'km';
+            case 'u:dist': return sp ? 'MI' : 'KM';
+            case 'avgSpeed': { const v = this._avgSpeed(); return fix(isNum(v) ? (sp ? v * 0.621371 : v) : v, 0); }
+            case 'range': { const v = this._raw('range'); return fix(isNum(v) ? (sp ? v * 0.621371 : v) : v, 0); }
             case 'ambient': {
                 const v = this._raw('ambient');
                 if (!isNum(v)) return '--';
-                const n = Math.round(us ? v * 9 / 5 + 32 : v);
+                const n = Math.round(tf ? v * 9 / 5 + 32 : v);
                 return (n > 0 ? '+' : '') + n;
             }
             case 'u:torque': return us ? 'lb-ft' : 'Nm';
@@ -1472,11 +1480,11 @@ class HudApp {
             }
             case 'hvSoc': { const v = this._raw('hvSoc'); return isNum(v) ? String(Math.round(v)) : '--'; }
             case 'fuelPct': { const v = this._raw('fuel'); return isNum(v) ? String(Math.round(v * 100)) : '--'; }
-            case 'ambientN': { const v = this._raw('ambient'); return isNum(v) ? String(Math.round(us ? v * 9 / 5 + 32 : v)) : '--'; }
+            case 'ambientN': { const v = this._raw('ambient'); return isNum(v) ? String(Math.round(tf ? v * 9 / 5 + 32 : v)) : '--'; }
             case 'torque': { const v = this._raw('torque'); return fix(isNum(v) ? (us ? v * 0.737562 : v) : v, 0); }
             case 'torquePct': case 'powerPct': { const v = this._raw(tok); return isNum(v) ? String(Math.min(100, Math.round(v))) : '--'; }
-            case 'boostHi': return us ? '20' : '1.4';
-            case 'boostMid': return us ? '10' : '0.7';
+            case 'boostHi': return ps ? '20' : '1.4';
+            case 'boostMid': return ps ? '10' : '0.7';
             case 'ampmLc': return this._token('ampm').toLowerCase();
             case 'gLat': case 'gLong': { const v = this._raw(tok); return isNum(v) ? Math.abs(v).toFixed(2) : '--'; }
             case 'gSide': case 'gFwd': {
@@ -1535,8 +1543,8 @@ class HudApp {
                 return ((h % 12) || 12) + ':' + pad2(m);
             }
             default:
-                if (tok.indexOf('spd:') === 0) { const v = SPEED_SCALE[us ? 'us' : 'metric'][Number(tok.slice(4))]; return v === undefined ? '' : String(v); }   // speed scale labels
-                if (tok.indexOf('temp:') === 0) { const c = Number(tok.slice(5)); return isNum(c) ? String(us ? Math.round((c * 9 / 5 + 32) / 10) * 10 : Math.round(c)) : '--'; }   // gauge labels: °F to the 10
+                if (tok.indexOf('spd:') === 0) { const v = SPEED_SCALE[sp ? 'us' : 'metric'][Number(tok.slice(4))]; return v === undefined ? '' : String(v); }   // speed scale labels
+                if (tok.indexOf('temp:') === 0) { const c = Number(tok.slice(5)); return isNum(c) ? String(tf ? Math.round((c * 9 / 5 + 32) / 10) * 10 : Math.round(c)) : '--'; }   // gauge labels: °F to the 10
                 if (tok.indexOf('setup:') === 0) { const s = this._setup(); return s ? s[tok.slice(6)] || '' : '--'; }
                 if (tok.indexOf('signal:') === 0) { const v = this._raw(tok.slice(7)); return isNum(v) ? (Math.round(v * 10) / 10).toString() : '--'; }
                 return '{{' + tok + '}}';
@@ -2051,7 +2059,7 @@ class HudApp {
         const now = Date.now();
         this._smoothRpm(now);
         // the 0-60 timer only on the car's own data (the demo drive would set a best time)
-        if (!this.car.data().demo) this.runs.update(this.car.data().speed, now, this.setting('units') === 'us' ? 'us' : 'metric');
+        if (!this.car.data().demo) this.runs.update(this.car.data().speed, now, this.unitUs('speed') ? 'us' : 'metric');
         this._trip(now);
         this._gTick(now);
         const b = this._boost();
@@ -2236,7 +2244,7 @@ class HudApp {
             x.c.uniform(x.ref, 'u_value', [q]);
             if (w.peak) x.c.uniform(x.ref, 'u_peak', [pk > q ? pk : -1]);
         } else if (w.type === 'dial') {
-            const D = this._dialScale(w), us = this.setting('units') === 'us';
+            const D = this._dialScale(w), us = this.unitUs('speed');
             let raw = this._raw(w.measure === 'rpm' ? 'rpm' : w.measure === 'speed' ? 'speed' : w.signal);
             if (w.measure === 'speed' && isNum(raw) && us) raw *= 0.621371;
             const v = isNum(raw) ? Math.min(1, Math.max(0, raw / D.max)) : 0;
@@ -2248,7 +2256,7 @@ class HudApp {
             x.c.uniform(x.ref, 'u_value', [q]);
             x.c.uniform(x.ref, 'u_hot', [hot]);
         } else if (w.type === 'sdash') {
-            const us = this.setting('units') === 'us';
+            const us = this.unitUs('speed');
             const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');
             const q = (v) => Math.round(Math.min(1, Math.max(0, v)) * 500) / 500;
             const vals = [

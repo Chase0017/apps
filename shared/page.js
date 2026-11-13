@@ -91,7 +91,7 @@ class Page {
         const s = this.item(k), v = this.get(k);
         if (!s) return '';
         if (s.type === 'bool') return v ? 'On' : 'Off';
-        if (s.type === 'number' && WARN_KEYS.indexOf(k) >= 0) return warnText(k, v, this.get('units') === 'us');
+        if (s.type === 'number' && WARN_KEYS.indexOf(k) >= 0) return warnText(k, v, this.hud.unitUs(k === 'warnBoost' ? 'press' : 'temp'));
         if (k === 'timeZone') return tzText(v);
         if (k === 'tankLitres') return fmtInt(v) + ' L';
         if (s.type === 'number') return k === 'shiftBefore' ? (v ? fmtInt(v) + ' rpm before' : 'At the redline') : fmtInt(v) + ' rpm';
@@ -191,7 +191,7 @@ class Page {
         if (id === 'alerts') { const n = WARN_KEYS.filter((k) => this.get(k) > 0).length; return n ? n + ' warning' + (n > 1 ? 's' : '') + ' on' : 'warnings off'; }
         if (id === 'gmeter') return this.optLabel('gRange', this.get('gRange')) + ' · trail ' + this.optLabel('gTrail', this.get('gTrail')).toLowerCase();
         if (id === 'colours') return this.valueText('hudTheme').replace(/ \(.*\)$/, '');
-        if (id === 'settings') return (this.get('units') === 'metric' ? 'km/h' : 'mph') + ' · ' + fmtInt(this.get('redline')) + ' rpm';
+        if (id === 'settings') return (this.hud.unitUs('speed') ? 'mph' : 'km/h') + ' · ' + (this.hud.unitUs('temp') ? '°F' : '°C') + ' · ' + (this.hud.unitUs('press') ? 'psi' : 'bar');
         return '';
     }
 
