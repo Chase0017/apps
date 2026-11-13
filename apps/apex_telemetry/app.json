@@ -2,7 +2,7 @@
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
   "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
@@ -795,6 +795,27 @@
         }
       ],
       "lpfp": [
+        {
+          "did": "58F3",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "ROH_NIEDERDRUCK_UNFILT, unfiltered low fuel pressure, u16 kPa/10 -> bar. DME8FF_R (MG1 DME: B58 / B48 / B38), EdiabasX SGBD reference. Absolute or gauge not stated: unverified on the car"
+        },
+        {
+          "did": "5463",
+          "bytes": 2,
+          "at": 0,
+          "signed": true,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "Kraftstoffniederdruck-Sensor Rohwert, low fuel pressure sensor raw, s16 hPa -> bar. DME8FF_R (MG1 DME: B58 / B48 / B38), EdiabasX SGBD reference. Absolute or gauge not stated: unverified on the car"
+        },
         {
           "did": "F40A",
           "bytes": 1,
