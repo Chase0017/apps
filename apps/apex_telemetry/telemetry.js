@@ -7,7 +7,8 @@
  *   engine     from the engine unit over the kit's read-only diagnostic link (app.json config.dme, the identifiers
  *              M Vitals reads): boost setpoint and actual (read back to back, so the deviation is of one moment),
  *              fuel rail and low pressure fuel, requested and actual air charge (load); boost falls back to the
- *              sport display. Nothing the Apex Cluster dash already shows (coolant, oil, AFR ...).
+ *              sport display; the charge air before the throttle and after the intercooler (read together, for
+ *              its drop and heat soak). Nothing else the Apex Cluster dash already shows (coolant, oil, AFR ...).
  *   gearbox    transmission oil temperature from the basic data set, else the gearbox unit (config.dme.egs)
  *   car        outside temperature, range, rpm, g-force (with peaks)
  *
@@ -23,7 +24,7 @@ const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
 const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v : null);
 const FRESH = { dme: 6000, fes: 1500 };
 // the DME values read in turn while the page shows: [names in config.dme (read back to back), ms between reads]
-const DME_READS = [[['boostTarget', 'boostActual'], 250], [['hpfp'], 500], [['lpfp'], 800], [['loadTarget', 'loadActual'], 600], [['egs'], 3000]];
+const DME_READS = [[['boostTarget', 'boostActual'], 250], [['hpfp'], 500], [['lpfp'], 800], [['loadTarget', 'loadActual'], 600], [['chargeBefore', 'intake'], 1000], [['egs'], 3000]];
 const ABS_KPA = { boostTarget: 1, boostActual: 1 };     // absolute kPa: shown as bar over the outside air
 
 class Telemetry {
@@ -172,6 +173,7 @@ class Telemetry {
                 },
                 boostTarget: tgt, boost: Math.max(0, tgt + w(0.08, 1.3)), hpfp: 60 + tgt * 220, lpfp: 5.2 + w(0.2, 5),
                 loadTarget: 30 + tgt * 100, loadActual: 28 + tgt * 100, gearbox: 86, ambient: 22, rangeKm: 512,
+                chargeBefore: 38 + tgt * 70, intake: 33 + tgt * 12,
             };
         } else {
             const bt = f('boostTarget', 3000), ba = f('boostActual', 3000), fes = f('boostFes', FRESH.fes);
@@ -179,6 +181,7 @@ class Telemetry {
                 tyres: {},
                 boostTarget: bt, boost: ba !== null ? ba : fes,
                 hpfp: f('hpfp'), lpfp: f('lpfp'), loadTarget: f('loadTarget'), loadActual: f('loadActual'),
+                chargeBefore: f('chargeBefore'), intake: f('intake'),
                 gearbox: f('gearboxBds', 60000) !== null ? f('gearboxBds', 60000) : f('gearboxEgs', 20000),
                 ambient: f('ambient', 600000), rangeKm: f('rangeKm', 600000),
             };

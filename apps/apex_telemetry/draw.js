@@ -3,8 +3,8 @@
  * draw.js - Apex Telemetry's page: a GT3 pit board on the centre screen, 1600 x 520 logical px (the kit's page).
  *
  *   BOOST CONTROL (left)   TYRES (middle)                         CAR (right)
- *   actual target dev.     FL box   [car, wheels lit by temp]  FR   gearbox   outside
- *   [bar: actual, target]  RL box                              RR   range     load
+ *   actual target dev.     FL box   [car, wheels lit by temp]  FR   gearbox outside range
+ *   [bar: actual, target]  RL box                              RR   intercooler (before, after, drop, soak)
  *   rail fuel  low fuel                                             g-force (lat, long, peaks)
  *
  * Nothing the Apex Cluster dash already shows. Black, white boxes with a white header strip and dark text on it
@@ -30,10 +30,13 @@
         lpfp: [4.0, 3.0], hpfp: [25, 15],            // bar, low = bad (engine running)
         gearbox: [110, 125], range: [80, 40],        // C high = bad; km low = bad
         ice: 3,                                      // C
+        icAfter: [50, 60], icSoak: [20, 30],          // C: air after the intercooler; after minus outside (heat soak)
+        cold: { gearbox: 40, ambient: 3, icAfter: 10 }, // C: blue (cold) below these
         tyreLow: [0.10, 0.21], tyreHigh: [0.41, 0.62], // bar under / over the car's (cold) target: 1.5 / 3 psi low, 6 / 9 psi high (hot tyres gain pressure)
     };
     const high = (v, l) => (!isNum(v) ? null : v >= l[1] ? C.hot : v >= l[0] ? C.warm : null);
     const low = (v, l) => (!isNum(v) ? null : v < l[1] ? C.hot : v < l[0] ? C.warm : null);
+    const cold = (v, below) => (isNum(v) && v < below ? C.cold : null);
 
     /* ---------- units ---------- */
     const fmt = (v, d) => (isNum(v) ? v.toFixed(d) : '--');
@@ -53,7 +56,8 @@
     /** a readout box: header, a big number right-aligned, an optional line under it */
     function readout(cv, x, y, w, h, label, unit, value, color, sub, subColor) {
         box(cv, x, y, w, h, label, unit);
-        const size = value.length > 5 ? 64 : 72;
+        const base = value.length > 5 ? 64 : 72, room = w - 28, tw = cv.textWidth(value, base, F);
+        const size = tw > room ? Math.max(40, base * room / tw) : base;
         cv.text(value, x + w - 14, y + HEAD + (sub ? 70 : 84), size, color || C.text, Object.assign({ align: 'right' }, F));
         if (sub) {
             const ss = Math.max(16, Math.min(22, 22 * (w - 24) / Math.max(1, cv.textWidth(sub, 22, F))));
@@ -88,8 +92,7 @@
         cv.fillRect(right ? x + 2 : x + w - 10, y + HEAD, 8, h - HEAD - 2, sc);
         const pv = isNum(t.p) ? (us ? fmt(t.p * 14.5038, 1) : fmt(t.p, 2)) : '--';
         const px = right ? x + w - 16 : x + w - 22;
-        const pc = tyreOff(t.p, t.target);
-        cv.text(pv, px, y + HEAD + 98, 96, pc || C.text, Object.assign({ align: 'right' }, F));
+        cv.text(pv, px, y + HEAD + 98, 96, pressState(t.p, t.target), Object.assign({ align: 'right' }, F));
         // temperature (left) and the difference to target (right)
         const tl = right ? x + 22 : x + 14;
         cv.text(isNum(t.t) ? fmt(temp(t.t, us), 0) + U.temp(us) : '--', tl, y + h - 16, 44, sc, F);
@@ -158,7 +161,30 @@
             word = !big ? 'ON TARGET' : dev > 0 ? 'OVERBOOST' : 'UNDERBOOST'; wc = dc;
         } else if (!isNum(t)) word = 'NO TARGET FROM THE ENGINE';
         cv.text(word, x + 16, y + h - 14, 26, wc, F);
+        if (isNum(s.loadActual)) cv.text('LOAD ' + fmt(s.loadActual, 0) + (isNum(s.loadTarget) ? '/' + fmt(s.loadTarget, 0) : '') + '%',
+            x + w * 0.53, y + h - 14, 20, C.dim, Object.assign({ align: 'center' }, F));
         if (s.peak && s.peak.boost > 0) cv.text('PEAK ' + fmt(s.peak.boost * k, dp), x + w - 16, y + h - 14, 26, C.dim, R);
+    }
+
+    /** the intercooler: charge air before and after it, the drop across it, and heat soak (after minus outside) */
+    function icBox(cv, x, y, w, h, s, us) {
+        box(cv, x, y, w, h, 'INTERCOOLER', U.temp(us));
+        const R = Object.assign({ align: 'right' }, F), cw = (w - 28) / 3, b = s.chargeBefore, a = s.intake;
+        const drop = isNum(b) && isNum(a) ? b - a : null, soak = isNum(a) && isNum(s.ambient) ? a - s.ambient : null;
+        const ac = [high(a, LIM.icAfter), high(soak, LIM.icSoak)].indexOf(C.hot) >= 0 ? C.hot
+            : high(a, LIM.icAfter) || high(soak, LIM.icSoak) || cold(a, LIM.cold.icAfter);
+        const k = us ? 1.8 : 1;
+        [['BEFORE', isNum(b) ? fmt(temp(b, us), 0) + '°' : '--', C.text], ['AFTER', isNum(a) ? fmt(temp(a, us), 0) + '°' : '--', ac || C.text],
+            ['DROP', isNum(drop) ? fmt(drop * k, 0) + '°' : '--', C.mark]].forEach(([l, v, c], i) => {
+            const rx = x + 14 + cw * (i + 1) - 8;
+            cv.text(l, rx, y + HEAD + 26, 18, C.dim, R);
+            cv.text(v, rx, y + HEAD + 84, 60, c, R);
+        });
+        if (isNum(soak)) {
+            const sc = high(soak, LIM.icSoak);
+            cv.text('HEAT SOAK ' + (soak >= 0 ? '+' : '') + fmt(soak * k, 0) + '° OVER OUTSIDE' + (sc === C.hot ? '  ·  LET IT COOL' : ''),
+                x + w - 14, y + h - 12, 20, sc || C.dim, R);
+        }
     }
 
     /** g-force: lateral and longitudinal now, their peaks under them */
@@ -209,12 +235,14 @@
 
         /* ---------- car, right ---------- */
         const R = [W - 16 - 2 * bw - g, W - 16 - bw];
-        readout(cv, R[0], ry(0), bw, rh, 'TRANS', U.temp(us), T(s.gearbox), high(s.gearbox, LIM.gearbox), 'GEARBOX OIL');
+        const sw = (2 * bw - g) / 3, S3 = [R[0], R[0] + sw + g, R[0] + 2 * (sw + g)];
+        const gc = cold(s.gearbox, LIM.cold.gearbox);
+        readout(cv, S3[0], ry(0), sw, rh, 'TRANS', U.temp(us), T(s.gearbox), high(s.gearbox, LIM.gearbox) || gc, gc ? 'WARMING UP' : 'GEARBOX', gc);
         const ice = isNum(s.ambient) && s.ambient <= LIM.ice;
-        readout(cv, R[1], ry(0), bw, rh, 'OUTSIDE', U.temp(us), T(s.ambient), ice ? C.warm : null, ice ? 'ICE POSSIBLE' : '', C.warm);
-        readout(cv, R[0], ry(1), bw, rh, 'RANGE', us ? 'MI' : 'KM', isNum(s.rangeKm) ? fmt(us ? s.rangeKm / 1.609344 : s.rangeKm, 0) : '--',
+        readout(cv, S3[1], ry(0), sw, rh, 'OUTSIDE', U.temp(us), T(s.ambient), ice ? C.cold : null, ice ? 'ICE POSSIBLE' : '', C.warm);
+        readout(cv, S3[2], ry(0), sw, rh, 'RANGE', us ? 'MI' : 'KM', isNum(s.rangeKm) ? fmt(us ? s.rangeKm / 1.609344 : s.rangeKm, 0) : '--',
             low(s.rangeKm, LIM.range));
-        readout(cv, R[1], ry(1), bw, rh, 'LOAD', '%', fmt(s.loadActual, 0), null, isNum(s.loadTarget) ? 'TARGET ' + fmt(s.loadTarget, 0) + ' %' : '');
+        icBox(cv, R[0], ry(1), 2 * bw + g, rh, s, us);
         gBox(cv, R[0], ry(2), 2 * bw + g, rh, s);
         if (opt.target) opt.target(cv, R[0], ry(2), 2 * bw + g, rh);     // a tap here resets the peaks
     }
