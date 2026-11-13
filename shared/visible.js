@@ -22,7 +22,7 @@ const BLACK_BOX = [1406, 342, 1597, 419];
 const BELT = [587, 663, 626, 700];
 /** 2022+ (LCI) cars with Driving Assistant Professional: the driver attention camera's pod sits in front of the panel,
  *  top centre, and hides it here (measured from photos of the Retro 80s and GT3 themes on a 2023 X3 M40i, Nov 12 2026;
- *  about +-15 px, it moves with eye height): [x0, y0, x1, y1]. */
+ *  about +-15 px, it moves with eye height): [x0, y0, x1, y1]. A widget only shown on cars without it says noCamera. */
 const CAMERA = [750, 0, 1190, 132];
 /** BMW's green turn-signal arrows, drawn over us either side of the camera: [x0, y0, x1, y1] each (same photos). */
 const ARROWS = [[695, 100, 775, 168], [1160, 100, 1235, 168]];
@@ -70,7 +70,7 @@ function lightRects(w) {
         const top = rise * (1 - li / Math.max(1, n - 1));
         const d = w.round ? Math.min(segW, segH) : 0;
         out.push({ id: w.id + '.' + (i + 1), x: w.x + i * slot + (d ? (segW - d) / 2 : 0), y: w.y + top + (d ? (segH - d) / 2 : 0),
-            w: d || segW, h: d || segH });
+            w: d || segW, h: d || segH, noCamera: w.noCamera });
     }
     return out;
 }
@@ -129,7 +129,7 @@ function check(widgets, target) {
             if (!w.overBlackBox && overlaps(w, BLACK_BOX)) {   // overBlackBox: skip (the 2023 X3 draws it too, so only for a car that does not)
                 out.push(id + ': overlaps BMW\'s gear box x' + BLACK_BOX[0] + '-' + BLACK_BOX[2] + ' y' + BLACK_BOX[1] + '-' + BLACK_BOX[3]);
             }
-            if (overlaps(w, CAMERA)) {
+            if (!w.noCamera && overlaps(w, CAMERA)) {   // noCamera: only shown for a car without the driver camera
                 out.push(id + ': under the driver camera x' + CAMERA[0] + '-' + CAMERA[2] + ' y' + CAMERA[1] + '-' + CAMERA[3]);
             }
             ARROWS.forEach((a, i) => {

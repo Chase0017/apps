@@ -26,6 +26,10 @@
   <label>Gear <select id="gear"><option>P</option><option>R</option><option>N</option><option selected>D3</option><option>S3</option><option>M3</option><option>S5</option></select></label>
   <label>Mode <select id="mode"><option>COMFORT</option><option selected>SPORT</option><option>SPORT PLUS</option><option>ECO PRO</option><option>SPORT INDIVIDUAL</option></select></label>
   <label><input id="car" type="checkbox" checked> Car view (camera, arrows, hood)</label>
+  <label>Shift lights <select id="lights"><option value="camera">Camera</option><option value="row">No camera</option><option value="off">Off</option></select></label>
+  <label>Colours <select id="colours"><option>gt3</option><option>f1</option><option>red</option><option>blue</option></select></label>
+  <label>First light <select id="from"><option>2000</option><option>2500</option><option selected>3000</option><option>3500</option><option>4000</option><option>4500</option><option>5000</option><option>5500</option><option>6000</option></select></label>
+  <label><input id="held" type="checkbox"> Held values (readouts)</label>
   <button id="sweep">Rev sweep</button>
 </div>
 <canvas id="out" width="1920" height="720"></canvas>
@@ -84,10 +88,16 @@ async function font(name) {
   const bin = atob(f.alpha); f.a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) f.a[i] = bin.charCodeAt(i);
   return (fonts[name] = f);
 }
-function text(x, y, w, h, s, f, col, align, xoff) {
+// a held value as hud_text.js draws it (Nov 13 2026): dimmed (hud.js HELD_DIM), an amber dot after it at cap height
+const HELD_DIM = 0.45, HELD_DOT = [255, 176, 0];
+const dotOf = (f) => { const r = Math.max(3, Math.round(f.size * 0.085)); return { r, room: Math.round(r * 2 + Math.max(3, r * 0.9)) }; };
+function text(x, y, w, h, s, f, col, align, xoff, held) {
   const g = (ch) => f.glyphs[ch] || f.glyphs[' '] || { x: 0, y: 0, w: 0, h: 0, ox: 0, advance: 0 };
   let width = 0; for (const ch of s) width += g(ch).advance;
-  let pen = (xoff || 0) + (align === 'right' ? w - width : align === 'center' ? Math.round((w - width) / 2) : 0);
+  const d = held ? dotOf(f) : null, room = d && width + d.room <= w - (xoff || 0), total = width + (room ? d.room : 0);
+  if (held) col = col.map((v, i) => (i < 3 ? Math.round(v * HELD_DIM) : v));
+  let pen = (xoff || 0) + (align === 'right' ? w - total : align === 'center' ? Math.round((w - total) / 2) : 0);
+  const start = pen;
   const img = ctx.createImageData(w, h);
   for (const ch of s) {
     const q = g(ch), x0 = Math.round(pen + q.ox);
@@ -98,6 +108,17 @@ function text(x, y, w, h, s, f, col, align, xoff) {
       if (av > img.data[k + 3]) { img.data[k] = col[0]; img.data[k + 1] = col[1]; img.data[k + 2] = col[2]; img.data[k + 3] = av; }
     }
     pen += q.advance;
+  }
+  if (d) {
+    // as hud_text.js: after the text level with the digits' tops, or (no room) the right edge just above them
+    let capTop = f.baseline - f.size * 0.7;
+    for (let i = 3; i < img.data.length; i += 4) if (img.data[i] > 64) { capTop = Math.floor((i - 3) / 4 / w); break; }
+    const cx = room ? start + total - d.r : w - d.r - 1, cy = Math.max(d.r, room ? capTop + d.r : capTop - d.r - 3);
+    for (let yy = Math.floor(cy - d.r - 1); yy <= cy + d.r + 1; yy++) for (let xx = Math.floor(cx - d.r - 1); xx <= cx + d.r + 1; xx++) {
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      const cov = Math.min(1, Math.max(0, d.r + 0.5 - Math.hypot(xx + 0.5 - cx, yy + 0.5 - cy))); if (cov <= 0) continue;
+      const k = (yy * w + xx) * 4; img.data[k] = HELD_DOT[0]; img.data[k + 1] = HELD_DOT[1]; img.data[k + 2] = HELD_DOT[2]; img.data[k + 3] = Math.round(cov * 255);
+    }
   }
   const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').putImageData(img, 0, 0);
   ctx.drawImage(c, x, y);
@@ -134,7 +155,7 @@ async function draw() {
   const lay = layout.shiftBlink > 0 ? layout.shiftBlink : 0;
   const phase = (half) => !st.now ? 0 : (half && Math.floor(t / half) % 2 === 1 ? 2 : 1);   // as hud.js _shiftPhase
   for (const w of layout.widgets) {
-    if (w.toggle === 'mapUp' || w.toggle === 'units=metric') continue;     // the preview runs in US units
+    if (!shown(w)) continue;
     const role = (r, d) => (Array.isArray(r) ? r : theme[r || d] || theme.fg);
     if (w.type === 'boxes') {
       const rects = [], styles = [];
@@ -144,11 +165,12 @@ async function draw() {
       effect(w, 'boxes', { u_size: [w.w, w.h], u_bg: rgba(Array.isArray(w.color) ? w.color : theme[w.color || 'bg']), u_hole: [0, 0, 0, 0], u_holeR: [0], u_n: [Math.min(12, w.boxes.length)],
         u_box: rects, u_boxStyle: styles, u_fill: rgba(theme.panel), u_line: rgba(theme.line), u_head: rgba(theme.head), u_accent: rgba(theme.accent) });
     } else if (w.type === 'lights') {
-      const n = w.count || 12, from = Math.min(w.from ?? 3000, SHIFT_AT - 500);
+      const n = w.count || 12, from = Math.min(Number($('from').value), SHIFT_AT - 500);
+      const pat = { gt3: ['green', 'yellow', 'red', 'blue'], f1: ['green', 'red', 'red', 'blue'], red: ['red', 'red', 'red', 'red'], blue: ['blue', 'blue', 'blue', 'blue'] }[$('colours').value];
       const lit = Math.floor(Math.min(1, Math.max(0, (st.rpm - from) / (SHIFT_AT - from))) * n);
       const strobe = phase(w.blink === true ? 100 : (w.blink > 0 ? w.blink : lay));
       effect(w, 'lights', { u_size: [w.w, w.h], u_n: [n], u_tail: [w.tail || 0], u_round: [w.round ? 1 : 0], u_mirror: [w.mirror ? 1 : 0], u_rise: [w.rise > 0 ? Math.min(w.h - 4, w.rise) : 0],
-        u_green: rgb(TH.LIGHTS.green), u_yellow: rgb(TH.LIGHTS.yellow), u_red: rgb(TH.LIGHTS.red), u_blue: rgb(TH.LIGHTS.blue),
+        u_green: rgb(TH.LIGHTS[pat[0]]), u_yellow: rgb(TH.LIGHTS[pat[1]]), u_red: rgb(TH.LIGHTS[pat[2]]), u_blue: rgb(TH.LIGHTS[pat[3]]),
         u_off: [w.off ?? 0.14], u_lit: [lit], u_strobe: [strobe] });
     } else if (w.type === 'shiftbar') {
       const segs = w.segments || 40, v = Math.min(1, st.rpm / max);
@@ -188,12 +210,14 @@ async function draw() {
       const col = w.hotWhen === 'now' && phase(lay) === 1 ? theme.hot : (theme[w.color || 'fg'] || theme.fg);
       // "fit" as hud.js: a smaller font on the same baseline when the text is too wide or has a missing glyph
       let f = await font(w.font), dy = 0;
+      const held = $('held').checked && /\{\{slot:/.test(w.text) && !/^-+$/.test(s);
       const fits = (g) => [...s].every((ch) => ch === ' ' || g.glyphs[ch]) && [...s].reduce((a, ch) => a + (g.glyphs[ch] || { advance: 0 }).advance, 0) <= w.w;
       if (w.fit && !fits(f)) {
         let g = null; for (const n of w.fit) { const c = await font(n); if (fits(c)) { g = c; break; } }
         g = g || await font(w.fit[w.fit.length - 1]); dy = f.baseline - g.baseline; f = g;
       }
-      text(w.x, w.y + dy, w.w, w.h - dy, s, f, col, w.align);
+      // "Held values": every readout value (a {{slot:..}} token) shows as held (held, above)
+      text(w.x, w.y + dy, w.w, w.h - dy, s, f, col, w.align, 0, held);
     }
   }
   if ($('car').checked) carView();
@@ -206,8 +230,10 @@ function carView() {
   VIS.HOOD.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(1920, 0); ctx.closePath(); ctx.fill();
   // the camera pod (a trapezoid, wider at the top)
   const [c0, , c1, cy] = VIS.CAMERA;
+  if ($('lights').value !== 'row') {
   ctx.fillStyle = '#0b0b0c'; ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.beginPath();
   ctx.moveTo(c0, 0); ctx.lineTo(c1, 0); ctx.lineTo(c1 - 45, cy); ctx.lineTo(c0 + 45, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
   // BMW's turn arrows, black box, belt light, PARK
   ctx.fillStyle = '#5f5'; VIS.ARROWS.forEach(([x0, y0, x1, y1], i) => { const m = (y0 + y1) / 2, tip = i ? x1 : x0, back = i ? x0 : x1;
     ctx.beginPath(); ctx.moveTo(tip, m); ctx.lineTo((x0 + x1) / 2, y0 + 8); ctx.lineTo((x0 + x1) / 2, m - 12); ctx.lineTo(back, m - 12);
@@ -221,11 +247,17 @@ function carView() {
   ctx.restore();
 }
 
+/** a widget shows with the preview's settings: US units, no map, the Shift lights pick (setting "shiftLights") */
+function shown(w) {
+  if (w.toggle === 'mapUp' || w.toggle === 'units=metric') return false;
+  if (String(w.toggle || '').indexOf('shiftLights=') === 0) return w.toggle === 'shiftLights=' + $('lights').value;
+  return true;
+}
 async function load() {
   const name = $('layout').value || 'apex';
   layout = await (await fetch('../../apps/cluster_themes/hud/layouts/' + name + '.json?' + Date.now())).json();
   theme = TH.THEMES[layout.theme] || TH.THEMES.gt3;
-  const warns = VIS.check(layout.widgets.filter((w) => w.toggle !== 'mapUp'), 'panel');
+  const warns = VIS.check(layout.widgets.filter(shown), 'panel');
   $('ok').textContent = warns.length ? '' : 'Visibility check: nothing under the camera, arrows, hood, box, belt or PARK light.';
   $('warn').textContent = warns.join('\n');
 }
@@ -238,6 +270,10 @@ async function load() {
   if (q.get('car') === '0') $('car').checked = false;
   await load();
   $('layout').addEventListener('change', load);
+  $('lights').addEventListener('change', load);
+  if (q.get('lights')) { $('lights').value = q.get('lights'); await load(); }
+  if (q.get('colours')) $('colours').value = q.get('colours');
+  if (q.get('held') === '1') $('held').checked = true;
   $('sweep').onclick = () => { const t0 = performance.now(); const tick = () => { const k = (performance.now() - t0) / 4000;
     $('rpm').value = k < 0.75 ? 900 + k / 0.75 * 6000 : 6900; if (k < 1.2) requestAnimationFrame(tick); }; tick(); };
   let busy = false;

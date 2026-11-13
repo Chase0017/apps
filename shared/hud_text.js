@@ -5,7 +5,11 @@
  * rasterizing). Each font is JSON: glyph metrics plus the atlas as one alpha
  * byte per pixel (base64). We tint the coverage with the requested colour.
  *
- *   drawText(boxW, boxH, text, { font, color, align, spacing, glow }) -> RGBA Buffer (boxW*boxH*4)
+ *   drawText(boxW, boxH, text, { font, color, align, spacing, glow, dot }) -> RGBA Buffer (boxW*boxH*4)
+ *
+ * dot: [r, g, b, a] or null: a held value (Nov 13 2026): a small round dot after the text at cap height, in room the
+ * text gives up (a right-aligned value moves left so the dot ends where the text did). The font never shrinks for it:
+ * a box without that room keeps the text where it was and puts the dot in the corner just above the digits.
  *
  * align: 'left' | 'center' | 'right' within the box; x shifts the start (px). The text's cell top sits at
  * the box top (y = 0). spacing: extra px between characters. glow: 0..1, a soft
@@ -99,8 +103,45 @@ function blur(src, w, h, r, passes) {
     return a;
 }
 
+/** The held dot for a font: radius and the room it takes after the text (px). */
+function dotSize(fontName) {
+    const size = loadFont(fontName).metrics.size, r = Math.max(3, Math.round(size * 0.085));
+    return { r, room: Math.round(r * 2 + Math.max(3, r * 0.9)) };
+}
+function dotRoom(fontName) { return dotSize(fontName).room; }
+
 function drawText(boxW, boxH, text, opts) {
-    return tint(mask(boxW, boxH, text, opts), boxW, boxH, opts);
+    if (!opts.dot) return tint(mask(boxW, boxH, text, opts), boxW, boxH, opts);
+    const font = loadFont(opts.font), d = dotSize(opts.font), width = measure(text, opts.font, opts.spacing);
+    // the top of the ink (the digits' tops), from the drawn mask; about 0.7 of the font size over the baseline without any
+    const inkTop = (m) => { for (let i = 0; i < m.length; i++) if (m[i] > 64) return Math.floor(i / boxW); return (opts.offsetY || 0) + font.metrics.baseline - font.metrics.size * 0.7; };
+    let cx, cy, out;
+    if (width + d.room <= boxW - (opts.x || 0)) {
+        // room: the text moves over, the dot after it, its top level with the digits' tops
+        const total = width + d.room;
+        const start = (opts.x || 0) + (opts.align === 'right' ? boxW - total : opts.align === 'center' ? Math.round((boxW - total) / 2) : 0);
+        const m = mask(boxW, boxH, text, Object.assign({}, opts, { align: 'left', x: start }));
+        out = tint(m, boxW, boxH, opts);
+        cx = start + total - d.r; cy = Math.max(d.r, inkTop(m) + d.r);
+    } else {
+        // no room: the text stays put, the dot sits at the box's right edge just above the digits
+        const m = mask(boxW, boxH, text, opts);
+        out = tint(m, boxW, boxH, opts);
+        cx = boxW - d.r - 1; cy = Math.max(d.r, inkTop(m) - d.r - 3);
+    }
+    const c = opts.dot, ca = (c[3] === undefined ? 255 : c[3]) / 255;
+    for (let y = Math.floor(cy - d.r - 1); y <= Math.ceil(cy + d.r + 1); y++) {
+        if (y < 0 || y >= boxH) continue;
+        for (let x = Math.floor(cx - d.r - 1); x <= Math.ceil(cx + d.r + 1); x++) {
+            if (x < 0 || x >= boxW) continue;
+            const cov = Math.min(1, Math.max(0, d.r + 0.5 - Math.sqrt((x + 0.5 - cx) * (x + 0.5 - cx) + (y + 0.5 - cy) * (y + 0.5 - cy))));
+            if (cov <= 0) continue;
+            const o = (y * boxW + x) * 4, a = Math.round(cov * ca * 255);
+            if (a <= out[o + 3]) continue;
+            out[o] = c[0]; out[o + 1] = c[1]; out[o + 2] = c[2]; out[o + 3] = a;
+        }
+    }
+    return out;
 }
 
 /** Colour a coverage mask (plus optional glow) into straight RGBA. opts: color, color2 (bottom, for a gradient), glow, font. */
@@ -131,4 +172,4 @@ function tint(m, boxW, boxH, opts) {
     return out;
 }
 
-module.exports = { drawText, mask, tint, measure, loadFont };
+module.exports = { drawText, mask, tint, measure, loadFont, dotRoom };

@@ -50,6 +50,11 @@ const TAB = {
     clock: { name: 'Badge & clock', icon: 'clock' },
     system: { name: 'System', icon: 'cog' },
 };
+// the Test row's six dots per shift light colour pattern (setting "shiftColours"; hud.js SHIFT_PATTERNS draws the lights)
+const SHIFT_DOTS = {
+    gt3: ['#2fd27a', '#2fd27a', '#ffc21a', '#ff2a2a', '#ff2a2a', '#286eff'], f1: ['#2fd27a', '#2fd27a', '#ff2a2a', '#ff2a2a', '#ff2a2a', '#286eff'],
+    red: ['#ff2a2a', '#ff2a2a', '#ff2a2a', '#ff2a2a', '#ff2a2a', '#ff2a2a'], blue: ['#286eff', '#286eff', '#286eff', '#286eff', '#286eff', '#286eff'],
+};
 // the warning limits on Shift & alerts: [key, name, what it does, scale low, scale high (C / bar)]
 const WARN_ROWS = [
     ['warnOil', 'Oil temperature', 'Red over the limit', 90, 160],
@@ -476,26 +481,43 @@ class Page {
     }
 
     /* ---------- Shift & alerts (both) ---------- */
-    /** The shift lights (redline, shift point, cold guard, test) beside the warning limits with their colour bars. */
+    /** The shift lights (redline, shift point, and on Apex Cluster how the lights sit, their colours and start; cold guard,
+     *  test) beside the warning limits with their colour bars. */
     shiftTab(cv) {
         const P = this.P, w = (CW - 16) / 2, x = CX, us = (d) => this.hud.unitUs(d);
         const at = this.get('redline') - (this.get('shiftBefore') || 0);
-        let y = gt3.section(cv, P, x, 50, w, 30 + 3 * 64 + 84, 'Shift lights', fmtInt(at) + ' rpm');
-        let cy = gt3.row(cv, P, x, y, w, 64, 'Redline', null, true);
+        // Apex Cluster's own light settings (Nov 13 2026): placement, colours, start rpm; tighter rows to make room
+        const own = !!(this.item('shiftLights') && this.item('shiftColours') && this.item('shiftFrom'));
+        const rh = own ? 54 : 64, th = 84, off = own && this.get('shiftLights') === 'off';
+        let y = gt3.section(cv, P, x, 50, w, 30 + (own ? 6 : 3) * rh + th, 'Shift lights', off ? 'off' : fmtInt(at) + ' rpm');
+        let cy = gt3.row(cv, P, x, y, w, rh, 'Redline', null, true);
         gt3.stepSetting(cv, P, x + w - 14, cy, this.item('redline'), this.get('redline'), (v) => this.set('redline', v), (v) => fmtInt(v) + ' rpm');
-        y += 64;
-        cy = gt3.row(cv, P, x, y, w, 64, 'Shift point', 'Lights flash at ' + fmtInt(at) + ' rpm');
+        y += rh;
+        cy = gt3.row(cv, P, x, y, w, rh, 'Shift point', 'Lights flash at ' + fmtInt(at) + ' rpm');
         gt3.stepSetting(cv, P, x + w - 14, cy, this.item('shiftBefore'), this.get('shiftBefore'), (v) => this.set('shiftBefore', v), (v) => (v ? fmtInt(v) + ' before' : 'At redline'));
-        y += 64;
+        y += rh;
+        if (own) {
+            const cam = this.get('shiftLights');
+            cy = gt3.row(cv, P, x, y, w, rh, 'Lights', cam === 'row' ? 'One row across the top' : cam === 'off' ? 'No shift lights' : 'Split round the driver camera');
+            gt3.seg(cv, P, x + w - 14, cy, [['camera', 'Camera'], ['row', 'No camera'], ['off', 'Off']], cam, (v) => this.set('shiftLights', v), 'set:shiftLights', 17);
+            y += rh;
+            cy = gt3.row(cv, P, x, y, w, rh, 'Colours');
+            gt3.seg(cv, P, x + w - 14, cy, [['gt3', 'GT3'], ['f1', 'F1'], ['red', 'Red'], ['blue', 'Blue']], this.get('shiftColours'), (v) => this.set('shiftColours', v), 'set:shiftColours', 17);
+            y += rh;
+            cy = gt3.row(cv, P, x, y, w, rh, 'First light', 'Lights fill from here to the shift point');
+            gt3.stepSetting(cv, P, x + w - 14, cy, this.item('shiftFrom'), this.get('shiftFrom'), (v) => this.set('shiftFrom', v), (v) => fmtInt(v) + ' rpm');
+            y += rh;
+        }
         if (this.item('coldGuard')) {
-            cy = gt3.row(cv, P, x, y, w, 64, 'Cold-engine guard', 'Earlier shift point until the oil is warm');
+            cy = gt3.row(cv, P, x, y, w, rh, 'Cold-engine guard', 'Earlier shift point until the oil is warm');
             gt3.toggle(cv, P, x + w - 14, cy, this.get('coldGuard') === true, () => this.set('coldGuard', this.get('coldGuard') !== true), 'set:coldGuard');
         }
-        y += 64;
+        y += rh;
         const testing = this.hud.shiftTesting && this.hud.shiftTesting();
         const d = this.hud.car && this.hud.car.data(), moving = d && !d.demo && d.speed > 3;
-        cy = gt3.row(cv, P, x, y, w, 84, 'Test', testing ? 'Running: watch the cluster' : moving ? 'Only while the car stands' : 'Revs to the shift point for 4 s');
-        ['#2ecc71', '#2ecc71', '#f1c40f', '#e74c3c', '#e74c3c', '#3478ff'].forEach((c, i) => cv.circle(x + 26 + i * 26, cy + 30, 9, c));
+        cy = gt3.row(cv, P, x, y, w, th, 'Test', testing ? 'Running: watch the cluster' : moving ? 'Only while the car stands' : 'Revs to the shift point for 4 s');
+        const pal = SHIFT_DOTS[own ? this.get('shiftColours') : 'gt3'] || SHIFT_DOTS.gt3;
+        pal.forEach((c, i) => cv.circle(x + 26 + i * 26, cy + 30, 9, off ? P.off : c));
         const bt = testing ? 'Running' : 'Run test';
         gt3.button(cv, P, x + w - 14 - gt3.tw(cv, gt3.up(bt), 19) - 36, cy - 19, bt, testing || moving ? null : () => {
             if (this.hud.testShift()) { this.kick(); setTimeout(() => this.kick(), 4000); }

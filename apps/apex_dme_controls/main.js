@@ -10,7 +10,7 @@
  *
  * Opening the app sends nothing (with BM3 picked it reads the ROM and the active map). A command leaves on a press,
  * and the valve's "at every start" setting once per start. No demo data: a value the car never sent is a dash, one
- * it stopped sending stays with a "!" (kit car.js).
+ * it stopped sending stays, dimmed with an amber dot (kit car.js).
  *
  * Plain Node 8 (the car's 8.16.2).
  */

@@ -40,6 +40,40 @@ function fit(cv, s, x, y, size, w, c, opt, min) {
     return txt(cv, s, x, y, k > w ? Math.max(min || 12, size * w / k) : size, c, opt);
 }
 
+/* ---------- held values (Nov 13 2026) ----------
+ * A value the car stopped sending stays on screen, dimmed, with a small amber dot after it at cap height (it used to
+ * be a "!"). The dot sits in room the text gives up, so a right-aligned number still ends where it did. */
+const HELD_AMBER = '#ffb000';
+const HELD_DIM = 0.45;
+/** colour c ('#rrggbb', '#rrggbbaa' or [r, g, b, a]) at HELD_DIM brightness, as '#rrggbbaa' */
+function heldDim(c) {
+    let v = c;
+    if (typeof c === 'string' && c.charAt(0) === '#') v = [1, 3, 5, 7].map((i) => (i < c.length ? parseInt(c.slice(i, i + 2), 16) : 255));
+    if (!Array.isArray(v)) return c;
+    const h = (n) => ('0' + Math.max(0, Math.min(255, Math.round(n))).toString(16)).slice(-2);
+    return '#' + h(v[0] * HELD_DIM) + h(v[1] * HELD_DIM) + h(v[2] * HELD_DIM) + h(v[3] === undefined ? 255 : v[3]);
+}
+/** the dot's radius and the room it takes after the text, for text of this size */
+function heldDot(size) { const r = Math.max(3, Math.round(size * 0.085)); return { r, room: Math.round(r * 2 + Math.max(3, r * 0.9)) }; }
+/** Text that may be held: held and not a dash draws dimmed with the amber dot; otherwise plain cv.text. o: cv.text options
+ *  (align, font) and maxW: the width the text may take; without room for the dot there, the text stays put and the dot
+ *  sits at its right end just above the digits (the size never shrinks for it). Returns the width taken. */
+function heldText(cv, s, x, y, size, c, o, held) {
+    o = o || {};
+    if (!held || /^-+$/.test(String(s))) return cv.text(s, x, y, size, c, o);
+    const d = heldDot(size), w = cv.textWidth(s, size, o), total = w + d.room;
+    if (o.maxW && total > o.maxW) {
+        cv.text(s, x, y, size, heldDim(c), o);
+        const right = o.align === 'right' ? x : o.align === 'center' ? x + w / 2 : x + w;
+        cv.circle(right - d.r, y - size * 0.74 - d.r - 3, d.r, HELD_AMBER);
+        return w;
+    }
+    const left = o.align === 'right' ? x - total : o.align === 'center' ? x - total / 2 : x;
+    cv.text(s, left, y, size, heldDim(c), Object.assign({}, o, { align: 'left' }));
+    cv.circle(left + total - d.r, y - size * 0.7 + d.r, d.r, HELD_AMBER);
+    return total;
+}
+
 /** A section: a frame in the box colour, a 30 px header strip (title left, note right). Returns where its rows start. */
 function section(cv, P, x, y, w, h, title, right) {
     cv.roundRect(x, y, w, h, 5, P.box);
@@ -219,4 +253,4 @@ function raceText(cv) {
     return cv;
 }
 
-module.exports = { BOX, palette, rgba, up, txt, tw, fit, section, row, seg, stepper, stepSetting, toggle, button, chip, swatches, scaleBar, rail, note, icon, raceText, FONT };
+module.exports = { HELD_AMBER, HELD_DIM, heldDim, heldDot, heldText, BOX, palette, rgba, up, txt, tw, fit, section, row, seg, stepper, stepSetting, toggle, button, chip, swatches, scaleBar, rail, note, icon, raceText, FONT };

@@ -23,7 +23,7 @@ const PRESS_UNITS = { 1: 'BAR', 2: 'KPA', 3: 'PSI' }, TEMP_UNITS = { 1: 'C', 2: 
 const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
 const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v : null);
 const FRESH = { dme: 6000, fes: 1500 };
-// a value with no new answer this long is held: still shown, with "!" after it (car signals: kit car.js)
+// a value with no new answer this long is held: still shown, dimmed with an amber dot (car signals: kit car.js)
 const HELD_MS = { boostTarget: 5000, boostActual: 5000, boostFes: 5000, hpfp: 5000, lpfp: 6000, loadTarget: 5000, loadActual: 5000,
     chargeBefore: 6000, intake: 6000, gearboxEgs: 15000, oilP: 5000, afr: 5000, timing: 5000 };
 // values from car signals the app keeps itself: [iface, field] (kit car.js staleAt)
@@ -56,7 +56,7 @@ class Telemetry {
         this.car = new Car(ctx, ['rpm', 'speed', 'accel', 'temps', 'gear'], {
             'de.bmw.infotainment.vehicle.TPMS': {
                 $pollMs: 5000,
-                // a corner the car sends no value for keeps its last one (held: shown with "!" once stale)
+                // a corner the car sends no value for keeps its last one (held: dimmed with an amber dot once stale)
                 statusTyrePressure: (v) => { CORNERS.forEach((k) => { const x = self._bar(v && v['actualValuePressureTyre' + k + 'H']); if (isNum(x)) { self.tyres.p[k] = x; self.tyres.at = Date.now(); } }); },
                 statusTyreTemperature: (v) => CORNERS.forEach((k) => { const x = self._degC(v && v['actualValueTemperatureTyre' + k + 'H']); if (isNum(x)) { self.tyres.t[k] = x; self.tyres.tAt = Date.now(); } }),
                 statusTargetTyrePressure: (v) => CORNERS.forEach((k) => { const x = self._bar(v && v['targetPressureTyre' + k + 'H']); if (isNum(x)) self.tyres.target[k] = x; }),

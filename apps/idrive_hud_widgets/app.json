@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "Apex HUD",
   "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD; Redline (shift lights and shift score) in Sport. Starts with the car.",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",

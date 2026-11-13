@@ -56,7 +56,7 @@ The header's **Settings** tab opens the settings page in place of the board (Set
 - **Data:** every engine value, the identifiers it is asked as, what the car answers and how old the reading is.
 - **System:** box colour (the board's boxes and this page), about.
 
-No made-up data: a value the car hasn't sent shows as a dash; one it stops sending (no answer for 5 s) stays on screen with a "!" after it until the car answers again.
+No made-up data: a value the car hasn't sent shows as a dash; one it stops sending (no answer for 5 s) stays on screen, dimmed with a small amber dot after it, until the car answers again.
 
 Every setting is also in BMW's plain list: System tab, Every setting as a list.
 

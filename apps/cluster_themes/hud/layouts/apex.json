@@ -220,7 +220,8 @@
       "round": true,
       "off": 0.12,
       "from": 3000,
-      "rise": 30
+      "rise": 30,
+      "toggle": "shiftLights=camera"
     },
     {
       "id": "lights_r",
@@ -236,7 +237,43 @@
       "off": 0.12,
       "from": 3000,
       "mirror": true,
-      "rise": 30
+      "rise": 30,
+      "toggle": "shiftLights=camera"
+    },
+    {
+      "id": "lights_rowl",
+      "type": "lights",
+      "z": 2,
+      "y": 20,
+      "w": 320,
+      "h": 78,
+      "count": 6,
+      "tail": 1,
+      "round": true,
+      "off": 0.12,
+      "from": 3000,
+      "rise": 30,
+      "x": 630,
+      "toggle": "shiftLights=row",
+      "noCamera": true
+    },
+    {
+      "id": "lights_rowr",
+      "type": "lights",
+      "z": 2,
+      "y": 20,
+      "w": 320,
+      "h": 78,
+      "count": 6,
+      "tail": 1,
+      "round": true,
+      "off": 0.12,
+      "from": 3000,
+      "rise": 30,
+      "x": 990,
+      "mirror": true,
+      "toggle": "shiftLights=row",
+      "noCamera": true
     },
     {
       "id": "revs",

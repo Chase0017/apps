@@ -255,7 +255,7 @@ const PLACE_KEYS = ['hudX', 'hudY', 'hudScale', 'stripClear'];
 // cluster-render has no clip, so the switch squeezes every layer to 662 / 720 of its height about the panel's top.
 const STRIP_TOP = 662;
 // settings that only change what a text shows (the next tick paints it), no rebuild
-const LIVE_KEYS = ['warnOil', 'warnCoolant', 'cautionCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong', 'gRange', 'gTrail'];
+const LIVE_KEYS = ['shiftFrom', 'warnOil', 'warnCoolant', 'cautionCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong', 'gRange', 'gTrail'];
 // g (after cauliflowermossgrape's G-Force, MIT, idea only): a sample over G_BAD is a bad reading, not a corner;
 // the rest are averaged over G_AVG_MS so kerbs and potholes don't throw the dot about
 const G_BAD = 3;
@@ -281,6 +281,9 @@ const TILE_BAR = {
     gLong: { raw: 'gLong', min: 0, max: 1.2, z: 1, abs: true }, fuel: { raw: 'fuel', min: 0, max: 1 },
     range: { raw: 'range', min: 0, max: 700 }, hvSoc: { raw: 'hvSoc', min: 0, max: 100 },
 };
+// shift light colour patterns (setting "shiftColours"): the LIGHTS colour for the lights shader's [green, yellow, red, blue]
+// bands (red is also the flash at the shift point)
+const SHIFT_PATTERNS = { gt3: ['green', 'yellow', 'red', 'blue'], f1: ['green', 'red', 'red', 'blue'], red: ['red', 'red', 'red', 'red'], blue: ['blue', 'blue', 'blue', 'blue'] };
 const TILE_MAX = 14;       // half a flash: red, then the normal colour
 // the shift-light test (page.js Alerts): rpm climbs from TEST_FROM to just past the shift point, then holds
 const TEST_FROM = 1500, TEST_CLIMB_MS = 2500, TEST_HOLD_MS = 1200;
@@ -294,9 +297,11 @@ const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v :
 const PROGRAMS = { S_MINUS_PROGRAMM: 'S', M_MINUS_PROGRAMM: 'M', 1: 'S', 2: 'M' };
 const MODE_NAME = { comfort: 'Comfort', sport: 'Sport', eco: 'Eco Pro' };
 const FRESH_MS = 3000;
-const STALE_MS = 5000;      // a value with no answer this long is held and shown with "!" (as kit car.js)
+const STALE_MS = 5000;      // a value with no answer this long is held: dimmed with an amber dot (as kit car.js)
+// a held value (Nov 13 2026): its text at HELD_DIM of its colour, with a dot in HELD_DOT after it (shared/gt3ui.js uses the same)
+const HELD_DIM = 0.45, HELD_DOT = [255, 176, 0, 255];
 // the value tokens that show a car or engine unit value -> the value they show (_stale); the rest (gauge labels,
-// signals for needles, headings) never get a "!"
+// signals for needles, headings) are never shown as held
 const STALE_TOKENS = { intake: 'intake', afr: 'afr', timing: 'timing', oilP: 'oilP', speed: 'speed', oil: 'oil', coolant: 'coolant', boost: 'boost',
     range: 'range', torque: 'torque', hvSoc: 'hvSoc', fuelPct: 'fuel', ambientN: 'ambient', torquePct: 'torquePct', powerPct: 'powerPct',
     gLat: 'gLat', gLong: 'gLong', gSide: 'gLat', gFwd: 'gLong', rpm: 'rpm', rpm10: 'rpm', ambient: 'ambient', power: 'torque' };
@@ -1448,12 +1453,14 @@ class HudApp {
         }
     }
 
-    /** A token's text; a held value gets a "!" after it (the cluster and HUD fonts carry one since Nov 13 2026). */
+    /** A token's text. A held value sets _heldHit, so the text widget drawing it dims it and adds the amber dot
+     *  (until Nov 13 2026 it got a "!" after it; the fonts still carry that glyph). */
     _token(tok) {
         const s = this._tokenText(tok);
         const src = STALE_TOKENS[tok] || (tok.indexOf('tyreP:') === 0 ? 'tyreP' : tok.indexOf('tyreT:') === 0 ? 'tyreT' : null);
         if (!src || !s || /^-+$/.test(s)) return s;
-        return this._stale(src) ? s + '!' : s;
+        if (this._stale(src)) this._heldHit = true;
+        return s;
     }
 
     _tokenText(tok) {
@@ -2010,10 +2017,12 @@ class HudApp {
             c.uniform(ref, 'u_round', [w.round ? 1 : 0]);
             c.uniform(ref, 'u_mirror', [w.mirror ? 1 : 0]);
             c.uniform(ref, 'u_rise', [isNum(w.rise) ? Math.max(0, Math.min(w.h - 4, w.rise)) : 0]);
-            c.uniform(ref, 'u_green', rgb(LIGHTS.green));
-            c.uniform(ref, 'u_yellow', rgb(LIGHTS.yellow));
-            c.uniform(ref, 'u_red', rgb(LIGHTS.red));
-            c.uniform(ref, 'u_blue', rgb(LIGHTS.blue));
+            // the colour pattern (Apex Cluster's "shiftColours"; an app without the setting keeps GT3)
+            const pat = SHIFT_PATTERNS[this.setting('shiftColours')] || SHIFT_PATTERNS.gt3;
+            c.uniform(ref, 'u_green', rgb(LIGHTS[pat[0]]));
+            c.uniform(ref, 'u_yellow', rgb(LIGHTS[pat[1]]));
+            c.uniform(ref, 'u_red', rgb(LIGHTS[pat[2]]));
+            c.uniform(ref, 'u_blue', rgb(LIGHTS[pat[3]]));
             c.uniform(ref, 'u_off', [w.off === undefined ? 0.14 : w.off]);
         } else if (w.type === 'fill') {
             c.uniform(ref, 'u_size', [w.w, w.h]);
@@ -2148,7 +2157,9 @@ class HudApp {
             x.c.uniform(x.ref, 'u_text', this._atlasCodes(x, s), { type: 'vec4' });
         } else if (w.type === 'text') {
             if (!force && now - x.lastPaint < (w.rate || TEXT_MS)) return;
-            const s = this._resolve(w.text);
+            this._heldHit = false;
+            const s = this._resolve(w.text), held = this._heldHit;
+            this._heldHit = false;
             let role = w.color || 'fg';
             if (w.colorBy === 'verdict' && this.score.last) role = VERDICT[this.score.last.verdict] || role;
             if (w.near && this._nearMark(w.near[0]) === w.near[1]) role = w.nearColor || 'fg';
@@ -2165,7 +2176,7 @@ class HudApp {
             else if (w.warnFlash !== false && this._caution(w)) role = 'caution';
             // "offRed": true shows it in the shift red while the engine is off (the gear and rpm on Apex)
             if (w.offRed && this._engineOff()) role = 'hot';
-            const key = s + '|' + role;
+            const key = s + '|' + role + '|' + held;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
             // "fit": smaller fonts to fall back on when the text is wider than the box (a readout slot showing a
@@ -2173,15 +2184,18 @@ class HudApp {
             // letters, + or °), on the same baseline
             let font = w.font, offsetY = 0;
             const has = (n) => { const g = textRaster.loadFont(n).metrics.glyphs; return s.split('').every((ch) => ch === ' ' || g[ch]); };
+            // (a held value's dot never makes it smaller: hud_text.js finds it a place)
             if (w.fit && (textRaster.measure(s, font, w.spacing) > w.w || !has(font))) {
                 const f = w.fit.find((n) => has(n) && textRaster.measure(s, n, w.spacing) <= w.w) || w.fit[w.fit.length - 1];
                 offsetY = textRaster.loadFont(w.font).metrics.baseline - textRaster.loadFont(f).metrics.baseline;
                 font = f;
             }
+            // held (the car stopped sending it): dimmed with the amber dot, unless it is flashing a warning
+            const dim = held && role !== 'hot', dc = (c) => (dim && c ? c.map((v, i) => (i < 3 ? Math.round(v * HELD_DIM) : v)) : c);
             const buf = textRaster.drawText(w.w, w.h, s, {
-                font, offsetY, color: color(this.theme, role), align: w.align, spacing: w.spacing,
-                color2: w.color2 && role !== 'hot' ? color(this.theme, w.color2) : null,
-                glow: w.glow ? this.theme.glow : 0,
+                font, offsetY, color: dc(color(this.theme, role)), align: w.align, spacing: w.spacing,
+                color2: w.color2 && role !== 'hot' ? dc(color(this.theme, w.color2)) : null,
+                glow: w.glow ? this.theme.glow : 0, dot: held ? HELD_DOT : null,
             });
             this._blitDiff(x, buf);
         } else if (w.type === 'badge') {
@@ -2354,8 +2368,10 @@ class HudApp {
             x.c.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
         } else if (w.type === 'lights') {
             const rpm = this._raw('rpm'), sp = this._shift(), n = w.count || 12;
-            // the lights fill from "from" rpm (3000) up to the shift point; a "from" at or past it means the last 500 rpm
-            const from = Math.min(isNum(w.from) ? w.from : 3000, sp.rpm - 500);
+            // the lights fill from "from" rpm (3000; Apex Cluster's "shiftFrom" setting wins) up to the shift point;
+            // a start at or past it means the last 500 rpm
+            const own = this.setting('shiftFrom');
+            const from = Math.min(isNum(own) ? own : isNum(w.from) ? w.from : 3000, sp.rpm - 500);
             const lit = isNum(rpm) ? Math.floor(Math.min(1, Math.max(0, (rpm - from) / (sp.rpm - from))) * n) : 0;
             // "blink": ms per half period (true = 100, 5 Hz; the tick is 50 ms); at the shift point the row flashes red
             const half = w.blink === true ? 100 : (isNum(w.blink) && w.blink > 0 ? w.blink : this.shiftBlinkMs);

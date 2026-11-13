@@ -124,7 +124,7 @@ class Setup {
         let y = gt3.section(cv, P, x, 50, w, 30 + 64, 'Display');
         cy = gt3.row(cv, P, x, y, w, 64, 'Box colour', P.name, true);
         gt3.swatches(cv, P, x + w - 14, cy, P.key, (val) => this.set('boxColour', val));
-        gt3.note(cv, P, x + 4, 50 + 30 + 64 + 34, ['A value the car stops sending stays with a "!" after it,', 'held until the car answers again.']);
+        gt3.note(cv, P, x + 4, 50 + 30 + 64 + 34, ['A value the car stops sending stays, dimmed with an amber dot,', 'held until the car answers again.']);
         const rx = x + w + 16, spec = this.ctx.spec;
         y = gt3.section(cv, P, rx, 50, w, 30 + 200, 'About');
         gt3.txt(cv, spec.title, rx + 16, y + 40, 32, P.text);

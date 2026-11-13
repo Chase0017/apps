@@ -6,7 +6,7 @@
  *
  *   draw(cv, bottom, v, opt, act)
  *     v    Control.view()
- *     opt  { P (gt3 palette), names [4], tempF, coolant, oil, rpm, held { coolant, oil, rpm } (shown with "!"), hold, closeLimit (rpm or null), locked (the confirm sheet is up: no taps) }
+ *     opt  { P (gt3 palette), names [4], tempF, coolant, oil, rpm, held { coolant, oil, rpm } (dimmed with an amber dot), hold, closeLimit (rpm or null), locked (the confirm sheet is up: no taps) }
  *     act  { map(n), valve(mode), cooling(on) }
  */
 const gt3 = require('./gt3ui');
@@ -26,7 +26,7 @@ function wrap(cv, s, x, y, w, size, c) {
     if (line) { txt(cv, line, x, y, size, c); y += size + 4; }
     return y;
 }
-const T = (c, f, held) => (typeof c === 'number' ? Math.round(f ? c * 9 / 5 + 32 : c) + '°' + (held ? '!' : '') : '--');
+const T = (c, f) => (typeof c === 'number' ? Math.round(f ? c * 9 / 5 + 32 : c) + '°' : '--');
 
 function mapBox(cv, P, v, opt, act, bottom) {
     const [x, w] = COLS[0], f = v.features.map;
@@ -107,13 +107,15 @@ function coolBox(cv, P, v, opt, act, bottom) {
     const tw3 = (bw - 16) / 3, ty = by + bh + 14, th = 92;
     const col = (c, warm, hot) => (typeof c !== 'number' ? P.text : c >= hot ? P.hot : c >= warm ? P.warm : c < 70 ? P.cold : P.text);
     const held = opt.held || {};
-    [['COOLANT', T(opt.coolant, opt.tempF, held.coolant), col(opt.coolant, 108, 115)], ['OIL', T(opt.oil, opt.tempF, held.oil), col(opt.oil, 130, 140)],
-        ['RPM', typeof opt.rpm === 'number' ? String(Math.round(opt.rpm / 10) * 10) + (held.rpm ? '!' : '') : '--', P.text]].forEach((t, i) => {
+    [['COOLANT', T(opt.coolant, opt.tempF), col(opt.coolant, 108, 115), held.coolant], ['OIL', T(opt.oil, opt.tempF), col(opt.oil, 130, 140), held.oil],
+        ['RPM', typeof opt.rpm === 'number' ? String(Math.round(opt.rpm / 10) * 10) : '--', P.text, held.rpm]].forEach((t, i) => {
         const tx = bx + i * (tw3 + 8);
         cv.roundRect(tx, ty, tw3, th, 4, P.box);
         cv.roundRect(tx + 2, ty + 26, tw3 - 4, th - 28, 3, P.bg);
         txt(cv, t[0], tx + 10, ty + 20, 17, P.ink);
-        fit(cv, t[1], tx + tw3 - 10, ty + th - 12, 50, tw3 - 20, t[2], { align: 'right' });
+        // held (the car stopped sending it): dimmed with an amber dot, shrunk to fit with the dot's room
+        const room = tw3 - 20, k = tw(cv, t[1], 50);
+        gt3.heldText(cv, t[1], tx + tw3 - 10, ty + th - 12, k > room ? Math.max(12, 50 * room / k) : 50, t[2], Object.assign({}, gt3.FONT, { align: 'right', maxW: room }), t[3]);
     });
     const msg = v.cooling.note && v.cooling.warn ? v.cooling.note : v.coolBlock
         || (v.cooling.note ? v.cooling.note + '. ' : '') + 'Needs the engine running. Use it after a hard run or in traffic on a hot day.';

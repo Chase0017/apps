@@ -100,7 +100,7 @@ Classic, M and Night, plus Auto, which switches to Night at sunset. You choose w
 
 ## Settings
 
-Layout, drive mode switching, which sensor each readout shows, where the HUD sits on the glass and its size, theme, daytime theme for Auto, units (mph, °F, psi or km/h, °C, bar), 12- or 24-hour clock, time zone, fuel tank size, redline, shift point before redline, cold-engine rev guard, and which readouts show (clock, oil, coolant, boost). No made-up data: a value the car hasn't sent shows as a dash; one it stops sending (no answer for 5 s) stays on screen with a "!" after it until the car answers again. Changes show on the HUD right away, and the HUD keeps running after you leave the page.
+Layout, drive mode switching, which sensor each readout shows, where the HUD sits on the glass and its size, theme, daytime theme for Auto, units (mph, °F, psi or km/h, °C, bar), 12- or 24-hour clock, time zone, fuel tank size, redline, shift point before redline, cold-engine rev guard, and which readouts show (clock, oil, coolant, boost). No made-up data: a value the car hasn't sent shows as a dash; one it stops sending (no answer for 5 s) stays on screen, dimmed with a small amber dot after it, until the car answers again. Changes show on the HUD right away, and the HUD keeps running after you leave the page.
 
 **Time zone (clock):** the head unit's clock runs on UTC, so pick your zone once. Named zones (US Eastern, Central, Mountain, Pacific, Alaska, Hawaii, Arizona, Canada Atlantic, Mexico, UK / Ireland / Portugal, Central Europe, Eastern Europe) change for daylight saving by themselves; for anywhere else, pick your offset from UTC. The Auto theme uses the same zone to work out sunset.
 

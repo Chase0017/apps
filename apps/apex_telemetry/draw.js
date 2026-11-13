@@ -13,7 +13,7 @@
  *
  * Pure: draw(cv, snap, opt) uses only the kit canvas calls (fillRect, roundRect, strokeRoundRect, gradientRect,
  * circle, text, textWidth), so tools/telemetry-preview/ runs this same file in a browser.
- *   snap: Telemetry.snapshot() (SI units; s.held: the values the car stopped sending, drawn with "!" after them)   opt: { us (mph, mi), tempF (°F), psi, tyreWarn (C), tyreHot (C), tyreLow / tyreOver /
+ *   snap: Telemetry.snapshot() (SI units; s.held: the values the car stopped sending, drawn dimmed with an amber dot)   opt: { us (mph, mi), tempF (°F), psi, tyreWarn (C), tyreHot (C), tyreLow / tyreOver /
  *         tyreOverRed (psi off the target), box ({ box, ink }: the box colour), slots ([5 SLOTS ids]), frame(cv, badges), target(cb),
  *         why(name): what the engine unit answered for config.dme[name], shown in a box without a value }
  */
@@ -70,8 +70,30 @@
 
     /* ---------- units ---------- */
     const fmt = (v, d) => (isNum(v) ? v.toFixed(d) : '--');
-    /** "!" after a held value (the car stopped sending it: Telemetry.snapshot() s.held), nothing after a dash */
-    const bang = (txt, held) => (held && txt !== '--' ? txt + '!' : txt);
+    /** a held value (the car stopped sending it: Telemetry.snapshot() s.held): { s, held } for put(), dimmed with an amber dot */
+    const bang = (txt, held) => (held && txt !== '--' ? { s: txt, held: true } : txt);
+    const str = (v) => (v && typeof v === 'object' ? v.s : v);
+    /** cv.text for a value that may be held (bang) */
+    const put = (cv, v, x, y, size, c, o) => heldText(cv, str(v), x, y, size, c, o, !!(v && v.held));
+    /** as shared/gt3ui.js heldText (this file stays self-contained for tools/telemetry-preview/): dimmed to 45 %, an amber
+     *  dot after the text level with the digits' tops; o.maxW without room for it: the text stays, the dot above its end */
+    function heldText(cv, s, x, y, size, c, o, held) {
+        o = o || {};
+        if (!held || /^-+$/.test(String(s))) return cv.text(s, x, y, size, c, o);
+        const v = [1, 3, 5, 7].map((i) => (i < c.length ? parseInt(c.slice(i, i + 2), 16) : 255));
+        const hx = (n) => ('0' + Math.round(n).toString(16)).slice(-2), dim = '#' + hx(v[0] * 0.45) + hx(v[1] * 0.45) + hx(v[2] * 0.45) + hx(v[3]);
+        const r = Math.max(3, Math.round(size * 0.085)), room = Math.round(r * 2 + Math.max(3, r * 0.9)), w = cv.textWidth(s, size, o);
+        if (o.maxW && w + room > o.maxW) {
+            cv.text(s, x, y, size, dim, o);
+            const right = o.align === 'right' ? x : o.align === 'center' ? x + w / 2 : x + w;
+            cv.circle(right - r, y - size * 0.74 - r - 3, r, '#ffb000');
+            return w;
+        }
+        const left = o.align === 'right' ? x - w - room : o.align === 'center' ? x - (w + room) / 2 : x;
+        cv.text(s, left, y, size, dim, Object.assign({}, o, { align: 'left' }));
+        cv.circle(left + w + room - r, y - size * 0.7 + r, r, '#ffb000');
+        return w + room;
+    }
     // the snapshot value each small box shows (s.held)
     const SLOT_SRC = { gearbox: 'gearbox', ambient: 'ambient', coolant: 'coolant', oil: 'oil', intake: 'intake', range: 'rangeKm', fuel: 'fuelL',
         hpfp: 'hpfp', lpfp: 'lpfp', oilP: 'oilP', afr: 'afr', timing: 'timing', load: 'loadActual', boost: 'boost', rpm: 'rpm', speed: 'speed', gLat: 'gLat' };
@@ -91,9 +113,9 @@
     /** a readout box: header, a big number right-aligned, an optional line under it */
     function readout(cv, x, y, w, h, label, unit, value, color, sub, subColor) {
         box(cv, x, y, w, h, label, unit);
-        const base = value.length > 5 ? 64 : 72, room = w - 28, tw = cv.textWidth(value, base, F);
+        const vs = str(value), base = vs.length > 5 ? 64 : 72, room = w - 28, tw = cv.textWidth(vs, base, F);
         const size = tw > room ? Math.max(40, base * room / tw) : base;
-        cv.text(value, x + w - 14, y + HEAD + (sub ? 70 : 84), size, color || C.text, Object.assign({ align: 'right' }, F));
+        put(cv, value, x + w - 14, y + HEAD + (sub ? 70 : 84), size, color || C.text, Object.assign({ align: 'right', maxW: room }, F));
         if (sub) {
             const room = w - 24, RA = Object.assign({ align: 'right' }, F), fit = (t, max) => Math.min(max, max * room / Math.max(1, cv.textWidth(t, max, F)));
             const parts = sub.split(', ');
@@ -129,10 +151,10 @@
         if (sc) cv.fillRect(right ? x + 2 : x + w - 10, y + HEAD, 8, h - HEAD - 2, sc);
         const pv = bang(isNum(t.p) ? (ps ? fmt(t.p * 14.5038, 1) : fmt(t.p, 2)) : '--', t.heldP);
         const px = right ? x + w - 16 : x + w - 22;
-        cv.text(pv, px, y + HEAD + 98, 96, pressState(t.p, t.target), Object.assign({ align: 'right' }, F));
+        put(cv, pv, px, y + HEAD + 98, 96, pressState(t.p, t.target), Object.assign({ align: 'right' }, F));
         // temperature (left) and the difference to target (right)
         const tl = right ? x + 22 : x + 14;
-        cv.text(bang(isNum(t.t) ? fmt(temp(t.t, tf), 0) + U.temp(tf) : '--', t.heldT), tl, y + h - 16, 44, sc || (isNum(t.t) ? C.text : C.dim), F);
+        put(cv, bang(isNum(t.t) ? fmt(temp(t.t, tf), 0) + U.temp(tf) : '--', t.heldT), tl, y + h - 16, 44, sc || (isNum(t.t) ? C.text : C.dim), F);
         const target = isNum(t.target) ? t.target : null;
         let delta = '', dc = C.dim;
         if (isNum(t.p) && target !== null) {
@@ -191,7 +213,7 @@
             ['DEVIATION', bang(isNum(dev) ? (dev >= 0 ? '+' : '') + (dev * k).toFixed(dp) : '--', hd.boost || hd.boostTarget), dc]].forEach(([l, v, c], i) => {
             const cx = x + 14 + cw * (i + 1) - 8;
             cv.text(l, cx, y + HEAD + 26, 18, C.dim, R);
-            cv.text(v, cx, y + HEAD + 92, us ? 64 : 54, c, R);     // bar has two decimals
+            put(cv, v, cx, y + HEAD + 92, us ? 64 : 54, c, R);     // bar has two decimals
         });
         // the bar: 0 .. max, actual filled (red while off target), the target a tall tick
         const max = us ? 25 / 14.5038 : 1.75, bx = x + 16, bw = w - 32, by = y + HEAD + 118, bh = 34;
@@ -211,7 +233,7 @@
             word = !bad ? 'ON TARGET' : dev > 0 ? 'OVERBOOST' : 'UNDERBOOST'; wc = bad ? C.hot : C.text;
         } else if (!isNum(t)) word = 'NO TARGET FROM THE ENGINE';
         cv.text(word, x + 16, y + h - 14, 26, wc, F);
-        if (isNum(s.loadActual)) cv.text('LOAD ' + fmt(s.loadActual, 0) + (isNum(s.loadTarget) ? '/' + fmt(s.loadTarget, 0) : '') + '%' + (hd.loadActual ? '!' : ''),
+        if (isNum(s.loadActual)) put(cv, bang('LOAD ' + fmt(s.loadActual, 0) + (isNum(s.loadTarget) ? '/' + fmt(s.loadTarget, 0) : '') + '%', hd.loadActual),
             x + w * 0.53, y + h - 14, 20, C.dim, Object.assign({ align: 'center' }, F));
         if (s.peak && s.peak.boost > 0) cv.text('PEAK ' + fmt(s.peak.boost * k, dp), x + w - 16, y + h - 14, 26, C.dim, R);
     }
@@ -229,7 +251,7 @@
             ['DROP', bang(isNum(drop) ? fmt(drop * k, 0) + '°' : '--', hd.chargeBefore || hd.intake), C.mark]].forEach(([l, v, c], i) => {
             const rx = x + 14 + cw * (i + 1) - 8;
             cv.text(l, rx, y + HEAD + 26, 18, C.dim, R);
-            cv.text(v, rx, y + HEAD + 84, 60, c, R);
+            put(cv, v, rx, y + HEAD + 84, 60, c, R);
         });
         if (note) cv.text(note, x + w - 14, y + h - 12, Math.max(14, Math.min(20, 20 * (w - 28) / Math.max(1, cv.textWidth(note, 20, F)))), C.dim, R);
         else if (isNum(soak)) {
@@ -247,7 +269,7 @@
         [['LATERAL', s.gLat, s.peak && s.peak.gLat, hd.gLat], ['LONGITUDINAL', s.gLong, s.peak && s.peak.gLong, hd.gLong]].forEach(([l, v, pk, held], i) => {
             const rx = x + 14 + cw * (i + 1) - 8;
             cv.text(l, x + 22 + cw * i, y + HEAD + 26, 18, C.dim, F);
-            cv.text(bang(isNum(v) ? Math.abs(v).toFixed(2) : '--', held), rx, y + HEAD + 86, 64, C.text, R);
+            put(cv, bang(isNum(v) ? Math.abs(v).toFixed(2) : '--', held), rx, y + HEAD + 86, 64, C.text, R);
             cv.text('PEAK ' + fmt(pk, 2), rx, y + h - 12, 20, C.dim, R);
         });
         cv.fillRect(x + w / 2, y + HEAD + 12, 1, h - HEAD - 24, C.faint);

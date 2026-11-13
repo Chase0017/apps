@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Apex Cluster",
   "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -457,6 +457,68 @@
         500,
         800,
         1000
+      ]
+    },
+    {
+      "key": "shiftLights",
+      "label": "Shift lights",
+      "type": "choice",
+      "default": "camera",
+      "options": [
+        [
+          "camera",
+          "Split round the driver camera"
+        ],
+        [
+          "row",
+          "One row (no driver camera)"
+        ],
+        [
+          "off",
+          "Off"
+        ]
+      ]
+    },
+    {
+      "key": "shiftColours",
+      "label": "Shift light colours",
+      "type": "choice",
+      "default": "gt3",
+      "options": [
+        [
+          "gt3",
+          "GT3 (green, yellow, red, blue)"
+        ],
+        [
+          "f1",
+          "F1 (green, red, blue)"
+        ],
+        [
+          "red",
+          "All red"
+        ],
+        [
+          "blue",
+          "All blue"
+        ]
+      ]
+    },
+    {
+      "key": "shiftFrom",
+      "label": "First shift light at",
+      "type": "number",
+      "unit": "rpm",
+      "default": 3000,
+      "steps": [
+        2000,
+        2500,
+        3000,
+        3500,
+        4000,
+        4500,
+        5000,
+        5500,
+        6000
       ]
     },
     {
