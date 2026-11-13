@@ -26,7 +26,7 @@
     const HEAD = 30;
     // warning (yellow) / near critical (red) limits, SI units
     const LIM = {
-        boostDev: [0.15, 0.30], boostFrom: 0.2,      // bar off target, while the target is over boostFrom
+        boostOff: 0.207, boostHold: 750, boostFrom: 0.2, // red when 3 psi off target for 0.75 s (spool-up lag isn't a fault), while the target is over boostFrom bar
         lpfp: [4.0, 3.0], hpfp: [25, 15],            // bar, low = bad (engine running)
         gearbox: [110, 125], range: [80, 40],        // C high = bad; km low = bad
         ice: 3,                                      // C
@@ -124,11 +124,16 @@
     }
 
     /** boost against its target: the three numbers, a bar with the target marked, the peak and what it means */
+    let boostOffSince = 0;     // since when boost has been off target (0: it isn't)
     function boostPanel(cv, x, y, w, h, s, us) {
         box(cv, x, y, w, h, 'BOOST CONTROL', U.press(us));
         const k = us ? 14.5038 : 1, dp = us ? 1 : 2, a = s.boost, t = s.boostTarget;
         const on = isNum(t) && t > LIM.boostFrom, dev = isNum(a) && isNum(t) ? a - t : null;
-        const dc = on && isNum(dev) ? high(Math.abs(dev), LIM.boostDev) || C.ok : C.dim;
+        // white while fine, red while off target for longer than a spool-up takes
+        const off = on && isNum(dev) && Math.abs(dev) >= LIM.boostOff, now = Date.now();
+        if (!off) boostOffSince = 0; else if (!boostOffSince) boostOffSince = now;
+        const bad = off && now - boostOffSince >= LIM.boostHold;
+        const dc = bad ? C.hot : on && isNum(dev) ? C.text : C.dim;
         const cw = (w - 28) / 3, R = Object.assign({ align: 'right' }, F);
         [['ACTUAL', fmt(isNum(a) ? a * k : null, dp), C.text], ['TARGET', fmt(isNum(t) ? t * k : null, dp), C.mark],
             ['DEVIATION', isNum(dev) ? (dev >= 0 ? '+' : '') + (dev * k).toFixed(dp) : '--', dc]].forEach(([l, v, c], i) => {
@@ -136,11 +141,11 @@
             cv.text(l, cx, y + HEAD + 26, 18, C.dim, R);
             cv.text(v, cx, y + HEAD + 92, 64, c, R);
         });
-        // the bar: 0 .. max, actual filled (in the deviation's colour when off), the target a tall tick
+        // the bar: 0 .. max, actual filled (red while off target), the target a tall tick
         const max = us ? 25 / 14.5038 : 1.75, bx = x + 16, bw = w - 32, by = y + HEAD + 118, bh = 34;
         const X = (v) => bx + bw * Math.max(0, Math.min(1, v / max));
         cv.roundRect(bx, by, bw, bh, 4, C.track);
-        if (isNum(a) && a > 0) cv.roundRect(bx, by, Math.max(8, X(a) - bx), bh, 4, on && dc !== C.ok ? dc : C.text);
+        if (isNum(a) && a > 0) cv.roundRect(bx, by, Math.max(8, X(a) - bx), bh, 4, bad ? C.hot : C.text);
         if (isNum(t) && t > 0) cv.fillRect(X(t) - 2, by - 8, 4, bh + 16, C.mark);
         const ticks = us ? [0, 5, 10, 15, 20, 25] : [0, 0.5, 1, 1.5];
         ticks.forEach((v, i) => {
@@ -151,8 +156,7 @@
         // the word for it, and the peak
         let word = 'OFF BOOST', wc = C.dim;
         if (on && isNum(dev)) {
-            const big = Math.abs(dev) >= LIM.boostDev[0];
-            word = !big ? 'ON TARGET' : dev > 0 ? 'OVERBOOST' : 'UNDERBOOST'; wc = dc;
+            word = !bad ? 'ON TARGET' : dev > 0 ? 'OVERBOOST' : 'UNDERBOOST'; wc = bad ? C.hot : C.text;
         } else if (!isNum(t)) word = 'NO TARGET FROM THE ENGINE';
         cv.text(word, x + 16, y + h - 14, 26, wc, F);
         if (isNum(s.loadActual)) cv.text('LOAD ' + fmt(s.loadActual, 0) + (isNum(s.loadTarget) ? '/' + fmt(s.loadTarget, 0) : '') + '%',

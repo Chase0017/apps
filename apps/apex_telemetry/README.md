@@ -11,7 +11,8 @@ Nothing Apex Cluster already shows (coolant, oil, oil pressure, AFR, intake and 
 - **Boost control (left):** actual boost, the engine's target and the deviation between them, all intake
   manifold pressure (after the throttle, so no spike when it shuts), a bar with the target
   marked, the peak, and a word for it: ON TARGET, UNDERBOOST, OVERBOOST or OFF BOOST (target under 0.2 bar / 3 psi).
-  Deviation yellow from 2.2 psi (0.15 bar) off target, red from 4.4 psi (0.3 bar).
+  White while fine; the deviation, the bar and the word turn **red** when boost stays 3 psi (0.21 bar) off target
+  for 0.75 s (shorter is the turbo spooling up, not a fault).
 - **Fuel (left, under it):** fuel rail (high pressure) and low pressure fuel. With the engine running: rail yellow
   under 25 bar (363 psi), red under 15 bar (218 psi); low pressure yellow under 4 bar (58 psi), red under 3 bar (44 psi).
 - **Tyres (middle):** the car from above, each tyre's pressure, its temperature and the difference to the car's own

@@ -2,7 +2,7 @@
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
   "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
@@ -181,7 +181,7 @@
     }
   ],
   "config": {
-    "_comment": "Colours: yellow = warning, red = near critical. Tyres show no colour while fine. Temperature (the air inside the tyre): yellow from tyreWarn (130 F), red from tyreHot (150 F), nothing for cold. Pressure against the car's target: blue 3 psi under, yellow 3 psi over, red 5 psi over (UNEVEN against the other side of the axle when the car sends no target). Boost against target (only while the target is over 0.2 bar): yellow 0.15 bar (2.2 psi) off, red 0.3 bar (4.4 psi). Low pressure fuel (engine running): yellow under 4 bar, red under 3. Fuel rail: yellow under 25 bar, red under 15. Gearbox oil: yellow from 110 C, red from 125. Outside: yellow at 3 C and below (ice). Range: yellow under 80 km, red under 40. Intercooler: air after it yellow from 50 C, red from 60 C; heat soak (after minus outside) yellow from 20 C (36 F), red from 30 C (54 F).",
+    "_comment": "Colours: yellow = warning, red = near critical. Tyres show no colour while fine. Temperature (the air inside the tyre): yellow from tyreWarn (130 F), red from tyreHot (150 F), nothing for cold. Pressure against the car's target: blue 3 psi under, yellow 3 psi over, red 5 psi over (UNEVEN against the other side of the axle when the car sends no target). Boost against target (only while the target is over 0.2 bar): white while fine, red when 3 psi (0.21 bar) off for 0.75 s.4 psi). Low pressure fuel (engine running): yellow under 4 bar, red under 3. Fuel rail: yellow under 25 bar, red under 15. Gearbox oil: yellow from 110 C, red from 125. Outside: yellow at 3 C and below (ice). Range: yellow under 80 km, red under 40. Intercooler: air after it yellow from 50 C, red from 60 C; heat soak (after minus outside) yellow from 20 C (36 F), red from 30 C (54 F).",
     "dme": {
       "comment": "Read from the engine unit (DME, ecu 18) with UDS 0x22 over the kit's read-only link, only while the page shows; candidates are tried in order, the first plausible one wins (value = raw * factor + offset). The identifiers M Vitals reads (cauliflowermossgrape, MIT). boostTarget / boostActual: intake manifold pressure setpoint and actual, absolute kPa (the outside air pressure, baro, is subtracted). hpfp: fuel rail (high pressure) bar. lpfp: low pressure fuel bar. loadTarget / loadActual: requested and actual relative air charge %. egs: gearbox oil temperature from the gearbox unit (ecu 24), asked only while the car's basic data set has none. chargeBefore / intake: the charge air before the throttle (ahead of the B58's water-to-air intercooler) and in the plenum after it: the intercooler's drop and heat soak (after minus outside). The B58 has no temperature sensor in the intercooler's water circuit. Boost is intake MANIFOLD pressure (after the throttle): never the charge pipe (pressure before the throttle: PID 0x70 'boost pressure sensor A', DME 4205 IPLAD), which spikes when the throttle shuts on a lift or a shift (seen at 27 psi, Nov 13 2026).",
       "ecu": 18,
