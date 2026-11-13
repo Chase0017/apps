@@ -1,7 +1,7 @@
 'use strict';
 /**
- * setup.js - Apex Telemetry's settings page (chase0017-apps, Nov 13 2026; design/settings-v3/), opened with the bar's
- * Setup button and closed with it or the rail's Pit board tab. The GT3 look of shared/gt3ui.js, as Apex Cluster's page.
+ * setup.js - Apex Telemetry's settings page (chase0017-apps, Nov 13 2026; design/settings-v3/), opened with the
+ * header's Settings tab and closed with it or the rail's Pit board tab. The GT3 look of shared/gt3ui.js, as Apex Cluster's page.
  *
  *   Readouts  the five small boxes (settings tBox1..5): which value each shows, with a map of where it sits
  *   Units     US / Metric / Custom, then speed, temperature and pressure each
@@ -190,13 +190,13 @@ class Setup {
         cy = gt3.row(cv, P, x, y, w, 64, 'Demo data', 'Auto: only until the car sends data', true);
         gt3.seg(cv, P, x + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('demo'), (v) => this.set('demo', v), 'demo');
         const rx = x + w + 16, spec = this.ctx.spec, demo = this.tel.car.data().demo;
-        y = gt3.section(cv, P, rx, 50, w, 30 + 190, 'About');
+        y = gt3.section(cv, P, rx, 50, w, 30 + 200, 'About');
         gt3.txt(cv, spec.title, rx + 16, y + 40, 32, P.text);
         gt3.txt(cv, 'v' + spec.version, rx + 24 + gt3.tw(cv, spec.title, 32), y + 40, 20, P.dim);
         gt3.txt(cv, 'Opens from the menu (doesn\'t start with the car)', rx + 16, y + 74, 20, P.text);
         gt3.txt(cv, 'Car data: ' + (demo ? 'demo' : 'live'), rx + 16, y + 102, 20, demo ? P.warm : P.ok);
-        gt3.txt(cv, 'Every setting as a list: the bar button All settings.', rx + 16, y + 130, 17, P.dim);
-        gt3.txt(cv, 'Back to the pit board: Setup, or the Pit board tab.', rx + 16, y + 156, 17, P.dim);
+        gt3.txt(cv, 'Back to the pit board: Settings again, or the Pit board tab.', rx + 16, y + 130, 17, P.dim);
+        if (this.opts.openList) gt3.button(cv, P, rx + 16, y + 146, 'Every setting as a list', () => this.opts.openList(), 'list', true, 17);
     }
 }
 

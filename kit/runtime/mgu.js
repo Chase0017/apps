@@ -460,7 +460,7 @@ function wireSettings(ctx) {
     // else the HMI's settings screen. The HMI's screen shows the values chosen in either.
     settings.onChange(() => { if (!ctx.display.sheet) refresh(); });
     if (ui.comp('BTN_SETTINGS')) {
-        ui.onClick('BTN_SETTINGS', () => {
+        const openList = () => {
             const d = ctx.display;
             if (d.sheet && d.sheet.settings) { d.closeSheet(); return null; }
             const sh = listSheet(settings, null, { version: SPEC.version });
@@ -468,7 +468,11 @@ function wireSettings(ctx) {
             sh.onClose = () => refresh();
             if (d.openSheet(sh)) return null;
             return refresh().then(() => ui.open('SETTINGS'));
-        });
+        };
+        // chase0017-apps: an app with a settings page of its own takes the Settings tab (ctx.ownSettings(fn));
+        // the list stays reachable through ctx.openSettingsList()
+        ctx.openSettingsList = openList;
+        ui.onClick('BTN_SETTINGS', () => (ctx.settingsPage ? ctx.settingsPage() : openList()));
     }
     return refresh();
 }
@@ -574,6 +578,8 @@ async function runInner(impl) {
          * layout setting): an app that draws only when its data changes draws again then.
          */
         onLayout(fn) { display.onLayout(fn); },
+        /** ownSettings(fn): the Settings tab / button calls fn (the app's own settings page) instead of opening the kit's list. */
+        ownSettings(fn) { this.settingsPage = fn; },
         /** The surface to draw one frame on (record.js Recorder, reused): pass it to ui.image. */
         canvas(w, h) { return display.canvas(w, h); },
         /**

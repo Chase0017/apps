@@ -45,7 +45,7 @@ Read only, nothing is written to the car.
 
 ## Settings
 
-The bar's **Setup** button opens the settings page in place of the board (Setup again, or its Pit board tab, goes back):
+The header's **Settings** tab opens the settings page in place of the board (Settings again, or its Pit board tab, goes back):
 
 - **Readouts:** the five small boxes (Trans, Outside, Range, Fuel rail, Low fuel by default) can each show another value:
   gearbox oil, outside, coolant, oil temperature, intake, range, fuel level, fuel rail, low fuel, oil pressure, AFR,
@@ -56,7 +56,7 @@ The bar's **Setup** button opens the settings page in place of the board (Setup 
 - **Data:** every engine value, the identifiers it is asked as, what the car answers and how old the reading is.
 - **System:** box colour (the board's boxes and this page), demo data.
 
-Everything is also in BMW's list under **All settings**.
+Every setting is also in BMW's plain list: System tab, Every setting as a list.
 
 ## Working on it
 

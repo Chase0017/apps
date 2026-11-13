@@ -6,8 +6,9 @@
  * five small boxes that each show a value of the driver's choosing (fuel rail, low fuel, gearbox, outside, range by
  * default). Yellow = warning, red = near critical. Tap the g-force box to reset the peaks.
  *
- * The bar's Setup button opens the settings page (setup.js: small boxes, units, tyre limits, what the car answers,
- * box colour) in place of the board; Setup again, or its Pit board tab, goes back.
+ * The Settings tab opens the app's own settings page (setup.js: small boxes, units, tyre limits, what the car answers,
+ * box colour) in place of the board; Settings again, or its Pit board tab, goes back. BMW's plain list of every
+ * setting stays one tap away on its System tab.
  *
  *   telemetry.js  the values (car signals, TPMS, the engine unit over the kit's read-only link)
  *   draw.js       the board (pure canvas calls; tools/telemetry-preview/ draws the same file in a browser)
@@ -45,7 +46,7 @@ mgu.run({
         const slots = () => [1, 2, 3, 4, 5].map((i) => { const v = settings.get('tBox' + i); return D.SLOTS[v] ? v : D.SLOT_DEFAULTS[i - 1]; });
         let mode = 'board', loop = null;
         const kick = () => { if (loop && loop.kick) loop.kick(); };
-        const setup = new Setup(ctx, tel, { kick, close: () => { mode = 'board'; kick(); } });
+        const setup = new Setup(ctx, tel, { kick, close: () => { mode = 'board'; kick(); }, openList: () => ctx.openSettingsList && ctx.openSettingsList() });
         loop = ctx.loop('MAIN', 5, () => {
             tel.wanted();
             const sl = slots(), u = units(), snap = tel.snapshot();
@@ -53,7 +54,7 @@ mgu.run({
             const cv = ctx.canvas(W, H);
             if (mode === 'setup') {
                 setup.draw(cv, G.pageBottom(cv), snap, u);
-                G.frame(cv, ctx.theme(), [], -1, [snap.demo ? { text: 'DEMO DATA', color: '#ffb020' } : null, { text: 'SETUP', color: '#ffffff' }]);
+                G.frame(cv, ctx.theme(), [], -1, [snap.demo ? { text: 'DEMO DATA', color: '#ffb020' } : null]);
             } else {
                 D.draw(cv, snap, {
                     us: u.sp, tempF: u.tf, psi: u.ps, slots: sl, box: gt3.palette(settings.get('boxColour')),
@@ -66,7 +67,9 @@ mgu.run({
             }
             return ctx.ui.image('MAIN_GFX', cv);
         });
-        ctx.ui.onClick('BTN_SETUP', () => { mode = mode === 'setup' ? 'board' : 'setup'; kick(); });
+        // the Settings tab opens our page (and closes it again); older kits without ownSettings keep their list
+        const toggle = () => { mode = mode === 'setup' ? 'board' : 'setup'; kick(); return null; };
+        if (ctx.ownSettings) ctx.ownSettings(toggle);
         settings.onChange(() => kick());
         log.info('Apex Telemetry started');
     },

@@ -19,7 +19,7 @@
      Serve the repo root and open /tools/settings-preview/. -->
 <div class="bar">
   <button data-app="cluster_themes" class="on">Apex Cluster</button><button data-app="idrive_hud_widgets">Apex HUD</button><button data-app="apex_telemetry">Apex Telemetry</button>
-  <button id="setupBtn" style="display:none">Setup (bar button)</button>
+  <button id="setupBtn" style="display:none">Settings tab</button>
   <span id="info" style="color:#888"></span>
 </div>
 <canvas id="c" width="1600" height="520"></canvas>
@@ -146,19 +146,19 @@ async function start() {
       { name: 'Fuel rail', ids: 'F423 · F459 · OBD 23', answer: 'F423 NRC 31, F459 NRC 31, OBD 23 NO REPLY', age: null, ok: false }, { name: 'Low fuel', ids: 'F40A · F422 · OBD 0A · OBD 22', answer: 'ok', age: 1.8, ok: true },
       { name: 'Oil pressure', ids: '4436 · 586F', answer: 'not shown, not asked', age: null, ok: false }, { name: 'Tyres', ids: 'TPMS', answer: 'ok', age: 4.1, ok: true }];
     const tel = { dataRows: () => rows, car: { data: () => ({ demo: false }) } };
-    const setup = new Setup(ctx, tel, { kick: () => draw(), close: () => { mode = 'board'; draw(); } });
-    ctx.clicks.BTN_SETUP = () => { mode = mode === 'setup' ? 'board' : 'setup'; draw(); };
+    const setup = new Setup(ctx, tel, { kick: () => draw(), close: () => { mode = 'board'; draw(); }, openList: () => alert('BMW list') });
+    ctx.clicks.BTN_SETTINGS = () => { mode = mode === 'setup' ? 'board' : 'setup'; draw(); };
     const unit = (k, y, n) => { const v = settings.get(k); return v === y ? true : v === n ? false : settings.get('units') !== 'metric'; };
     const gt3 = req('./gt3ui');
     render = () => {
       const u = { sp: unit('unitSpeed', 'mph', 'kmh'), tf: unit('unitTemp', 'f', 'c'), ps: unit('unitPress', 'psi', 'bar') }, snap = snapshot();
       const sl = [1, 2, 3, 4, 5].map((i) => { const v = settings.get('tBox' + i); return D.SLOTS[v] ? v : D.SLOT_DEFAULTS[i - 1]; });
-      if (mode === 'setup') { setup.draw(cv, 512, snap, u); gauges.frame(cv, theme, [], -1, [{ text: 'SETUP', color: '#ffffff' }]); }
+      if (mode === 'setup') { setup.draw(cv, 512, snap, u); gauges.frame(cv, theme, [], -1, []); }
       else D.draw(cv, snap, { us: u.sp, tempF: u.tf, psi: u.ps, slots: sl, box: gt3.palette(settings.get('boxColour')), tyreWarn: Number(settings.get('tyreWarn')), tyreHot: Number(settings.get('tyreHot')),
         tyreLow: settings.get('tyreLow'), tyreOver: settings.get('tyreOver'), tyreOverRed: settings.get('tyreOverRed'), frame: (c, b) => gauges.frame(c, theme, [], -1, b), why: (k) => (k === 'hpfp' ? 'F423 NRC 31' : '') });
     };
     $('setupBtn').style.display = '';
-    $('setupBtn').onclick = () => ctx.clicks.BTN_SETUP();
+    $('setupBtn').onclick = () => ctx.clicks.BTN_SETTINGS();
   } else {
     $('setupBtn').style.display = 'none';
     const req = loader({ './kit/gauges': gauges, './gt3ui': '/shared/gt3ui.js', './kit/themes': '/kit/runtime/themes.js', './previews': { get: () => null }, './sensors': '/shared/sensors.js',
