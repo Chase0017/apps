@@ -171,8 +171,9 @@
  *
  * rpm is smoothed (a 120 ms filter, and the readout moves in 50 rpm steps only when it changes by 40 or
  * more), so idle wobble doesn't show, as on BMW's own tach. Shift scoring uses the raw rpm.
- * Boost: FES displayBoostPressure while it's valid, else (app.json config.dme) the engine unit over
- * read-only UDS, absolute pressure minus outside air pressure, as cauliflowermossgrape's car_vitals does.
+ * Boost: intake manifold pressure from the engine unit (app.json config.dme.boost) over read-only UDS, absolute
+ * pressure minus outside air pressure; FES displayBoostPressure only while the engine unit gives none. Never the
+ * charge pipe (before the throttle), which spikes on every lift and shift (Nov 13 2026).
  *
  * Text tokens: {{speed}} {{u:speed}} {{oil}} {{coolant}} {{boost}} {{u:boost}} {{rpm}}
  * {{gear}} (P / R / N, D3 / S3 / M3 by the shifter programme, or just 3 when the selector position is unknown), {{gearnum}} (3, or P / R / N)
@@ -794,7 +795,8 @@ class HudApp {
         } catch (e) { this.log.info('engine unit boost off: ' + (e && e.message || e)); return; }
         this.dmeTimer = setInterval(() => this._guard('engine unit boost', () => {
             const now = Date.now();
-            const wantBoost = hasBoost && this.needsBoost && now - this.boostFesAt >= FRESH_MS;
+            // manifold pressure from the engine unit whenever boost shows; the sport display's is only the fallback
+            const wantBoost = hasBoost && this.needsBoost;
             const wantIntake = hasIntake && this.needsIntake && now - intakeAsk >= 2000;   // a temperature: every 2 s is plenty
             const wantHv = this.needsHv && now - hvAsk >= (hvMiss >= 3 ? HV_RETRY_MS : HV_EVERY_MS);
             const wantFuel = this.needsFuel && now - fuelAsk >= (fuelMiss >= 3 ? FUEL_RETRY_MS : FUEL_EVERY_MS);
@@ -1208,8 +1210,8 @@ class HudApp {
     /** Boost in bar: the sport display's value while fresh, else the engine unit's, else null. */
     _boost() {
         const now = Date.now();
+        if (isNum(this.boostDme) && now - this.boostDmeAt < FRESH_MS) return this.boostDme;      // manifold, after the throttle
         if (isNum(this.boostFes) && now - this.boostFesAt < FRESH_MS) return this.boostFes;
-        if (isNum(this.boostDme) && now - this.boostDmeAt < FRESH_MS) return this.boostDme;
         return null;
     }
 

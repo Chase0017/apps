@@ -2,7 +2,7 @@
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
   "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
@@ -182,7 +182,7 @@
   "config": {
     "_comment": "Colours: yellow = warning, red = near critical. Tyre temperature is the air inside the tyre: blue under tyreCold, yellow within 15 C of tyreHot, red from tyreHot. Tyre pressure against the car's target: yellow over 1 psi off, red over 3 psi (UNEVEN against the other side of the axle when the car sends no target). Boost against target (only while the target is over 0.2 bar): yellow 0.15 bar (2.2 psi) off, red 0.3 bar (4.4 psi). Low pressure fuel (engine running): yellow under 4 bar, red under 3. Fuel rail: yellow under 25 bar, red under 15. Gearbox oil: yellow from 110 C, red from 125. Outside: yellow at 3 C and below (ice). Range: yellow under 80 km, red under 40. Intercooler: air after it yellow from 50 C, red from 60 C; heat soak (after minus outside) yellow from 20 C (36 F), red from 30 C (54 F).",
     "dme": {
-      "comment": "Read from the engine unit (DME, ecu 18) with UDS 0x22 over the kit's read-only link, only while the page shows; candidates are tried in order, the first plausible one wins (value = raw * factor + offset). The identifiers M Vitals reads (cauliflowermossgrape, MIT). boostTarget / boostActual: boost setpoint and actual, absolute kPa (the outside air pressure, baro, is subtracted). hpfp: fuel rail (high pressure) bar. lpfp: low pressure fuel bar. loadTarget / loadActual: requested and actual relative air charge %. egs: gearbox oil temperature from the gearbox unit (ecu 24), asked only while the car's basic data set has none. chargeBefore / intake: the charge air before the throttle (ahead of the B58's water-to-air intercooler) and in the plenum after it: the intercooler's drop and heat soak (after minus outside). The B58 has no temperature sensor in the intercooler's water circuit.",
+      "comment": "Read from the engine unit (DME, ecu 18) with UDS 0x22 over the kit's read-only link, only while the page shows; candidates are tried in order, the first plausible one wins (value = raw * factor + offset). The identifiers M Vitals reads (cauliflowermossgrape, MIT). boostTarget / boostActual: intake manifold pressure setpoint and actual, absolute kPa (the outside air pressure, baro, is subtracted). hpfp: fuel rail (high pressure) bar. lpfp: low pressure fuel bar. loadTarget / loadActual: requested and actual relative air charge %. egs: gearbox oil temperature from the gearbox unit (ecu 24), asked only while the car's basic data set has none. chargeBefore / intake: the charge air before the throttle (ahead of the B58's water-to-air intercooler) and in the plenum after it: the intercooler's drop and heat soak (after minus outside). The B58 has no temperature sensor in the intercooler's water circuit. Boost is intake MANIFOLD pressure (after the throttle): never the charge pipe (pressure before the throttle: PID 0x70 'boost pressure sensor A', DME 4205 IPLAD), which spikes when the throttle shuts on a lift or a shift (seen at 27 psi, Nov 13 2026).",
       "ecu": 18,
       "baro": [
         {
@@ -218,37 +218,27 @@
       ],
       "boostTarget": [
         {
-          "did": "4AB0",
+          "did": "57DB",
           "bytes": 2,
           "at": 0,
           "factor": 0.00390625,
           "offset": 0,
           "min": 20,
-          "max": 400,
-          "note": "BMW boost pressure setpoint (absolute), hPa = raw * 10 / 256"
-        },
-        {
-          "did": "F470",
-          "bytes": 2,
-          "at": 1,
-          "factor": 0.03125,
-          "offset": 0,
-          "min": 20,
-          "max": 600,
-          "note": "OBD PID 0x70: commanded boost pressure A (absolute), 1/32 kPa"
-        },
-        {
-          "obd": "70",
-          "bytes": 2,
-          "at": 1,
-          "factor": 0.03125,
-          "offset": 0,
-          "min": 20,
-          "max": 600,
-          "note": "OBD service 01 PID 0x70 (same as F470)"
+          "max": 255,
+          "note": "AVG_OF_PSSOL, intake manifold pressure setpoint (mean), absolute: hPa = raw * 0.0390625, DME8FF_R reference (EdiabasX SGBD docs). Not 4AB0 (S_LADEDRUCK): that is the charge pressure setpoint, before the throttle."
         }
       ],
       "boostActual": [
+        {
+          "did": "4A2D",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0078125,
+          "offset": 0,
+          "min": 20,
+          "max": 500,
+          "note": "DRUCK_ABS_SAUGROHR, intake manifold absolute pressure, measured: hPa = raw * 20 / 256 (0..5120 hPa), DME8FF_R reference (EdiabasX SGBD docs)"
+        },
         {
           "did": "580B",
           "bytes": 2,
@@ -256,28 +246,38 @@
           "factor": 0.00390625,
           "offset": 0,
           "min": 20,
-          "max": 400,
-          "note": "BMW boost pressure actual (absolute), hPa = raw * 10 / 256"
+          "max": 255,
+          "note": "IPSAU, intake manifold absolute pressure: hPa = raw * 10 / 256 (reads up to 2560 hPa, about 22 psi of boost), DME8FF_R reference (EdiabasX SGBD docs)"
         },
         {
-          "did": "F470",
+          "did": "F487",
           "bytes": 2,
-          "at": 3,
+          "at": 1,
           "factor": 0.03125,
           "offset": 0,
           "min": 20,
           "max": 600,
-          "note": "OBD PID 0x70: boost pressure sensor A (absolute), 1/32 kPa"
+          "note": "OBD PID 0x87 intake manifold absolute pressure sensor A, 1/32 kPa"
         },
         {
-          "obd": "70",
-          "bytes": 2,
-          "at": 3,
-          "factor": 0.03125,
+          "did": "F40B",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
           "offset": 0,
           "min": 20,
-          "max": 600,
-          "note": "OBD service 01 PID 0x70 (same as F470)"
+          "max": 255,
+          "note": "OBD PID 0x0B intake manifold absolute pressure, kPa (max 255 = 1.5 bar boost)"
+        },
+        {
+          "obd": "0B",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": 0,
+          "min": 20,
+          "max": 255,
+          "note": "OBD service 01 PID 0x0B (same as F40B)"
         }
       ],
       "hpfp": [

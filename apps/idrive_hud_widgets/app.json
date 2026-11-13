@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "Apex HUD",
   "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD; Redline (shift lights and shift score) in Sport. Starts with the car.",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -870,18 +870,28 @@
     "utcOffsetMinutes": null,
     "_comment": "socketPath: cluster-render's documented default. utcOffsetMinutes: leave null to use the head unit's own time zone; set it (e.g. -300 for EST) only if the HUD clock shows the wrong hour on the car. tankLitres: the fuel gauge's full mark (the car sends litres, not the tank size; a G01 X3 holds 65).",
     "dme": {
-      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car.",
+      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22 while a boost readout is shown (the sport display's boost only when the engine unit gives none). Boost is intake MANIFOLD pressure (after the throttle): never the charge pipe (pressure before the throttle: PID 0x70 'boost pressure sensor A', DME 4205 IPLAD), which spikes when the throttle shuts on a lift or a shift (seen at 27 psi, Nov 13 2026). Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car.",
       "ecu": 18,
       "boost": [
         {
-          "did": "F470",
+          "did": "4A2D",
           "bytes": 2,
-          "at": 3,
-          "factor": 0.03125,
+          "at": 0,
+          "factor": 0.0078125,
           "offset": 0,
           "min": 20,
-          "max": 600,
-          "note": "OBD PID 0x70 boost pressure control: actual boost pressure sensor A (absolute), 1/32 kPa"
+          "max": 500,
+          "note": "DRUCK_ABS_SAUGROHR, intake manifold absolute pressure, measured: hPa = raw * 20 / 256 (0..5120 hPa), DME8FF_R reference (EdiabasX SGBD docs)"
+        },
+        {
+          "did": "580B",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.00390625,
+          "offset": 0,
+          "min": 20,
+          "max": 255,
+          "note": "IPSAU, intake manifold absolute pressure: hPa = raw * 10 / 256 (reads up to 2560 hPa, about 22 psi of boost), DME8FF_R reference (EdiabasX SGBD docs)"
         },
         {
           "did": "F487",

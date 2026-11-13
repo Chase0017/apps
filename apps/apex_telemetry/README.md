@@ -8,7 +8,8 @@ header strip, Barlow Condensed numbers. One still page, nothing to scroll or pag
 Nothing Apex Cluster already shows (coolant, oil, oil pressure, AFR, intake and timing are on the dash). Colours:
 **yellow** = warning, **red** = near critical, blue = cold.
 
-- **Boost control (left):** actual boost, the engine's target and the deviation between them, a bar with the target
+- **Boost control (left):** actual boost, the engine's target and the deviation between them, all intake
+  manifold pressure (after the throttle, so no spike when it shuts), a bar with the target
   marked, the peak, and a word for it: ON TARGET, UNDERBOOST, OVERBOOST or OFF BOOST (target under 0.2 bar / 3 psi).
   Deviation yellow from 2.2 psi (0.15 bar) off target, red from 4.4 psi (0.3 bar).
 - **Fuel (left, under it):** fuel rail (high pressure) and low pressure fuel. With the engine running: rail yellow
