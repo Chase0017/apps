@@ -1,0 +1,522 @@
+{
+ "id": "apex_dme_controls",
+ "title": "Apex DME Controls",
+ "description": "One GT3 page on the center screen: engine map switching (MHD or BM3), the exhaust valve (OEM, open, closed) and MHD's Max Cooling. Maps switch only with the car stopped and the engine running. No xDrive control",
+ "version": "0.1.0",
+ "vendor": "custom",
+ "loggingId": "OAD1",
+ "iconGlyph": "DME",
+ "shared": [
+  "gt3ui.js"
+ ],
+ "signals": {
+  "de.bmw.infotainment.vehicle.CDS": {
+   "statusEngineSpeed2": "rs",
+   "statusEngineTemperature": "rs"
+  },
+  "de.bmw.infotainment.vehicle.Vehicle2": {
+   "statusCarSpeed2": "rs"
+  },
+  "de.bmw.infrastructure.VehicleInformation": {
+   "statusGearboxDrive": "s",
+   "DataPowerTrain2": "s"
+  },
+  "com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu": {
+   "_instances": "SystemFunctionsInternalTasuInst1",
+   "_methods": [
+    "sendTasuRequest"
+   ],
+   "_broadcasts": [
+    "sendTasuResponse"
+   ]
+  }
+ },
+ "screens": [
+  {
+   "name": "MAIN",
+   "kind": "canvas",
+   "title": "Apex DME Controls",
+   "buttons": [
+    [
+     "BTN_SETTINGS",
+     "Settings"
+    ]
+   ]
+  }
+ ],
+ "settings": [
+  {
+   "key": "tuner",
+   "label": "Tuning software",
+   "type": "choice",
+   "default": "off",
+   "options": [
+    [
+     "off",
+     "Off (exhaust valve only)"
+    ],
+    [
+     "mhd",
+     "MHD: map, valve, Max Cooling"
+    ],
+    [
+     "bm3",
+     "BM3: map, valve"
+    ]
+   ]
+  },
+  {
+   "key": "confirmMap",
+   "label": "Confirm map switch",
+   "type": "bool",
+   "default": true
+  },
+  {
+   "key": "map1",
+   "label": "Map 1 name",
+   "type": "choice",
+   "default": "stock",
+   "options": [
+    [
+     "stock",
+     "Stock"
+    ],
+    [
+     "stage1",
+     "Stage 1"
+    ],
+    [
+     "stage193",
+     "Stage 1 93"
+    ],
+    [
+     "stage1e30",
+     "Stage 1 E30"
+    ],
+    [
+     "stage2",
+     "Stage 2"
+    ],
+    [
+     "stage2e30",
+     "Stage 2 E30"
+    ],
+    [
+     "track",
+     "Track"
+    ],
+    [
+     "burble",
+     "Burble"
+    ],
+    [
+     "quiet",
+     "Quiet"
+    ],
+    [
+     "valet",
+     "Valet"
+    ],
+    [
+     "map1",
+     "Map 1"
+    ],
+    [
+     "map2",
+     "Map 2"
+    ],
+    [
+     "map3",
+     "Map 3"
+    ],
+    [
+     "map4",
+     "Map 4"
+    ]
+   ]
+  },
+  {
+   "key": "map2",
+   "label": "Map 2 name",
+   "type": "choice",
+   "default": "stage193",
+   "options": [
+    [
+     "stock",
+     "Stock"
+    ],
+    [
+     "stage1",
+     "Stage 1"
+    ],
+    [
+     "stage193",
+     "Stage 1 93"
+    ],
+    [
+     "stage1e30",
+     "Stage 1 E30"
+    ],
+    [
+     "stage2",
+     "Stage 2"
+    ],
+    [
+     "stage2e30",
+     "Stage 2 E30"
+    ],
+    [
+     "track",
+     "Track"
+    ],
+    [
+     "burble",
+     "Burble"
+    ],
+    [
+     "quiet",
+     "Quiet"
+    ],
+    [
+     "valet",
+     "Valet"
+    ],
+    [
+     "map1",
+     "Map 1"
+    ],
+    [
+     "map2",
+     "Map 2"
+    ],
+    [
+     "map3",
+     "Map 3"
+    ],
+    [
+     "map4",
+     "Map 4"
+    ]
+   ]
+  },
+  {
+   "key": "map3",
+   "label": "Map 3 name",
+   "type": "choice",
+   "default": "stage1e30",
+   "options": [
+    [
+     "stock",
+     "Stock"
+    ],
+    [
+     "stage1",
+     "Stage 1"
+    ],
+    [
+     "stage193",
+     "Stage 1 93"
+    ],
+    [
+     "stage1e30",
+     "Stage 1 E30"
+    ],
+    [
+     "stage2",
+     "Stage 2"
+    ],
+    [
+     "stage2e30",
+     "Stage 2 E30"
+    ],
+    [
+     "track",
+     "Track"
+    ],
+    [
+     "burble",
+     "Burble"
+    ],
+    [
+     "quiet",
+     "Quiet"
+    ],
+    [
+     "valet",
+     "Valet"
+    ],
+    [
+     "map1",
+     "Map 1"
+    ],
+    [
+     "map2",
+     "Map 2"
+    ],
+    [
+     "map3",
+     "Map 3"
+    ],
+    [
+     "map4",
+     "Map 4"
+    ]
+   ]
+  },
+  {
+   "key": "map4",
+   "label": "Map 4 name",
+   "type": "choice",
+   "default": "valet",
+   "options": [
+    [
+     "stock",
+     "Stock"
+    ],
+    [
+     "stage1",
+     "Stage 1"
+    ],
+    [
+     "stage193",
+     "Stage 1 93"
+    ],
+    [
+     "stage1e30",
+     "Stage 1 E30"
+    ],
+    [
+     "stage2",
+     "Stage 2"
+    ],
+    [
+     "stage2e30",
+     "Stage 2 E30"
+    ],
+    [
+     "track",
+     "Track"
+    ],
+    [
+     "burble",
+     "Burble"
+    ],
+    [
+     "quiet",
+     "Quiet"
+    ],
+    [
+     "valet",
+     "Valet"
+    ],
+    [
+     "map1",
+     "Map 1"
+    ],
+    [
+     "map2",
+     "Map 2"
+    ],
+    [
+     "map3",
+     "Map 3"
+    ],
+    [
+     "map4",
+     "Map 4"
+    ]
+   ]
+  },
+  {
+   "key": "valveStart",
+   "label": "Valve at every start",
+   "type": "choice",
+   "default": "oem",
+   "options": [
+    [
+     "oem",
+     "OEM"
+    ],
+    [
+     "open",
+     "Open"
+    ],
+    [
+     "closed",
+     "Closed"
+    ]
+   ]
+  },
+  {
+   "key": "hold",
+   "label": "Hold open / closed",
+   "type": "choice",
+   "default": "on",
+   "options": [
+    [
+     "on",
+     "On: sent again every 15 s"
+    ],
+    [
+     "off",
+     "Off: the car takes over after ~20 s"
+    ]
+   ]
+  },
+  {
+   "key": "closeLimit",
+   "label": "Closed: back to OEM above",
+   "type": "choice",
+   "default": "4000",
+   "options": [
+    [
+     "2500",
+     "2,500 rpm"
+    ],
+    [
+     "3000",
+     "3,000 rpm"
+    ],
+    [
+     "3500",
+     "3,500 rpm"
+    ],
+    [
+     "4000",
+     "4,000 rpm"
+    ],
+    [
+     "4500",
+     "4,500 rpm"
+    ],
+    [
+     "5000",
+     "5,000 rpm"
+    ],
+    [
+     "5500",
+     "5,500 rpm"
+    ],
+    [
+     "off",
+     "Never"
+    ]
+   ]
+  },
+  {
+   "key": "units",
+   "label": "Units (all)",
+   "type": "choice",
+   "default": "us",
+   "options": [
+    [
+     "us",
+     "mph, °F"
+    ],
+    [
+     "metric",
+     "km/h, °C"
+    ]
+   ]
+  },
+  {
+   "key": "unitSpeed",
+   "label": "Speed and distance",
+   "type": "choice",
+   "default": "auto",
+   "options": [
+    [
+     "auto",
+     "Follow Units"
+    ],
+    [
+     "mph",
+     "mph, mi"
+    ],
+    [
+     "kmh",
+     "km/h, km"
+    ]
+   ]
+  },
+  {
+   "key": "unitTemp",
+   "label": "Temperature",
+   "type": "choice",
+   "default": "auto",
+   "options": [
+    [
+     "auto",
+     "Follow Units"
+    ],
+    [
+     "f",
+     "°F"
+    ],
+    [
+     "c",
+     "°C"
+    ]
+   ]
+  },
+  {
+   "key": "boxColour",
+   "label": "Box colour",
+   "type": "choice",
+   "default": "white",
+   "options": [
+    [
+     "white",
+     "White"
+    ],
+    [
+     "silver",
+     "Silver"
+    ],
+    [
+     "yellow",
+     "Yellow"
+    ],
+    [
+     "orange",
+     "Orange"
+    ],
+    [
+     "red",
+     "Red"
+    ],
+    [
+     "mblue",
+     "M blue"
+    ],
+    [
+     "green",
+     "Green"
+    ]
+   ]
+  },
+  {
+   "key": "demo",
+   "label": "Demo data",
+   "type": "choice",
+   "default": "auto",
+   "options": [
+    [
+     "auto",
+     "Auto (until the car sends data)"
+    ],
+    [
+     "on",
+     "On"
+    ],
+    [
+     "off",
+     "Off"
+    ]
+   ]
+  }
+ ],
+ "config": {
+  "bm3MarkerAddress": "807FFE50"
+ }
+}

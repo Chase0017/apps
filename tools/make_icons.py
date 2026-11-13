@@ -1,6 +1,6 @@
 """Apex Cluster / Apex HUD icons: a chevron (the apex) built from shift lights, green at the base to blue at the tip.
 
-    python tools/make_icons.py <repo root> <out dir>   then copy cluster.png / hud.png / telemetry.png to each app's icon.png (needs Pillow)
+    python tools/make_icons.py <repo root> <out dir>   then copy cluster.png / hud.png / telemetry.png / dme.png to each app's icon.png (needs Pillow)
 """
 import sys, os
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -106,11 +106,36 @@ def telemetry():
             d.rounded_rectangle([x * S, (y + i * 6) * S, (x + 16) * S, (y + i * 6 + 3) * S], 1 * S, fill=(233, 242, 255, 255 if i == 0 else 110))
     return img.resize((140, 140), Image.LANCZOS)
 
+def dme():
+    """Apex DME Controls: a map selector knob, four map lights round it (green to blue), the pointer on map 2."""
+    import math
+    img = Image.new('RGBA', (N, N), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    shadow = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle([10 * S, 16 * S, 130 * S, 132 * S], 26 * S, fill=(0, 0, 0, 150))
+    img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(5 * S)))
+    slab(d, [8 * S, 10 * S, 132 * S, 128 * S], 26 * S, (16, 19, 24, 255), (233, 242, 255, 255))
+    cx, cy = 70 * S, 74 * S
+    # the four map lights on an arc over the knob
+    lay = Image.new('RGBA', img.size, (0, 0, 0, 0)); ld = ImageDraw.Draw(lay)
+    cols = [LED[0], (52, 120, 255), LED[2], LED[3]]
+    for i, a in enumerate([-60, -20, 20, 60]):
+        r = 44 * S; x = cx + math.sin(math.radians(a)) * r; y = cy - math.cos(math.radians(a)) * r; rad = 6.5 * S
+        ld.ellipse([x - rad, y - rad, x + rad, y + rad], fill=cols[i] + ((255,) if i == 1 else (90,)))
+    glow(img, lay, 3 * S)
+    d = ImageDraw.Draw(img)
+    # the knob
+    d.ellipse([cx - 30 * S, cy - 30 * S, cx + 30 * S, cy + 30 * S], fill=(233, 242, 255, 255))
+    d.ellipse([cx - 26 * S, cy - 26 * S, cx + 26 * S, cy + 26 * S], fill=(40, 45, 54, 255))
+    a = math.radians(-20); x = cx + math.sin(a) * 20 * S; y = cy - math.cos(a) * 20 * S
+    d.line([cx, cy, x, y], fill=(233, 242, 255, 255), width=int(6 * S))
+    d.ellipse([cx - 5 * S, cy - 5 * S, cx + 5 * S, cy + 5 * S], fill=(233, 242, 255, 255))
+    return img.resize((140, 140), Image.LANCZOS)
 
-cluster().save(os.path.join(OUT, 'cluster.png')); hud().save(os.path.join(OUT, 'hud.png')); telemetry().save(os.path.join(OUT, 'telemetry.png'))
+
+cluster().save(os.path.join(OUT, 'cluster.png')); hud().save(os.path.join(OUT, 'hud.png')); telemetry().save(os.path.join(OUT, 'telemetry.png')); dme().save(os.path.join(OUT, 'dme.png'))
 # a side-by-side on dark and light, to look at
-sheet = Image.new('RGBA', (900, 170), (20, 20, 20, 255))
-ImageDraw.Draw(sheet).rectangle([450, 0, 900, 170], fill=(235, 238, 242, 255))
-for i, n in enumerate(['cluster', 'hud', 'telemetry', 'cluster', 'hud', 'telemetry']):
+sheet = Image.new('RGBA', (1200, 170), (20, 20, 20, 255))
+ImageDraw.Draw(sheet).rectangle([600, 0, 1200, 170], fill=(235, 238, 242, 255))
+for i, n in enumerate(['cluster', 'hud', 'telemetry', 'dme', 'cluster', 'hud', 'telemetry', 'dme']):
     sheet.alpha_composite(Image.open(os.path.join(OUT, n + '.png')), (10 + i * 150, 15))
 sheet.save(os.path.join(OUT, 'sheet.png'))

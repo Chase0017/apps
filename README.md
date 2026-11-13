@@ -10,6 +10,12 @@
 
 A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets around a car seen from above, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force, in yellow and red when something needs a look. [Read more](apps/apex_telemetry/README.md)
 
+## Apex DME Controls
+
+<img src="apps/apex_dme_controls/icon.png" width="72" align="left" alt="Apex DME Controls icon">
+
+One page on the center screen to switch the engine map (MHD or BM3), set the exhaust valve (OEM, open, closed) and turn on MHD's Max Cooling. Maps switch only with the car stopped and the engine running. No xDrive control. [Read more](apps/apex_dme_controls/README.md)
+
 ## Cluster Themes
 
 <img src="apps/cluster_themes/icon.png" width="72" align="left" alt="Cluster Themes icon">

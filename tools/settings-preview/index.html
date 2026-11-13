@@ -14,11 +14,12 @@
 </head>
 <body>
 <!-- The apps' own centre-screen pages as the car draws them: shared/page.js (Apex Cluster, Apex HUD) and
-     apps/apex_telemetry/setup.js + draw.js, the real files, on a stand-in for the kit's canvas (the baked race font
+     apps/apex_telemetry/setup.js + draw.js and Apex DME Controls (its real main.js, control.js, draw.js, setup.js on a
+     stand-in DME that answers like MHD, BM3-less stock or nothing: window.DME, the car in window.CAR, sent bytes in window.SENT), the real files, on a stand-in for the kit's canvas (the baked race font
      from kit/runtime/fonts) with the car's settings schemas from each app.json. Taps work: click the page.
      Serve the repo root and open /tools/settings-preview/. -->
 <div class="bar">
-  <button data-app="cluster_themes" class="on">Apex Cluster</button><button data-app="idrive_hud_widgets">Apex HUD</button><button data-app="apex_telemetry">Apex Telemetry</button>
+  <button data-app="cluster_themes" class="on">Apex Cluster</button><button data-app="idrive_hud_widgets">Apex HUD</button><button data-app="apex_telemetry">Apex Telemetry</button><button data-app="apex_dme_controls">Apex DME Controls</button>
   <button id="setupBtn" style="display:none">Settings tab</button>
   <span id="info" style="color:#888"></span>
 </div>
@@ -114,6 +115,7 @@ function makeSettings(spec, over) {
   return {
     get: (k) => vals[k], item: (k) => { const s = spec.settings.find((x) => x.key === k); return s; },
     set: (k, v) => { vals[k] = v; fns.forEach((f) => f(k)); }, onChange: (f) => fns.push(f), vals,
+    display: (k) => { const s = spec.settings.find((x) => x.key === k), v = vals[k]; if (s && s.type === 'choice') { const o = s.options.find((x) => x[0] === v); return o ? o[1] : String(v); } return String(v); },
   };
 }
 
@@ -134,7 +136,39 @@ async function start() {
     loop: (n, fps, fn) => { render = fn; return loop; }, onLayout() {} };
   for (const f of ['/shared/gt3ui.js', '/shared/sensors.js', '/shared/badges.js', '/shared/tz.js', '/shared/visible.js', '/shared/page.js', '/kit/runtime/themes.js',
     '/apps/apex_telemetry/draw.js', '/apps/apex_telemetry/setup.js']) await src(f);
-  if (app === 'apex_telemetry') {
+  if (app === 'apex_dme_controls') {
+    for (const f of ['main.js', 'control.js', 'draw.js', 'setup.js', 'bm3_protocol.js', 'bm3_profiles.js']) await src('/apps/apex_dme_controls/' + f);
+    window.CAR = window.CAR || { rpm: 760, speed: 0, coolant: 96, oil: 104, demo: false };
+    window.DME = window.DME || 'mhd'; window.SENT = [];
+    class FakeCar { constructor() {} data() { return Object.assign({}, window.CAR); } }
+    const hex = (n, w) => n.toString(16).toUpperCase().padStart(w || 2, '0');
+    // a stand-in DME: MHD echoes 2F 01/02/03, any DME takes BMW's valve job 2F 60FD, an untuned one refuses the rest
+    class FakeDiag { constructor() { this.available = true; this.fns = {}; } async init() { return this; } on(e, f) { this.fns[e] = f; }
+      async physical(target, sid, data) {
+        window.SENT.push(hex(sid) + ' ' + data.map((b) => hex(b)).join(' '));
+        await new Promise((r) => setTimeout(r, 150));
+        if (window.DME === 'none') return null;
+        if (sid === 0x2F && data[0] === 0x60 && data[1] === 0xFD) return [0x6F].concat(data.slice(0, 3));
+        if (sid === 0x2F && window.DME === 'mhd' && data.length === 2) return [0x6F].concat(data);
+        return [0x7F, sid, 0x31];
+      } }
+    const diagMod = { Diag: FakeDiag, NRC: { 0x31: 'out of range' }, hex, replyTo: () => () => true };
+    const mguMod = { run(impl) { impl.start(ctx); } };
+    ctx.ownSettings = (fn) => { ctx.clicks.BTN_SETTINGS = fn; };
+    ctx.openSettingsList = () => alert('BMW list');
+    spec.config = spec.config || {};
+    const A = '/apps/apex_dme_controls/';
+    if (window.__dmeTimer) clearInterval(window.__dmeTimer);
+    const realSetInterval = window.setInterval;
+    const reqMain = loader({ './kit/mgu': mguMod, './kit/gauges': gauges, './kit/themes': '/kit/runtime/themes.js', './kit/car': FakeCar, './kit/diag': diagMod,
+      './gt3ui': '/shared/gt3ui.js', './control': A + 'control.js', './draw': A + 'draw.js', './setup': A + 'setup.js', './bm3_protocol': A + 'bm3_protocol.js', './bm3_profiles': A + 'bm3_profiles.js', './main': A + 'main.js' });
+    window.setInterval = (fn, ms) => (window.__dmeTimer = realSetInterval(fn, ms));
+    reqMain('./main');
+    window.setInterval = realSetInterval;
+    $('setupBtn').style.display = '';
+    $('setupBtn').onclick = () => ctx.clicks.BTN_SETTINGS();
+    window.dmeDraw = () => draw();
+  } else if (app === 'apex_telemetry') {
     const req = loader({ './gt3ui': '/shared/gt3ui.js', './draw': '/apps/apex_telemetry/draw.js', './setup': '/apps/apex_telemetry/setup.js' });
     const D = req('./draw'), Setup = req('./setup');
     let mode = 'setup';
@@ -185,7 +219,7 @@ async function start() {
 function draw() { try { render && render(); $('info').textContent = cv.targets.length + ' tap targets'; } catch (e) { logErr(e); } }
 $('c').addEventListener('click', (e) => {
   const r = $('c').getBoundingClientRect(), x = (e.clientX - r.left) * 1600 / r.width, y = (e.clientY - r.top) * 520 / r.height;
-  const t = cv.targets.slice().reverse().find((q) => x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h);
+  const t = cv.targets.find((q) => x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h);
   if (t) { try { t.fn(); } catch (err) { logErr(err); } window.__tab = page && page.tab; draw(); }
 });
 window.tapKey = (key) => { const t = cv.targets.find((q) => q.key === key); if (!t) return 'no target ' + key; try { t.fn(); } catch (err) { logErr(err); return String(err); } window.__tab = page && page.tab; draw(); return 'ok'; };

@@ -1,0 +1,277 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Apex DME Controls (prototype for review)</title>
+<!-- Prototype of a fourth app (Nov 13 2026): one master page for map switching, the exhaust valve and Max Cooling,
+     plus a settings page behind the header's SETTINGS tab. 1600 x 520 like the car's centre screen.
+     Everything is simulated: nothing here talks to a car. The bar above the screen fakes the car. -->
+<style>
+  @font-face { font-family: 'Barlow C'; src: url('../../tools/fonts-src/BarlowCondensed-Bold.ttf'); font-weight: 700; }
+  @font-face { font-family: 'Barlow C'; src: url('../../tools/fonts-src/BarlowCondensed-SemiBold.ttf'); font-weight: 600; }
+  :root { --bg: #050607; --text: #fff; --dim: #9aa0a8; --line: #ffffff2e; --box: #ffffff; --ink: #0b0d10;
+          --ok: #3ddc84; --warm: #ffd60a; --hot: #ff3b30; --cold: #4aa3ff; }
+  body { background: #111; color: #ddd; font: 14px system-ui, sans-serif; margin: 12px; }
+  .bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .bar b { color: #999; font-weight: 600; margin-left: 10px; }
+  .bar button { background: #222; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+  .bar button.on { background: #fff; color: #0b0d10; }
+  #wrap { width: 1600px; transform-origin: 0 0; }
+  #screen { width: 1600px; height: 520px; position: relative; overflow: hidden; border-radius: 6px; background: var(--bg);
+            font-family: 'Barlow C', 'Arial Narrow', sans-serif; font-weight: 600; color: var(--text); user-select: none; }
+  .hdr { position: absolute; left: 0; top: 0; right: 0; height: 36px; background: #ffffff0d; border-bottom: 1px solid var(--line);
+         display: flex; align-items: center; padding: 0 16px; gap: 10px; }
+  .hdr .t { font-weight: 700; letter-spacing: 1.5px; font-size: 18px; color: var(--dim); margin-right: auto; }
+  .htab { font-weight: 700; letter-spacing: 1.5px; font-size: 16px; padding: 3px 14px; border-radius: 4px; cursor: pointer; color: var(--dim); border: 1px solid var(--line); }
+  .htab.on { background: var(--box); color: var(--ink); border-color: var(--box); }
+  .badge { font-weight: 700; letter-spacing: 1.5px; font-size: 15px; padding: 2px 10px; border-radius: 4px; }
+  .b-ok { background: #3ddc8433; color: var(--ok); } .b-warn { background: #ffd60a33; color: var(--warm); }
+  .cols { position: absolute; left: 16px; right: 16px; top: 50px; bottom: 12px; display: flex; gap: 16px; }
+  .sec { border: 2px solid var(--box); border-radius: 5px; overflow: hidden; display: flex; flex-direction: column; }
+  .sec > .lbl { background: var(--box); color: var(--ink); font-weight: 700; font-size: 19px; letter-spacing: .5px; text-transform: uppercase;
+                padding: 4px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .sec > .lbl small { font-size: 15px; opacity: .65; letter-spacing: 0; }
+  .sec > .in { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .off { opacity: .35; pointer-events: none; }
+  .note { font-size: 16px; color: var(--dim); line-height: 1.2; }
+  .note.w { color: var(--warm); }
+  .maps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .map { border: 2px solid var(--box); border-radius: 4px; height: 118px; padding: 8px 12px; cursor: pointer; position: relative; display: flex; flex-direction: column; }
+  .map .n { font-weight: 700; font-size: 54px; line-height: 1; }
+  .map .nm { font-size: 18px; color: var(--dim); text-transform: uppercase; margin-top: auto; }
+  .map .tag { position: absolute; right: 8px; top: 8px; font-size: 14px; font-weight: 700; letter-spacing: 1px; padding: 1px 7px; border-radius: 3px; }
+  .map.act { background: var(--box); color: var(--ink); } .map.act .nm { color: var(--ink); opacity: .7; }
+  .map.act .tag { background: var(--ink); color: var(--box); }
+  .map.pend { border-color: var(--warm); } .map.pend .tag { background: var(--warm); color: var(--ink); }
+  .seg { display: flex; border: 2px solid var(--box); border-radius: 4px; overflow: hidden; }
+  .seg div { flex: 1; text-align: center; padding: 18px 0; font-size: 30px; font-weight: 700; cursor: pointer; text-transform: uppercase; }
+  .seg div + div { border-left: 1px solid var(--line); }
+  .seg div.on { background: var(--box); color: var(--ink); }
+  .pipe { height: 110px; }
+  .big { border: 2px solid var(--box); border-radius: 4px; height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+  .big .s { font-size: 64px; font-weight: 700; line-height: 1; }
+  .big .h { font-size: 17px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+  .big.on { background: var(--cold); border-color: var(--cold); color: var(--ink); } .big.on .h { color: var(--ink); opacity: .7; }
+  .temps { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .t1 { border: 2px solid var(--box); border-radius: 4px; overflow: hidden; }
+  .t1 .h { background: var(--box); color: var(--ink); font-weight: 700; font-size: 15px; padding: 1px 8px; }
+  .t1 .x { font-weight: 700; font-size: 38px; text-align: right; padding: 0 8px; line-height: 1.15; }
+  /* settings page */
+  .rail { position: absolute; left: 16px; top: 50px; width: 252px; display: flex; flex-direction: column; gap: 8px; }
+  .tab { height: 62px; border-radius: 5px; border: 2px solid var(--box); display: flex; flex-direction: column; justify-content: center; padding-left: 14px; cursor: pointer; }
+  .tab .n { font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: .5px; line-height: 1; }
+  .tab .v { font-size: 15px; color: var(--dim); margin-top: 3px; }
+  .tab.sel { background: var(--box); color: var(--ink); } .tab.sel .v { color: var(--ink); opacity: .7; }
+  .body { position: absolute; left: 288px; right: 16px; top: 50px; bottom: 12px; display: flex; gap: 16px; }
+  .col { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .body .sec > .in { padding: 4px 0; gap: 0; flex: none; }
+  .row { min-height: 56px; display: flex; align-items: center; padding: 4px 12px 4px 14px; gap: 12px; border-top: 1px solid var(--line); }
+  .in > .row:first-child { border-top: none; }
+  .row .name { font-size: 20px; flex: 1; min-width: 0; text-transform: uppercase; }
+  .row .name span { display: block; font-size: 14px; color: var(--dim); text-transform: none; margin-top: 1px; }
+  .sg { display: flex; border: 2px solid var(--box); border-radius: 4px; overflow: hidden; }
+  .sg div { padding: 6px 16px; font-size: 17px; font-weight: 700; cursor: pointer; white-space: nowrap; text-transform: uppercase; }
+  .sg div + div { border-left: 1px solid var(--line); }
+  .sg div.on { background: var(--box); color: var(--ink); }
+  .step { display: flex; align-items: center; gap: 8px; }
+  .step .b { width: 38px; height: 38px; border-radius: 4px; border: 2px solid var(--box); display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; font-weight: 700; }
+  .step .val { min-width: 150px; text-align: center; font-weight: 700; font-size: 22px; text-transform: uppercase; }
+  .tog { width: 62px; height: 30px; border-radius: 4px; border: 2px solid var(--box); position: relative; cursor: pointer; flex: none; }
+  .tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 20px; border-radius: 2px; background: #ffffff55; transition: left .15s; }
+  .tog.on { background: var(--box); } .tog.on::after { left: 33px; background: var(--ink); }
+  .swatches { display: flex; gap: 8px; }
+  .sw { width: 34px; height: 34px; border-radius: 4px; cursor: pointer; border: 2px solid #ffffff33; }
+  .sw.on { outline: 3px solid #fff; outline-offset: 2px; }
+  .btnS { padding: 7px 18px; border-radius: 4px; border: 2px solid var(--box); font-weight: 700; cursor: pointer; font-size: 17px; text-transform: uppercase; }
+  .sheet { position: absolute; inset: 36px 0 0 0; background: #000000cc; display: none; align-items: center; justify-content: center; }
+  .sheet.show { display: flex; }
+  .dlg { width: 620px; border: 2px solid var(--box); border-radius: 5px; background: var(--bg); overflow: hidden; }
+  .dlg .lbl { background: var(--box); color: var(--ink); font-weight: 700; font-size: 22px; padding: 6px 14px; text-transform: uppercase; }
+  .dlg .in { padding: 16px; font-size: 22px; line-height: 1.25; }
+  .dlg .btns { display: flex; gap: 12px; padding: 0 16px 16px; }
+  .btn { flex: 1; text-align: center; padding: 14px 0; border-radius: 4px; background: var(--box); color: var(--ink); font-weight: 700; font-size: 24px; cursor: pointer; text-transform: uppercase; }
+  .btn.ghost { background: none; color: var(--text); border: 2px solid var(--box); }
+  #review { margin-top: 14px; max-width: 1600px; color: #bbb; line-height: 1.5; }
+  #review h3 { color: #eee; margin: 10px 0 4px; }
+</style>
+</head>
+<body>
+<div class="bar" id="sim"></div>
+<div id="wrap"><div id="screen">
+  <div class="hdr"><span class="t">APEX DME CONTROLS</span><span id="badges" style="display:flex;gap:8px"></span>
+    <span class="htab" id="tabCtl" onclick="mode='main';draw()">CONTROLS</span><span class="htab" id="tabSet" onclick="mode='settings';draw()">SETTINGS</span></div>
+  <div id="page"></div>
+  <div class="sheet" id="sheet"><div class="dlg"><div class="lbl" id="dlgT"></div><div class="in" id="dlgB"></div>
+    <div class="btns"><div class="btn ghost" id="dlgNo">Cancel</div><div class="btn" id="dlgYes">Switch</div></div></div></div>
+</div></div>
+
+<div id="review">
+  <h3>Round 2 (your edits)</h3>
+  <ul>
+    <li><b>No arm switch.</b> The valve buttons act straight away.</li>
+    <li><b>Settings page</b> behind the header's SETTINGS tab (CONTROLS goes back), same GT3 look as the other apps:
+      <b>Tuning</b> (Auto / MHD / BM3 / None, confirm before a map switch), <b>Maps</b> (a name per map), <b>Units</b> (preset plus temperature and speed on their own),
+      <b>Valve &amp; cooling</b> (what the valve does at each start), <b>System</b> (box colour, demo data, about, BMW's plain list).</li>
+  </ul>
+  <h3>Still in</h3>
+  <ul>
+    <li>One master page: engine map, exhaust valve, Max Cooling. No xDrive control.</li>
+    <li>Maps switch only when stopped (under 3 mph or 5 km/h) with the engine running; the page shows SENDING, then the map the engine unit reports back as ACTIVE.</li>
+    <li>Max Cooling: MHD only, engine running, off again when the car is switched off.</li>
+    <li>The bar above the screen fakes the car (what is flashed on the engine unit, engine, speed, coolant).</li>
+  </ul>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const car = { flash: 'mhd', engine: true, mph: 0, coolant: 96, oil: 104, iat: 34, rpm: 760 };
+const S = { active: 1, pending: null, valve: 'oem', cooling: false };
+// settings (on the car these are the app's settings schema)
+const P = { tuner: 'auto', confirmMap: true, names: ['Stock', 'Stage 1 93', 'Stage 1 E30', 'Valet'],
+            units: 'us', unitTemp: 'auto', unitSpeed: 'auto', valveStart: 'oem', boxColour: 'white', demo: 'auto' };
+const NAMES = ['Stock', 'Stage 1', 'Stage 1 93', 'Stage 1 E30', 'Stage 2', 'Stage 2 E30', 'Track', 'Burble', 'Quiet', 'Valet', 'Map 1', 'Map 2', 'Map 3', 'Map 4'];
+const BOX = [['white', '#ffffff', 'White'], ['silver', '#c9d3df', 'Silver'], ['yellow', '#ffd60a', 'Yellow'], ['orange', '#ff9f0a', 'Orange'], ['red', '#ff3b30', 'Red'], ['mblue', '#1c69d4', 'M blue'], ['green', '#3ddc84', 'Green']];
+const INK = { red: '#ffffff', mblue: '#ffffff' };
+let mode = 'main', tab = 'tuning';
+
+const tuner = () => P.tuner === 'auto' ? car.flash : P.tuner;
+const tempF = () => P.unitTemp === 'f' || (P.unitTemp === 'auto' && P.units === 'us');
+const mphU = () => P.unitSpeed === 'mph' || (P.unitSpeed === 'auto' && P.units === 'us');
+const T = (c) => tempF() ? Math.round(c * 9 / 5 + 32) + '°' : Math.round(c) + '°';
+const stopLimit = () => mphU() ? 'under 3 mph' : 'under 5 km/h';
+const set = (k, v) => { P[k] = v; draw(); };
+
+function sim() {
+  const b = (label, key, vals) => '<b>' + label + '</b>' + vals.map(([v, t]) =>
+    `<button class="${car[key] === v ? 'on' : ''}" onclick="car.${key}=${JSON.stringify(v)};carChanged()">${t}</button>`).join('');
+  $('#sim').innerHTML = b('Flashed on the DME', 'flash', [['mhd', 'MHD'], ['bm3', 'BM3'], ['none', 'Stock']]) +
+    b('Engine', 'engine', [[true, 'Running'], [false, 'Off']]) +
+    b('Speed', 'mph', [[0, '0 mph'], [35, '35 mph']]) +
+    b('Coolant', 'coolant', [[60, '60 °C'], [96, '96 °C'], [112, '112 °C']]);
+}
+function carChanged() {
+  car.rpm = car.engine ? 760 : 0;
+  if (!car.engine || tuner() !== 'mhd') S.cooling = false;
+  sim(); draw();
+}
+
+function draw() {
+  const c = BOX.find((x) => x[0] === P.boxColour)[1];
+  document.documentElement.style.setProperty('--box', c);
+  document.documentElement.style.setProperty('--ink', INK[P.boxColour] || '#0b0d10');
+  $('#tabCtl').classList.toggle('on', mode === 'main');
+  $('#tabSet').classList.toggle('on', mode === 'settings');
+  const t = tuner();
+  $('#badges').innerHTML = t !== 'none' ? `<span class="badge b-ok">${t.toUpperCase()}${P.tuner === 'auto' ? ' FOUND' : ''}</span>`
+    : `<span class="badge b-warn">${P.tuner === 'auto' ? 'NO MHD OR BM3 FLASH' : 'NO TUNING SOFTWARE'}</span>`;
+  if (mode === 'main') drawMain(); else drawSettings();
+}
+
+function drawMain() {
+  const t = tuner(), tuned = t !== 'none', mhd = t === 'mhd', stopped = car.mph < 3;
+  let m = `<div class="maps ${tuned ? '' : 'off'}">` + P.names.map((n, i) => {
+    const k = i + 1, act = S.active === k && S.pending === null, pend = S.pending === k;
+    return `<div class="map ${act ? 'act' : ''} ${pend ? 'pend' : ''}" onclick="pickMap(${k})">
+      <div class="n">${k}</div><div class="nm">${n}</div>${act ? '<div class="tag">ACTIVE</div>' : pend ? '<div class="tag">SENDING</div>' : ''}</div>`;
+  }).join('') + '</div>';
+  m += !tuned ? '<div class="note w">Map switching needs MHD or BM3 on the engine unit (Settings, Tuning).</div>'
+     : !car.engine ? '<div class="note w">Start the engine to switch maps.</div>'
+     : !stopped ? `<div class="note w">Stop the car to switch maps (${stopLimit()}).</div>`
+     : '<div class="note">The engine light may flash while the map changes. That is normal.</div>';
+
+  const open = S.valve === 'open' || (S.valve === 'oem' && car.rpm > 3000);
+  let v = `<div class="seg ${tuned ? '' : 'off'}">` + [['oem', 'OEM'], ['open', 'Open'], ['closed', 'Closed']].map(([k, x]) =>
+    `<div class="${S.valve === k ? 'on' : ''}" onclick="S.valve='${k}';draw()">${x}</div>`).join('') + '</div>';
+  v += `<svg class="pipe" viewBox="0 0 440 110" width="100%">
+      <rect x="20" y="24" width="400" height="44" rx="4" fill="none" stroke="var(--box)" stroke-width="2"/>
+      <g transform="translate(220 46) rotate(${open ? 80 : 0})"><rect x="-3" y="-21" width="6" height="42" fill="#fff"/></g>
+      <circle cx="220" cy="46" r="6" fill="#050607" stroke="#fff" stroke-width="2"/>
+      <text x="220" y="100" fill="#fff" font-size="26" font-weight="700" text-anchor="middle" font-family="Barlow C">${open ? 'OPEN' : 'CLOSED'}<tspan fill="#9aa0a8" font-size="18">${S.valve === 'oem' ? '  CAR DECIDES' : ''}</tspan></text></svg>`;
+  v += tuned ? `<div class="note">At every start: ${P.valveStart === 'oem' ? 'back to OEM' : 'keeps the last setting'} (Settings).</div>` : '<div class="note w">Needs MHD or BM3 on the engine unit.</div>';
+
+  const canCool = mhd && car.engine;
+  const tc = (x, warm, hot) => x >= hot ? 'var(--hot)' : x >= warm ? 'var(--warm)' : x < 70 ? 'var(--cold)' : '#fff';
+  let k = `<div class="big ${S.cooling ? 'on' : ''} ${canCool ? '' : 'off'}" onclick="S.cooling=!S.cooling;draw()">
+      <div class="s">${S.cooling ? 'ON' : 'OFF'}</div><div class="h">${S.cooling ? 'Fans and pump flat out' : 'Tap to turn on'}</div></div>`;
+  k += `<div class="temps">
+      <div class="t1"><div class="h">COOLANT</div><div class="x" style="color:${tc(car.coolant, 108, 115)}">${T(car.coolant)}</div></div>
+      <div class="t1"><div class="h">OIL</div><div class="x" style="color:${tc(car.oil, 130, 140)}">${T(car.oil)}</div></div>
+      <div class="t1"><div class="h">INTAKE</div><div class="x">${T(car.iat)}</div></div></div>`;
+  k += !mhd ? `<div class="note w">${t === 'bm3' ? 'BM3 has no Max Cooling.' : 'Max Cooling needs MHD on the engine unit.'}</div>`
+     : !car.engine ? '<div class="note w">Start the engine first. Max Cooling needs it running.</div>'
+     : '<div class="note">Turns itself off when the car is switched off. Use it after a hard run or in traffic on a hot day.</div>';
+
+  $('#page').innerHTML = `<div class="cols">
+    <div class="sec" style="flex: 1.25"><div class="lbl">Engine map <small>${tuned ? 'read from the DME' : ''}</small></div><div class="in">${m}</div></div>
+    <div class="sec" style="flex: 1"><div class="lbl">Exhaust valve <small>${tuned ? t.toUpperCase() : ''}</small></div><div class="in">${v}</div></div>
+    <div class="sec" style="flex: 1"><div class="lbl">Max cooling <small>MHD</small></div><div class="in">${k}</div></div></div>`;
+}
+
+// settings widgets
+const sg = (k, opts) => `<div class="sg">${opts.map(([v, x]) => `<div class="${P[k] === v ? 'on' : ''}" onclick="set('${k}', ${JSON.stringify(v).replace(/"/g, "'")})">${x}</div>`).join('')}</div>`;
+const tog = (k) => `<div class="tog ${P[k] ? 'on' : ''}" onclick="set('${k}', !P.${k})"></div>`;
+const row = (name, sub, ctl) => `<div class="row"><div class="name">${name}${sub ? `<span>${sub}</span>` : ''}</div>${ctl}</div>`;
+const sec = (lbl, rows, right) => `<div class="sec"><div class="lbl">${lbl}<small>${right || ''}</small></div><div class="in">${rows}</div></div>`;
+function stepName(i, d) { const j = NAMES.indexOf(P.names[i]); P.names[i] = NAMES[(j + d + NAMES.length) % NAMES.length]; draw(); }
+
+const TABS = [
+  ['tuning', 'Tuning', () => { const t = tuner(); return P.tuner === 'auto' ? 'Auto · ' + (t === 'none' ? 'none found' : t.toUpperCase()) : P.tuner.toUpperCase(); }],
+  ['maps', 'Maps', () => P.names.length + ' map names'],
+  ['units', 'Units', () => (tempF() ? '°F' : '°C') + ' · ' + (mphU() ? 'mph' : 'km/h')],
+  ['valve', 'Valve & cooling', () => P.valveStart === 'oem' ? 'Valve OEM at start' : 'Valve keeps last'],
+  ['system', 'System', () => BOX.find((x) => x[0] === P.boxColour)[2] + ' boxes'],
+];
+
+function drawSettings() {
+  const rail = '<div class="rail">' + TABS.map(([k, n, v]) => `<div class="tab ${tab === k ? 'sel' : ''}" onclick="tab='${k}';draw()"><div class="n">${n}</div><div class="v">${v()}</div></div>`).join('') + '</div>';
+  let body = '';
+  const found = car.flash === 'none' ? 'nothing found' : car.flash.toUpperCase() + ' found';
+  if (tab === 'tuning') {
+    body = `<div class="col">${sec('Tuning software',
+      row('Software', 'Auto reads the flash from the engine unit at start (' + found + ')', sg('tuner', [['auto', 'Auto'], ['mhd', 'MHD'], ['bm3', 'BM3'], ['none', 'None']])) +
+      row('Confirm map switch', 'Ask before sending a map change', tog('confirmMap')))}</div>
+      <div class="col">${sec('What each one does',
+      row('MHD', 'Map switching, exhaust valve, Max Cooling', '') +
+      row('BM3', 'Map switching, exhaust valve (no Max Cooling)', '') +
+      row('None', 'Stock engine unit: the page shows temperatures only', ''))}</div>`;
+  } else if (tab === 'maps') {
+    body = `<div class="col">${sec('Map names', P.names.map((n, i) => row('Map ' + (i + 1), i === S.active - 1 ? 'Active now' : '',
+      `<div class="step"><div class="b" onclick="stepName(${i},-1)">‹</div><div class="val">${n}</div><div class="b" onclick="stepName(${i},1)">›</div></div>`)).join(''), 'shown on the map tiles')}</div>
+      <div class="col">${sec('Switching', row('Only when stopped', stopLimit() + ', engine running. Always on.', '<span class="note">FIXED</span>') +
+      row('Confirm first', 'Set on the Tuning tab', '<span class="note">' + (P.confirmMap ? 'ON' : 'OFF') + '</span>'))}</div>`;
+  } else if (tab === 'units') {
+    body = `<div class="col">${sec('Units', row('Units (all)', 'Sets the two below when they follow it', sg('units', [['us', 'US'], ['metric', 'Metric']])) +
+      row('Temperature', 'Coolant, oil, intake', sg('unitTemp', [['auto', 'Follow'], ['f', '°F'], ['c', '°C']])) +
+      row('Speed', 'The stopped limit for map switching', sg('unitSpeed', [['auto', 'Follow'], ['mph', 'mph'], ['kmh', 'km/h']])))}</div>
+      <div class="col">${sec('Preview', row('Coolant', '', `<span style="font-size:30px;font-weight:700">${T(car.coolant)}</span>`) +
+      row('Map switch allowed', '', `<span style="font-size:24px;font-weight:700">${stopLimit().toUpperCase()}</span>`))}</div>`;
+  } else if (tab === 'valve') {
+    body = `<div class="col">${sec('Exhaust valve', row('At every start', 'What the valve does when the car starts', sg('valveStart', [['oem', 'OEM'], ['last', 'Last used']])))}</div>
+      <div class="col">${sec('Max cooling', row('Switches off', 'When the car is switched off. Always.', '<span class="note">FIXED</span>') +
+      row('Needs', 'MHD and the engine running', '<span class="note">FIXED</span>'))}</div>`;
+  } else {
+    body = `<div class="col">${sec('Look', row('Box colour', BOX.find((x) => x[0] === P.boxColour)[2],
+      `<div class="swatches">${BOX.map(([k, c]) => `<div class="sw ${P.boxColour === k ? 'on' : ''}" style="background:${c}" onclick="set('boxColour','${k}')"></div>`).join('')}</div>`))}
+      ${sec('Data', row('Demo data', 'Auto: made-up values when the car sends none', sg('demo', [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']])))}</div>
+      <div class="col">${sec('About', row('Apex DME Controls', 'v0.1.0 · Chase0017/apps', '') +
+      row('Every setting as a list', "BMW's plain settings list", '<div class="btnS">Open</div>'))}</div>`;
+  }
+  $('#page').innerHTML = rail + `<div class="body">${body}</div>`;
+}
+
+function pickMap(k) {
+  if (tuner() === 'none' || !car.engine || car.mph >= 3 || S.pending !== null || k === S.active) return;
+  const go = () => { $('#sheet').classList.remove('show'); S.pending = k; draw(); setTimeout(() => { S.active = k; S.pending = null; draw(); }, 1600); };
+  if (!P.confirmMap) return go();
+  $('#dlgT').textContent = `Switch to map ${k}?`;
+  $('#dlgB').innerHTML = `<b>${P.names[k - 1]}</b><br><span style="color:#9aa0a8">The engine light may flash for a moment. Stay stopped until the page says ACTIVE.</span>`;
+  $('#sheet').classList.add('show');
+  $('#dlgYes').onclick = go;
+}
+$('#dlgNo').onclick = () => $('#sheet').classList.remove('show');
+sim(); draw();
+const fit = () => { const s = Math.min(1, (innerWidth - 24) / 1600); $('#wrap').style.transform = `scale(${s})`; $('#wrap').style.height = 520 * s + 'px'; };
+addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>
