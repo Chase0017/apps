@@ -532,12 +532,14 @@ async function runInner(impl) {
         return;
     }
     const ui = new Ui(app);
-    const display = new Display(ui, log, SPEC, settings, () => themes.theme(settings.get('theme')));
+    // chase0017-apps: an app without a "theme" setting is Ice White, whatever an older settings.json still says
+    const themeId = () => (settings.item('theme') ? settings.get('theme') : 'ice');
+    const display = new Display(ui, log, SPEC, settings, () => themes.theme(themeId()));
     ui.display = display;
     const ctx = {
         app, ui, settings, log, spec: SPEC, dataDir: DATA_DIR, display, widget, background,
         signals: require('./signals'),
-        theme: () => themes.theme(settings.get('theme')),
+        theme: () => themes.theme(themeId()),
         /**
          * controller.grab(true): the iDrive controller's knob, press and tilt go to this app only
          * (the HMI stops moving its focus or opening its menus); BACK, MENU and the touchscreen

@@ -45,12 +45,23 @@ Read only, nothing is written to the car.
 
 ## Settings
 
-Units (all: US / metric), and each on its own: Speed and distance (mph / km/h), Temperature (°F / °C), Pressure
-(psi / bar), each following Units until set. Tyre warm (yellow) from, Tyre hot (red) from, Demo data, Colour theme. All under **All settings**.
+The bar's **Setup** button opens the settings page in place of the board (Setup again, or its Pit board tab, goes back):
+
+- **Readouts:** the five small boxes (Trans, Outside, Range, Fuel rail, Low fuel by default) can each show another value:
+  gearbox oil, outside, coolant, oil temperature, intake, range, fuel level, fuel rail, low fuel, oil pressure, AFR,
+  timing, load, boost, rpm, speed or lateral g. Oil pressure, AFR and timing are only asked of the engine while a box
+  shows them.
+- **Units:** US / Metric / Custom, then speed and distance, temperature and pressure each.
+- **Tyres:** temperature warm (yellow) and hot (red) from; pressure low (blue) under, high (yellow / red) over target.
+- **Data:** every engine value, the identifiers it is asked as, what the car answers and how old the reading is.
+- **System:** box colour (the board's boxes and this page), demo data.
+
+Everything is also in BMW's list under **All settings**.
 
 ## Working on it
 
-`tools/telemetry-preview/`: serve the repo root and open `/tools/telemetry-preview/` to see the page as
-`draw.js` draws it, with a street, cold start, hot track and no-data scene, in US or metric units.
+`tools/telemetry-preview/`: serve the repo root and open `/tools/telemetry-preview/` to see the board as
+`draw.js` draws it, with a street, pull, cold start, hot track and no-data scene, in any units.
+`tools/settings-preview/`: the settings pages of all three apps, the real code, clickable.
 
 Third-party parts are listed in `NOTICE`.

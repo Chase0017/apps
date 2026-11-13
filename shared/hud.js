@@ -213,6 +213,7 @@ const sensors = require('./sensors');
 const { ClusterRender, DEFAULT_PATH } = require('./cluster_render_client.js');
 const Layouts = require('./layouts');
 const { THEMES, M_STRIPE, LIGHTS, VERDICT, color } = require('./hud_themes');
+const gt3 = require('./gt3ui');
 const ShiftScore = require('./shift_score');
 const sun = require('./sun');
 const textRaster = require('./hud_text');
@@ -1630,6 +1631,13 @@ class HudApp {
         this.theme = THEMES[this.themeName] || THEMES.classic;
         this.nightOn = this._nightDim();
         if (this.nightOn) this.theme = dimTheme(this.theme, NIGHT_DIM);
+        // the box colour (setting "boxColour", the page's System tab): a theme with boxes (frames "line", header strips "head")
+        // draws them in it, with "ink" (text on a header) dark or white to suit; White keeps the theme's own
+        const box = this.setting('boxColour');
+        if (box && box !== 'white' && this.theme.line && this.theme.head) {
+            const c = gt3.rgba(box), ink = gt3.palette(box).ink === '#ffffff' ? [255, 255, 255, 255] : this.theme.ink;
+            this.theme = Object.assign({}, this.theme, { line: this.nightOn ? c.map((v, i) => (i < 3 ? Math.round(v * NIGHT_DIM) : v)) : c, head: c, ink });
+        }
         this.log.info('layout "' + layout.name + '", theme ' + this.theme.name + (this.layoutTheme ? '' : ' (' + this.setting('hudTheme') + ')'));
         const shown = layout.widgets.filter((w) => !(w.toggle && !this._toggleOn(w.toggle)) && !(w.themes && w.themes.indexOf(this.themeName) < 0));
         this._setNeeds(shown);

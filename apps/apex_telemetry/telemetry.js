@@ -24,7 +24,14 @@ const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
 const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v : null);
 const FRESH = { dme: 6000, fes: 1500 };
 // the DME values read in turn while the page shows: [names in config.dme (read back to back), ms between reads]
-const DME_READS = [[['boostTarget', 'boostActual'], 250], [['hpfp'], 1000], [['lpfp'], 2000], [['loadTarget', 'loadActual'], 1500], [['chargeBefore', 'intake'], 2000], [['egs'], 5000]];
+// [names, ms, optional]: an optional group is only read while a small box shows it (setNeeds)
+const DME_READS = [[['boostTarget', 'boostActual'], 250], [['hpfp'], 1000, 1], [['lpfp'], 2000, 1], [['loadTarget', 'loadActual'], 1500],
+    [['chargeBefore', 'intake'], 2000], [['egs'], 5000, 1], [['oilPressure'], 1000, 1], [['afr'], 600, 1], [['timing'], 600, 1]];
+// the Data tab's rows: [name, config.dme names, where the value is kept in this.v]
+const DATA_ROWS = [['Boost (actual)', ['boostActual'], 'boostActual'], ['Boost target', ['boostTarget'], 'boostTarget'], ['Fuel rail', ['hpfp'], 'hpfp'],
+    ['Low fuel', ['lpfp'], 'lpfp'], ['Load', ['loadActual'], 'loadActual'], ['Intercooler before', ['chargeBefore'], 'chargeBefore'],
+    ['Intercooler after', ['intake'], 'intake'], ['Gearbox oil (EGS)', ['egs'], 'gearboxEgs'], ['Oil pressure', ['oilPressure'], 'oilP'],
+    ['Air-fuel ratio', ['afr'], 'afr'], ['Ignition timing', ['timing'], 'timing']];
 const ABS_KPA = { boostTarget: 1, boostActual: 1 };     // absolute kPa: shown as bar over the outside air
 
 class Telemetry {
@@ -36,6 +43,7 @@ class Telemetry {
         this.v = {};                // name -> { v, at } for the values not in car.data()
         this.peak = { gLat: 0, gLong: 0, boost: 0 };
         this.wantAt = 0;            // last time the page was drawn: the engine unit is asked only while it shows
+        this.needs = {};            // optional config.dme names a small box shows now (setNeeds)
         const self = this;
         const put = (k, v) => { if (isNum(v)) this.v[k] = { v, at: Date.now() }; };
         this.car = new Car(ctx, ['rpm', 'speed', 'accel', 'temps', 'gear'], {
@@ -132,6 +140,7 @@ class Telemetry {
             let due = null, most = 1;
             groups.forEach((gr) => {
                 const k0 = gr[0][0], g = st[k0] || (st[k0] = { asked: 0, miss: 0 });
+                if (gr[2] && !this.needs[k0]) return;
                 if (k0 === 'egs' && this._fresh('gearboxBds', 30000)) return;
                 const r = (now - g.asked) / (g.miss >= 3 ? Math.max(gr[1], 15000) : gr[1]);
                 if (r >= most) { most = r; due = gr; }
@@ -141,7 +150,7 @@ class Telemetry {
             g.asked = now;
             busy = true;
             (async () => {
-                if (ks[0] === 'boostTarget' && now - baroAt > 60000 && Array.isArray(dme.baro)) {
+                if ((ks[0] === 'boostTarget' || ks[0] === 'oilPressure') && now - baroAt > 60000 && Array.isArray(dme.baro)) {
                     baroAt = now;
                     const b = await rd.value('baro', dme.baro);
                     if (isNum(b)) baro = b;
@@ -154,12 +163,32 @@ class Telemetry {
                     const at = Date.now();
                     if (ABS_KPA[k]) this.v[k] = { v: (v - baro) / 100, at };                         // absolute kPa -> bar boost
                     else if (k === 'egs') this.v.gearboxEgs = { v, at };
+                    else if (k === 'oilPressure') this.v.oilP = { v: Math.max(0, v - baro / 100), at };   // absolute bar -> gauge
                     else this.v[k] = { v, at };
                 }
                 if (got) g.miss = 0;
                 else if (++g.miss === 3) this.log.info('engine unit: no ' + ks.join(' / ') + ' (' + ks.map((k) => this.why(k)).join('; ') + '), asked every 15 s');
             })().catch((e) => this.log.info('engine unit: ' + (e && e.message || e))).then(() => { busy = false; });
         }, 100);
+    }
+
+    /** The optional engine unit values (config.dme names) the small boxes show now. */
+    setNeeds(names) { const n = {}; names.forEach((k) => { if (k) n[k] = true; }); this.needs = n; }
+
+    /** For the Data tab: [{ name, ids ('4A2D · 580B'), answer ('ok', 'NRC 31', 'not shown'), age (s or null), ok }]. */
+    dataRows() {
+        const rd = this.reader, dme = this.cfg.dme || {}, now = Date.now(), opt = {};
+        DME_READS.forEach((g) => { if (g[2]) g[0].forEach((k) => { opt[k] = true; }); });
+        const rows = DATA_ROWS.filter((r) => Array.isArray(dme[r[1][0]])).map(([name, ks, store]) => {
+            const list = dme[ks[0]], x = this.v[store];
+            const ids = list.map((c) => (rd ? rd.constructor.label(c) : c.did || 'OBD ' + c.obd)).join(' · ');
+            let answer, ok = false;
+            if (opt[ks[0]] && !this.needs[ks[0]]) answer = 'not shown, not asked';
+            else if (x && now - x.at < 10000) { answer = 'ok'; ok = true; } else answer = this.why(ks[0]) || 'asking';
+            return { name, ids, answer, age: x ? (now - x.at) / 1000 : null, ok };
+        });
+        rows.push({ name: 'Tyres', ids: 'TPMS', answer: this.tyres.at ? 'ok' : 'waiting', age: this.tyres.at ? (now - this.tyres.at) / 1000 : null, ok: !!this.tyres.at });
+        return rows;
     }
 
     _fresh(k, ms) { const x = this.v[k]; return x && Date.now() - x.at < ms ? x.v : null; }
@@ -196,7 +225,8 @@ class Telemetry {
                 },
                 boostTarget: tgt, boost: Math.max(0, tgt + w(0.08, 1.3)), hpfp: 60 + tgt * 220, lpfp: 5.2 + w(0.2, 5),
                 loadTarget: 30 + tgt * 100, loadActual: 28 + tgt * 100, gearbox: 86, ambient: 22, rangeKm: 512,
-                chargeBefore: 38 + tgt * 70, intake: 33 + tgt * 12,
+                chargeBefore: 38 + tgt * 70, intake: 33 + tgt * 12, coolant: 96, oil: 108 + w(3, 13), oilP: 3.4 + tgt * 1.5,
+                afr: 14.7 - tgt * 2.4, timing: 22 - tgt * 12, fuelL: 41,
             };
         } else {
             const bt = f('boostTarget', 3000), ba = f('boostActual', 3000), fes = f('boostFes', FRESH.fes);
@@ -206,7 +236,9 @@ class Telemetry {
                 hpfp: f('hpfp'), lpfp: f('lpfp'), loadTarget: f('loadTarget'), loadActual: f('loadActual'),
                 chargeBefore: f('chargeBefore'), intake: f('intake'),
                 gearbox: f('gearboxBds', 60000) !== null ? f('gearboxBds', 60000) : f('gearboxEgs', 20000),
-                ambient: f('ambient', 600000), rangeKm: f('rangeKm', 600000),
+                ambient: f('ambient', 600000), rangeKm: f('rangeKm', 600000), fuelL: f('fuelL', 600000),
+                coolant: isNum(d.coolant) ? d.coolant : null, oil: isNum(d.oil) ? d.oil : null,
+                oilP: f('oilP'), afr: f('afr'), timing: f('timing'),
             };
             CORNERS.forEach((k) => { s.tyres[k] = { p: tyre('p', k), t: tyre('t', k), target: tyre('target', k) }; });
         }

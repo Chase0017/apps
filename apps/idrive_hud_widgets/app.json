@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "Apex HUD",
   "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD; Redline (shift lights and shift score) in Sport. Starts with the car.",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -20,6 +20,7 @@
     "cluster_render_client.js",
     "calibration.js",
     "visible.js",
+    "gt3ui.js",
     "page.js",
     "previews.js",
     "sensors.js",
@@ -887,6 +888,42 @@
       ]
     },
     {
+      "key": "boxColour",
+      "label": "Box colour",
+      "type": "choice",
+      "default": "white",
+      "options": [
+        [
+          "white",
+          "White"
+        ],
+        [
+          "silver",
+          "Silver"
+        ],
+        [
+          "yellow",
+          "Yellow"
+        ],
+        [
+          "orange",
+          "Orange"
+        ],
+        [
+          "red",
+          "Red"
+        ],
+        [
+          "mblue",
+          "M blue"
+        ],
+        [
+          "green",
+          "Green"
+        ]
+      ]
+    },
+    {
       "key": "demo",
       "label": "Demo data",
       "type": "choice",
@@ -903,22 +940,6 @@
         [
           "off",
           "Off"
-        ]
-      ]
-    },
-    {
-      "key": "theme",
-      "label": "Colour theme (center screen)",
-      "type": "choice",
-      "default": "ice",
-      "options": [
-        [
-          "ice",
-          "Ice White"
-        ],
-        [
-          "m_tricolour",
-          "M Tricolour"
         ]
       ]
     }

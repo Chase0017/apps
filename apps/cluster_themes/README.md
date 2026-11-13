@@ -43,6 +43,8 @@ Store that honours it).
 
 - `tools/layout-preview/`: serve the repo root and open `/tools/layout-preview/?layout=apex` for a browser preview
   with the app's real shaders and fonts, an rpm slider and the visibility check.
-- The center-screen page uses the kit's Ice White colours (setting **Colour theme**).
+- The center-screen page is GT3 like the dash (shared/gt3ui.js): tabs Layouts, Readouts, Units, Shift & alerts,
+  Badge & clock, System. **Box colour** (System tab) colours the page and the dash's boxes.
+- `tools/settings-preview/`: the page as the car draws it, clickable, in a browser.
 
 Third-party parts are listed in `NOTICE`.

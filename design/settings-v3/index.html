@@ -1,0 +1,328 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Apex settings v3 (mockup for review)</title>
+<!-- Design mockup for the settings revamp (Nov 13 2026), for review before it is built into shared/page.js.
+     1600 x 520 like the car's page; click around: tabs, segmented buttons, steppers and toggles all work. -->
+<style>
+  @font-face { font-family: 'Barlow C'; src: url('../../tools/fonts-src/BarlowCondensed-Bold.ttf'); font-weight: 700; }
+  @font-face { font-family: 'Barlow C'; src: url('../../tools/fonts-src/BarlowCondensed-SemiBold.ttf'); font-weight: 600; }
+  :root { --bg: #050607; --text: #fff; --dim: #9aa0a8; --label: #7a8089; --line: #ffffff2e;
+          --box: #ffffff; --ink: #0b0d10; --ok: #3ddc84; --warm: #ffd60a; --hot: #ff3b30; --cold: #4aa3ff; }
+  body { background: #111; color: #ddd; font: 14px system-ui, sans-serif; margin: 12px; }
+  .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .bar button { background: #222; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .bar button.on { background: #fff; color: #0b0d10; }
+  .note { color: #888; margin-left: 8px; }
+  #wrap { width: 1600px; transform-origin: 0 0; }
+  #screen { width: 1600px; height: 520px; position: relative; overflow: hidden; border-radius: 6px; background: var(--bg);
+            font-family: 'Barlow C', 'Arial Narrow', sans-serif; font-weight: 600; color: var(--text); }
+  .hdr { position: absolute; left: 0; top: 0; right: 0; height: 36px; background: #ffffff0d; border-bottom: 1px solid var(--line);
+         display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+  .hdr .t { font-weight: 700; letter-spacing: 1.5px; font-size: 18px; color: var(--dim); }
+  .badge { margin-left: auto; font-weight: 700; letter-spacing: 1.5px; font-size: 15px; padding: 2px 10px; border-radius: 4px; background: #3ddc8433; color: #3ddc84; }
+  .rail { position: absolute; left: 16px; top: 50px; width: 252px; display: flex; flex-direction: column; gap: 8px; }
+  .tab { height: 54px; border-radius: 5px; border: 2px solid var(--box); display: flex; align-items: center; gap: 12px; padding-left: 14px; cursor: pointer; }
+  .tab .ic { width: 26px; text-align: center; font-size: 20px; color: var(--box); }
+  .tab .n { font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: .5px; line-height: 1; }
+  .tab .v { font-size: 15px; color: var(--dim); margin-top: 3px; }
+  .tab.sel { background: var(--box); color: var(--ink); }
+  .tab.sel .ic, .tab.sel .v { color: var(--ink); }
+  .tab.sel .v { opacity: .7; }
+  .body { position: absolute; left: 288px; right: 16px; top: 50px; bottom: 10px; }
+  .cols { display: flex; gap: 16px; height: 100%; }
+  .col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  /* a section: the white header strip with the frame under it, rows inside */
+  .sec { border: 2px solid var(--box); border-radius: 5px; overflow: hidden; margin-bottom: 12px; flex: none; }
+  .sec > .lbl { background: var(--box); color: var(--ink); font-weight: 700; font-size: 17px; letter-spacing: .5px; text-transform: uppercase;
+                padding: 4px 12px; display: flex; justify-content: space-between; }
+  .sec > .in { padding: 4px 0; }
+  .row { min-height: 54px; display: flex; align-items: center; padding: 4px 12px 4px 14px; gap: 12px; border-top: 1px solid var(--line); }
+  .sec > .in > .row:first-child { border-top: none; }
+  .row .name { font-size: 20px; flex: 1; min-width: 0; text-transform: uppercase; }
+  .row .sub { font-size: 14px; color: var(--dim); display: block; margin-top: 1px; text-transform: none; font-weight: 600; }
+  .seg { display: flex; border: 2px solid var(--box); border-radius: 4px; overflow: hidden; }
+  .seg div { padding: 6px 16px; font-size: 17px; font-weight: 700; color: var(--text); cursor: pointer; white-space: nowrap; text-transform: uppercase; }
+  .seg div + div { border-left: 1px solid var(--line); }
+  .seg div.on { background: var(--box); color: var(--ink); }
+  .seg.big div { padding: 8px 26px; font-size: 19px; }
+  .step { display: flex; align-items: center; gap: 8px; }
+  .step .b { width: 38px; height: 38px; border-radius: 4px; border: 2px solid var(--box); display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; font-weight: 700; }
+  .step .val { min-width: 118px; text-align: center; font-weight: 700; font-size: 24px; }
+  .tog { width: 62px; height: 30px; border-radius: 4px; border: 2px solid var(--box); position: relative; cursor: pointer; flex: none; }
+  .tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 20px; border-radius: 2px; background: #ffffff55; transition: left .15s; }
+  .tog.on { background: var(--box); } .tog.on::after { left: 33px; background: var(--ink); }
+  .btn { padding: 7px 18px; border-radius: 4px; background: var(--box); color: var(--ink); font-weight: 700; cursor: pointer; font-size: 17px; text-transform: uppercase; }
+  .btn.ghost { background: none; color: var(--text); border: 2px solid var(--box); }
+  .prev { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+  .pv { border: 2px solid var(--box); border-radius: 4px; overflow: hidden; }
+  .pv .h { background: var(--box); color: var(--ink); font-weight: 700; font-size: 15px; padding: 2px 8px; display: flex; justify-content: space-between; }
+  .pv .x { font-weight: 700; font-size: 44px; text-align: right; padding: 0 10px; line-height: 1.15; }
+  .scale { height: 8px; border-radius: 2px; margin-top: 6px; }
+  .mini { font-size: 15px; color: var(--dim); text-transform: none; }
+  .lights { display: flex; gap: 6px; margin: 6px 0 2px; }
+  .lights i { width: 20px; height: 20px; border-radius: 10px; display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 18px; }
+  td, th { padding: 6px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+  .okc { color: var(--ok); } .bad { color: var(--warm); }
+  .placeholder { color: var(--dim); font-size: 20px; padding: 40px; text-align: center; }
+  .new { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--ink); background: var(--warm); border-radius: 3px; padding: 0 5px; margin-left: 8px; }
+  .swatches { display: flex; gap: 8px; }
+  .sw { width: 34px; height: 34px; border-radius: 4px; cursor: pointer; border: 2px solid #ffffff33; }
+  .sw.on { outline: 3px solid #fff; outline-offset: 2px; }
+  .slot { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .slot .num { width: 30px; height: 30px; border-radius: 4px; background: var(--box); color: var(--ink); font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 18px; flex: none; }
+  .slot.sel { background: #ffffff14; }
+  .chips { display: flex; gap: 6px; padding: 8px 12px; flex-wrap: wrap; }
+  .chip { border: 2px solid var(--box); border-radius: 4px; padding: 3px 12px; font-weight: 700; font-size: 16px; cursor: pointer; text-transform: uppercase; }
+  .chip.on { background: var(--box); color: var(--ink); }
+  .mapbox { position: relative; height: 78px; margin: 8px 12px; border: 1px solid var(--line); border-radius: 4px; }
+  .mapbox div { position: absolute; border: 2px solid #ffffff55; border-radius: 3px; font-size: 13px; color: var(--dim); display: flex; align-items: center; justify-content: center; }
+  .mapbox div.hl { border-color: var(--box); background: var(--box); color: var(--ink); }
+  #review { margin-top: 14px; max-width: 1600px; color: #bbb; line-height: 1.5; }
+  #review h3 { color: #eee; margin: 10px 0 4px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  App: <button data-app="cluster" class="on">Apex Cluster</button><button data-app="hud">Apex HUD</button><button data-app="tel">Apex Telemetry</button>
+  <span class="note">Mockup only: everything is clickable, nothing is sent to the car. Tabs marked as unchanged keep today's page.</span>
+</div>
+<div id="wrap"><div id="screen">
+  <div class="hdr"><span class="t" id="hdrTitle">APEX CLUSTER</span><span class="badge" id="hdrBadge">ON THE CLUSTER</span></div>
+  <div class="rail" id="rail"></div>
+  <div class="sep"></div>
+  <div class="body" id="body"></div>
+</div></div>
+
+<div id="review">
+  <h3>Round 2 (your edits)</h3>
+  <ul>
+    <li><b>GT3 look:</b> black, every section a framed box with a solid header strip and dark text, Barlow Condensed caps, square corners, the selected tab filled in like a header strip.</li>
+    <li><b>Box colour</b> (System tab, new): White, Silver, Yellow, Orange, Red, M blue, Green. It colours this page and, once built, the boxes on the dash / HUD / pit board too. Tell me if you want it on the page only. Heads-up: Yellow and Red are also the warning colours.</li>
+    <li><b>M Tricolour is gone</b> (it only tinted BMW's settings list, which the page covers).</li>
+    <li><b>Cluster:</b> Themes is now Layouts. <b>HUD:</b> no G-meter page. <b>Telemetry:</b> a Readouts tab: its five small boxes (Trans, Outside, Range, Fuel rail, Low fuel) can each show another value, picked like the cluster's slots, with a map of where each box sits.</li>
+  </ul>
+  <h3>From round 1, still in</h3>
+  <ul>
+    <li>Settings split into focused tabs; segmented buttons and − / + steppers instead of lists; Units as a preset plus one row per measure with a live preview; Shift &amp; alerts with coloured limit bars; Telemetry Tyres (pressure limits new) and Data tabs; System with About.</li>
+    <li>Layouts, Readouts (cluster / HUD), Position and Badge list keep today's pages, restyled. Saved settings carry over.</li>
+  </ul>
+</div>
+
+<script>
+const $ = (s, r) => (r || document).querySelector(s);
+const S = { units: 'us', unitSpeed: 'auto', unitTemp: 'auto', unitPress: 'auto', redline: 7000, shiftBefore: 300, coldGuard: true,
+  warnOil: 130, cautionCoolant: 113, warnCoolant: 120, warnBoost: 0, clock: '12h', nightDim: 'auto', badge: 'X3 M40i', badgeBMW: true,
+  boxColour: 'white', showBoost: true, stripClear: false, tankLitres: 65, demo: 'auto', tyreWarn: 54, tyreHot: 66, tyreLow: 3, tyreOver: 3, tyreOverRed: 5,
+  hudTheme: 'auto', dayTheme: 'classic', hudScale: 100, gRange: '1.2' };
+let app = 'cluster', tab = null;
+// box colour: [value, colour, name]; text on a box is dark on light colours, white on dark ones
+const BOX = [['white', '#ffffff', 'White'], ['silver', '#c9d3df', 'Silver'], ['yellow', '#ffd60a', 'Yellow'], ['orange', '#ff9f0a', 'Orange'], ['red', '#ff3b30', 'Red'], ['mblue', '#1c69d4', 'M blue'], ['green', '#3ddc84', 'Green']];
+const INK = { red: '#ffffff', mblue: '#ffffff' };
+// Telemetry's small boxes (the slots) and what they can show
+const TEL_SLOTS = [
+  { id: 1, where: 'Top right, left', def: 'gearbox', box: [64, 4, 11, 28] }, { id: 2, where: 'Top right, middle', def: 'ambient', box: [76.5, 4, 11, 28] },
+  { id: 3, where: 'Top right, right', def: 'range', box: [89, 4, 11, 28] }, { id: 4, where: 'Bottom left', def: 'hpfp', box: [0, 68, 9.5, 28] }, { id: 5, where: 'Bottom left, right', def: 'lpfp', box: [10.5, 68, 9.5, 28] }];
+const CATS = ['Engine', 'Temps', 'Fuel', 'Chassis'];
+const SENSORS = [
+  { id: 'hpfp', name: 'Fuel rail', cat: 'Fuel', val: () => P(21.9, 0).replace('.0', '') }, { id: 'lpfp', name: 'Low fuel pressure', cat: 'Fuel', val: () => P(5.1, 0) },
+  { id: 'fuel', name: 'Fuel level', cat: 'Fuel', val: () => '62 %' }, { id: 'range', name: 'Range', cat: 'Fuel', val: () => isUS('speed') ? '318 mi' : '512 km' },
+  { id: 'oilP', name: 'Oil pressure', cat: 'Engine', val: () => P(3.9, 0) }, { id: 'afr', name: 'Air-fuel ratio', cat: 'Engine', val: () => '14.7' },
+  { id: 'timing', name: 'Ignition timing', cat: 'Engine', val: () => '18.5°' }, { id: 'load', name: 'Engine load', cat: 'Engine', val: () => '33 %' },
+  { id: 'rpm', name: 'Engine speed', cat: 'Engine', val: () => '1900 rpm' },
+  { id: 'gearbox', name: 'Gearbox oil', cat: 'Temps', val: () => T(81) }, { id: 'ambient', name: 'Outside', cat: 'Temps', val: () => T(24) },
+  { id: 'coolant', name: 'Coolant', cat: 'Temps', val: () => T(93) }, { id: 'oil', name: 'Oil temperature', cat: 'Temps', val: () => T(104) }, { id: 'intake', name: 'Intake air', cat: 'Temps', val: () => T(31) },
+  { id: 'speed', name: 'Speed', cat: 'Chassis', val: () => isUS('speed') ? '47 mph' : '76 km/h' }, { id: 'gLat', name: 'Lateral g', cat: 'Chassis', val: () => '0.12 g' }];
+const TEL_PICK = {};
+let telSlot = 1, telCat = 'Temps';
+const APPS = {
+  cluster: { title: 'APEX CLUSTER', name: 'Apex Cluster', badge: ['ON THE CLUSTER', '#3ddc84'], version: '0.20.0',
+    tabs: [['look', 'Layouts', '▣'], ['readouts', 'Readouts', '☰'], ['units', 'Units', '⇄'], ['shift', 'Shift & alerts', '⚠'], ['badge', 'Badge & clock', '◷'], ['system', 'System', '⚙']] },
+  hud: { title: 'APEX HUD', name: 'Apex HUD', badge: ['ON THE HUD', '#3ddc84'], version: '0.14.0',
+    tabs: [['look', 'Layouts', '▣'], ['readouts', 'Readouts', '☰'], ['position', 'Position & colours', '✥'], ['units', 'Units', '⇄'], ['shift', 'Shift & alerts', '⚠'], ['system', 'System', '⚙']] },
+  tel: { title: 'APEX TELEMETRY', name: 'Apex Telemetry', badge: ['LIVE', '#3ddc84'], version: '0.5.0',
+    tabs: [['readouts', 'Readouts', '☰'], ['units', 'Units', '⇄'], ['tyres', 'Tyres', '◍'], ['data', 'Data', '⇅'], ['system', 'System', '⚙']] },
+};
+const isUS = (dim) => { const v = S[{ speed: 'unitSpeed', temp: 'unitTemp', press: 'unitPress' }[dim]]; return v === 'mph' || v === 'f' || v === 'psi' ? true : v === 'kmh' || v === 'c' || v === 'bar' ? false : S.units === 'us'; };
+const preset = () => { const s = isUS('speed'), t = isUS('temp'), p = isUS('press'); return s && t && p ? 'us' : !s && !t && !p ? 'metric' : 'custom'; };
+const T = (c) => isUS('temp') ? Math.round(c * 9 / 5 + 32) + ' °F' : c + ' °C';
+const TYF = { 43: 110, 49: 120, 54: 130, 60: 140, 66: 150, 71: 160, 77: 170, 82: 180 };   // the tyre settings' own °F labels
+const Tt = (c) => isUS('temp') ? (TYF[c] || Math.round(c * 9 / 5 + 32)) + ' °F' : c + ' °C';
+const Tn = (c) => isUS('temp') ? Math.round(c * 9 / 5 + 32) + '°' : c + '°';
+const P = (b, d) => isUS('press') ? (b * 14.5038).toFixed(d == null ? 1 : d) + ' psi' : b.toFixed(2) + ' bar';
+const psiTo = (x) => isUS('press') ? x + ' psi' : (x / 14.5038).toFixed(2) + ' bar';
+
+function tabValue(id) {
+  if (id === 'look') return app === 'hud' ? 'Redline · Sport' : 'Apex · every mode';
+  if (id === 'readouts') return app === 'hud' ? 'Redline · 4 slots' : app === 'tel' ? '5 small boxes' : 'Apex · 10 slots';
+  if (id === 'units') return (isUS('speed') ? 'mph' : 'km/h') + ' · ' + (isUS('temp') ? '°F' : '°C') + ' · ' + (isUS('press') ? 'psi' : 'bar');
+  if (id === 'shift') return (S.redline - S.shiftBefore) + ' rpm · ' + [S.warnOil, S.warnCoolant, S.warnBoost].filter(Boolean).length + ' warnings';
+  if (id === 'badge') return S.badge + ' · ' + (S.clock === '12h' ? '12-hour' : '24-hour');
+  if (id === 'position') return 'centred · ' + S.hudScale + ' %';
+  if (id === 'gmeter') return S.gRange + ' g · trail 2 s';
+  if (id === 'tyres') return 'warm ' + Tt(S.tyreWarn) + ' · hot ' + Tt(S.tyreHot);
+  if (id === 'data') return '7 of 9 answering';
+  if (id === 'system') return 'v' + APPS[app].version + ' · ' + BOX.find((x) => x[0] === S.boxColour)[2].toLowerCase() + ' boxes';
+  return '';
+}
+
+/* ---------- pieces ---------- */
+/** a section: the header strip (title, right-hand note) and its rows in one frame */
+const sec = (title, inner, right, style) => '<div class="sec"' + (style ? ' style="' + style + '"' : '') + '><div class="lbl"><span>' + title + '</span><span>' + (right || '') + '</span></div><div class="in">' + inner + '</div></div>';
+const seg = (key, opts, big) => '<div class="seg' + (big ? ' big' : '') + '">' + opts.map(([v, l]) => '<div data-set="' + key + '" data-v="' + v + '" class="' + (String(S[key]) === String(v) ? 'on' : '') + '">' + l + '</div>').join('') + '</div>';
+const row = (name, ctl, sub, h) => '<div class="row"' + (h ? ' style="min-height:' + h + 'px"' : '') + '><div class="name">' + name + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</div>' + ctl + '</div>';
+const tog = (key) => '<div class="tog' + (S[key] ? ' on' : '') + '" data-tog="' + key + '"></div>';
+const step = (key, steps, fmt) => '<div class="step"><div class="b" data-step="' + key + '" data-d="-1" data-steps="' + steps.join(',') + '">−</div><div class="val">' + fmt(S[key]) + '</div><div class="b" data-step="' + key + '" data-d="1" data-steps="' + steps.join(',') + '">+</div></div>';
+/** a coloured scale under a limit: dim, then yellow, then red, from lo to hi */
+const scale = (lo, hi, y, r) => {
+  const p = (v) => Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
+  const stops = ['#ffffff22 0%', '#ffffff22 ' + p(y) + '%'];
+  if (y != null) stops.push('var(--warm) ' + p(y) + '%', 'var(--warm) ' + p(r) + '%');
+  stops.push('var(--hot) ' + p(r) + '%', 'var(--hot) 100%');
+  return '<div class="scale" style="background:linear-gradient(90deg,' + stops.join(',') + ')"></div>';
+};
+
+/* ---------- tabs ---------- */
+const PAGES = {
+  units() {
+    const pr = preset();
+    const pv = (h, u, x) => '<div class="pv"><div class="h"><span>' + h + '</span><span>' + u + '</span></div><div class="x">' + x + '</div></div>';
+    const one = (key, opts, us) => '<div class="seg">' + opts.map(([v, l], i) => '<div data-unit="' + key + '" data-v="' + v + '" class="' + ((i === 0) === us ? 'on' : '') + '">' + l + '</div>').join('') + '</div>';
+    return '<div class="cols"><div class="col" style="flex:1.25">' +
+      sec('Units', row('Preset', '<div class="seg big">' + [['us', 'US'], ['metric', 'Metric'], ['custom', 'Custom']].map(([v, l]) => '<div data-preset="' + v + '" class="' + (pr === v ? 'on' : '') + '">' + l + '</div>').join('') + '</div>', pr === 'custom' ? 'Your own mix, set below' : 'Sets all three below') +
+        row('Speed and distance', one('unitSpeed', [['mph', 'mph · mi'], ['kmh', 'km/h · km']], isUS('speed'))) +
+        row('Temperature', one('unitTemp', [['f', '°F'], ['c', '°C']], isUS('temp'))) +
+        row('Pressure', one('unitPress', [['psi', 'psi'], ['bar', 'bar']], isUS('press'))), 'torque and power follow the preset') +
+      '</div><div class="col">' + sec('Preview', '<div class="prev">' +
+        pv('SPEED', isUS('speed') ? 'MPH' : 'KM/H', isUS('speed') ? '47' : '76') + pv('COOLANT', isUS('temp') ? '°F' : '°C', Tn(93)) +
+        pv('BOOST', isUS('press') ? 'PSI' : 'BAR', isUS('press') ? '14.2' : '0.98') + pv('RANGE', isUS('speed') ? 'MI' : 'KM', isUS('speed') ? '318' : '512') + '</div>', 'live') +
+      '</div></div>';
+  },
+  shift() {
+    const at = S.redline - S.shiftBefore, lit = ['#2ecc71', '#2ecc71', '#f1c40f', '#e74c3c', '#e74c3c', '#3478ff'];
+    const Toff = () => (v) => v ? T(v) : 'Off';
+    const lim = (name, sub, key, steps, fmt, sc) => row(name, step(key, steps, fmt), sub + '</span>' + sc + '<span>', 70);
+    return '<div class="cols"><div class="col">' +
+      sec('Shift lights', row('Redline', step('redline', [5500, 6000, 6500, 7000, 7500], (v) => v + ' rpm')) +
+        row('Shift point', step('shiftBefore', [0, 100, 200, 300, 500, 800, 1000], (v) => v ? v + ' before' : 'At redline'), 'Lights flash at ' + at + ' rpm') +
+        row('Cold-engine guard', tog('coldGuard'), 'Earlier shift point until the oil is warm') +
+        row('Test', '<div class="btn">Run test</div>', 'Revs to the shift point for 4 s, car standing</span><div class="lights">' + lit.map((c) => '<i style="background:' + c + '"></i>').join('') + '</div><span>', 76), at + ' rpm') +
+      '</div><div class="col">' +
+      sec('Warnings', lim('Oil temperature', 'Red over the limit', 'warnOil', [0, 110, 115, 120, 125, 130, 135, 140, 150], Toff(), scale(90, 160, null, S.warnOil || 999)) +
+        (app === 'cluster' ? lim('Coolant caution', 'Yellow over the limit', 'cautionCoolant', [0, 105, 108, 110, 113, 115, 118, 120], Toff(), scale(90, 130, S.cautionCoolant || 999, S.warnCoolant || 999)) : '') +
+        lim('Coolant warning', 'Flashing red over the limit', 'warnCoolant', [0, 100, 105, 110, 115, 120, 125], Toff(), scale(90, 130, app === 'cluster' ? (S.cautionCoolant || 999) : null, S.warnCoolant || 999)) +
+        lim('Boost warning', 'Red over the limit', 'warnBoost', [0, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0], (v) => v ? P(v, 0) : 'Off', scale(0, 2, null, S.warnBoost || 9)),
+        'in ' + (isUS('temp') ? '°F' : '°C') + ' and ' + (isUS('press') ? 'psi' : 'bar')) +
+      '</div></div>';
+  },
+  badge() {
+    return '<div class="cols"><div class="col">' +
+      sec('Badge', '<div style="text-align:center;padding:18px;font-weight:700;font-size:40px">' + (S.badgeBMW ? 'BMW ' : '') + S.badge + '</div>' +
+        row('BMW lettering', tog('badgeBMW')) + row('Model', '<div class="btn ghost">Open badge list ›</div>'), 'top left of the cluster') +
+      '</div><div class="col">' +
+      sec('Clock and night', row('Clock', seg('clock', [['12h', '12-hour'], ['24h', '24-hour']])) +
+        row('Time zone', '<div style="font-weight:700;font-size:20px">US PACIFIC ›</div>', 'Follows the car until set') +
+        row('Night colours', seg('nightDim', [['auto', 'Auto'], ['off', 'Off']]), 'Dimmer after sunset')) +
+      '</div></div>';
+  },
+  position() {
+    return '<div class="cols"><div class="col">' + sec('Position', '<div class="placeholder">Today\'s move pad and size stepper</div>', 'unchanged') +
+      '</div><div class="col">' + sec('Colours on the glass', row('Theme', seg('hudTheme', [['auto', 'Auto'], ['classic', 'Classic'], ['m', 'M'], ['night', 'Night']])) +
+        (S.hudTheme === 'auto' ? row('In daylight', seg('dayTheme', [['classic', 'Classic'], ['m', 'M']]), 'Auto uses Night after sunset') : '') +
+        row('Size', step('hudScale', [80, 85, 90, 95, 100, 105, 110, 115, 120], (v) => v + ' %')), 'was its own tab') + '</div></div>';
+  },
+  tyres() {
+    const tw = S.tyreWarn, th = S.tyreHot;
+    return '<div class="cols"><div class="col">' +
+      sec('Tyre temperature', row('Warm (yellow) from', step('tyreWarn', [43, 49, 54, 60, 66], Tt), '</span>' + scale(20, 90, tw, th) + '<span>', 70) +
+        row('Hot (red) from', step('tyreHot', [60, 66, 71, 77, 82], Tt), '</span>' + scale(20, 90, tw, th) + '<span>', 70), 'air inside the tyre') +
+      '<div class="mini" style="margin:0 4px">No colour while fine; nothing for cold. Street tyres run about 80 to 110 °F.</div>' +
+      '</div><div class="col">' +
+      sec('Tyre pressure<span class="new">NEW</span>', row('Low (blue) under target', step('tyreLow', [1, 2, 3, 4, 5], psiTo)) +
+        row('High (yellow) over target', step('tyreOver', [2, 3, 4, 5, 6], psiTo), 'Warm tyres gain a few psi') +
+        row('High (red) over target', step('tyreOverRed', [3, 4, 5, 6, 8], psiTo)), 'target 34 / 35 psi') +
+      '</div></div>';
+  },
+  readouts() {
+    if (app !== 'tel') return null;
+    const slots = TEL_SLOTS, cur = slots.find((x) => x.id === telSlot);
+    const pick = TEL_PICK[telSlot] || cur.def, sn = SENSORS.find((x) => x.id === pick);
+    const map = '<div class="mapbox">' + slots.map((x) => '<div class="' + (x.id === telSlot ? 'hl' : '') + '" style="left:' + x.box[0] + '%;top:' + x.box[1] + '%;width:' + x.box[2] + '%;height:' + x.box[3] + '%">' + x.id + '</div>').join('') +
+      '<div style="left:21%;top:4%;width:42%;height:92%;border-style:dashed">TYRES</div><div style="left:0;top:4%;width:20%;height:60%;border-style:dashed">BOOST</div><div style="left:64%;top:36%;width:36%;height:28%;border-style:dashed">INTERCOOLER</div><div style="left:64%;top:68%;width:36%;height:28%;border-style:dashed">G-FORCE</div></div>';
+    return '<div class="cols"><div class="col" style="flex:1.05">' +
+      sec('Apex Telemetry · small boxes<span class="new">NEW</span>', map + slots.map((x) => {
+        const s1 = SENSORS.find((y) => y.id === (TEL_PICK[x.id] || x.def));
+        return '<div class="row slot' + (x.id === telSlot ? ' sel' : '') + '" data-slot="' + x.id + '" style="min-height:46px"><div class="num">' + x.id + '</div><div class="name">' + s1.name + '<span class="sub">' + x.where + (TEL_PICK[x.id] ? '' : ' · default') + '</span></div><div style="font-weight:700;font-size:22px">' + s1.val() + '</div></div>';
+      }).join(''), '<span data-resetslots style="cursor:pointer">RESET ›</span>') +
+      '</div><div class="col">' +
+      sec('Box ' + telSlot + ' · pick a value', '<div class="chips">' + CATS.map((c) => '<div class="chip' + (c === telCat ? ' on' : '') + '" data-cat="' + c + '">' + c + '</div>').join('') + '</div>' +
+        SENSORS.filter((x) => x.cat === telCat).map((x) => '<div class="row slot' + (x.id === pick ? ' sel' : '') + '" data-pick="' + x.id + '" style="min-height:42px"><div class="name" style="font-size:18px">' + x.name + '</div><div class="mini" style="font-size:17px">' + x.val() + '</div></div>').join(''), sn.name) +
+      '</div></div>';
+  },
+  data() {
+    const R = [['Boost (actual)', '4A2D', 'ok', '0.3 s'], ['Boost target', '57DB', 'ok', '0.3 s'], ['Fuel rail', 'F423 · F459 · OBD 23', 'NRC 31 on all three', 'every 15 s'],
+      ['Low fuel', 'F40A', 'ok', '1.8 s'], ['Load', '480C · 5813', 'ok', '1.2 s'], ['Intercooler before', '59D4', 'ok', '1.9 s'], ['Intercooler after', '580F', 'ok', '1.9 s'],
+      ['Gearbox oil', 'data set · EGS 6000', 'no reply', 'every 15 s'], ['Tyres', 'TPMS', 'ok', '4 s']];
+    return sec('What the car answers<span class="new">NEW</span>', '<table><tr><th>Value</th><th>Asked as</th><th>Answer</th><th>Last reading</th></tr>' +
+      R.map((r) => '<tr><td>' + r[0] + '</td><td class="mini" style="font-size:17px">' + r[1] + '</td><td class="' + (r[2] === 'ok' ? 'okc' : 'bad') + '">' + r[2] + '</td><td class="mini" style="font-size:17px">' + r[3] + '</td></tr>').join('') + '</table>', 'read only') +
+      '<div class="mini" style="margin:0 4px">A value that never answers is asked every 15 s so it can\'t slow the rest down.</div>';
+  },
+  system() {
+    const a = APPS[app];
+    const sw = BOX.map(([v, c, n]) => '<div class="sw' + (S.boxColour === v ? ' on' : '') + '" data-box="' + v + '" title="' + n + '" style="background:' + c + '"></div>').join('');
+    return '<div class="cols"><div class="col">' +
+      sec('Display', row('Box colour<span class="new">NEW</span>', '<div class="swatches">' + sw + '</div>', BOX.find((x) => x[0] === S.boxColour)[2] + ' · this page and the ' + (app === 'hud' ? 'HUD' : app === 'tel' ? 'pit board' : 'dash') + '\'s boxes') +
+        (app === 'cluster' ? row('Show boost', tog('showBoost')) + row('Leave BMW\'s bottom strip clear', tog('stripClear')) : '') +
+        (app !== 'tel' ? row('Fuel tank size', step('tankLitres', [55, 60, 65, 68, 70], (v) => isUS('speed') ? (v / 3.785).toFixed(1) + ' gal' : v + ' L'), 'The fuel gauge\'s full mark') : '')) +
+      sec('Data', row('Demo data', seg('demo', [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']]), 'Auto: only until the car sends data')) +
+      '</div><div class="col">' + sec('About', '<div style="padding:10px 14px;line-height:1.7;font-size:19px">' +
+        '<div style="font-weight:700;font-size:28px">' + a.name + ' <span class="mini">v' + a.version + '</span></div>' +
+        '<div>Starts with the car: ' + (app === 'tel' ? 'no, open it from the menu' : '<span class="okc">yes</span>') + '</div>' +
+        '<div>Car data: <span class="okc">live</span> · engine unit: <span class="okc">7 of 9 values</span></div>' +
+        (app !== 'tel' ? '<div class="mini">Drawing Apex · 9 layers · 3.1 MB</div>' : '') +
+        '<div style="display:flex;gap:10px;margin-top:10px"><div class="btn ghost">All settings (BMW list)</div><div class="btn ghost">Changelog</div></div></div>') +
+      '</div></div>';
+  },
+};
+const placeholder = (name) => sec(name, '<div class="placeholder">Today\'s ' + name + ' page stays as it is, in the new style.</div>', 'unchanged');
+
+function render() {
+  const A = APPS[app];
+  if (!A.tabs.some((t) => t[0] === tab)) tab = A.tabs.find((t) => PAGES[t[0]])[0];
+  $('#hdrTitle').textContent = A.title;
+  $('#hdrBadge').textContent = A.badge[0];
+  $('#rail').innerHTML = A.tabs.map(([id, n, ic]) => '<div class="tab' + (id === tab ? ' sel' : '') + '" data-tab="' + id + '"><div class="ic">' + ic + '</div><div><div class="n">' + n + '</div><div class="v">' + tabValue(id) + '</div></div></div>').join('');
+  const name = A.tabs.find((t) => t[0] === tab)[1];
+  const html = PAGES[tab] && !(tab === 'badge' && app !== 'cluster') ? PAGES[tab]() : null;
+  $('#body').innerHTML = html || placeholder(name);
+  const bc = BOX.find((x) => x[0] === S.boxColour);
+  $('#screen').style.setProperty('--box', bc[1]); $('#screen').style.setProperty('--ink', INK[bc[0]] || '#0b0d10');
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-app],[data-tab],[data-set],[data-tog],[data-step],[data-preset],[data-unit],[data-box],[data-slot],[data-cat],[data-pick],[data-resetslots]');
+  if (!t) return;
+  const d = t.dataset;
+  if (d.app) { app = d.app; document.querySelectorAll('[data-app]').forEach((b) => b.classList.toggle('on', b === t)); }
+  else if (d.tab) tab = d.tab;
+  else if (d.set) S[d.set] = isNaN(Number(d.v)) || d.v === '' ? d.v : (typeof S[d.set] === 'number' ? Number(d.v) : d.v);
+  else if (d.tog) S[d.tog] = !S[d.tog];
+  else if (d.step) { const st = d.steps.split(',').map(Number), i = st.indexOf(S[d.step]); S[d.step] = st[Math.max(0, Math.min(st.length - 1, (i < 0 ? 0 : i) + Number(d.d)))]; }
+  else if (d.preset) { if (d.preset !== 'custom') { S.units = d.preset; S.unitSpeed = S.unitTemp = S.unitPress = 'auto'; } }
+  else if (d.unit) S[d.unit] = d.v;
+  else if (d.box) S.boxColour = d.box;
+  else if (d.slot) { telSlot = Number(d.slot); const s1 = SENSORS.find((y) => y.id === (TEL_PICK[telSlot] || TEL_SLOTS[telSlot - 1].def)); telCat = s1.cat; }
+  else if (d.cat) telCat = d.cat;
+  else if (d.pick) { if (d.pick === TEL_SLOTS[telSlot - 1].def) delete TEL_PICK[telSlot]; else TEL_PICK[telSlot] = d.pick; }
+  else if ('resetslots' in d) Object.keys(TEL_PICK).forEach((k) => delete TEL_PICK[k]);
+  render();
+});
+const fit = () => { const k = Math.min(1, (window.innerWidth - 24) / 1600); $('#wrap').style.transform = 'scale(' + k + ')'; $('#wrap').style.height = 520 * k + 'px'; };
+window.addEventListener('resize', fit); fit();
+tab = 'units'; render();
+</script>
+</body>
+</html>

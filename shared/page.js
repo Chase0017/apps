@@ -1,8 +1,10 @@
 'use strict';
 /**
- * page.js - the app's own centre-screen page (both apps), in place of BMW's plain settings list.
- * Look: design/settings-mock-v2.png (approved Nov 7 2026): near-black with a soft blue glow, a rail of
- * tabs on the left (icon, name, current value), glass cards, BMW blue for what is on.
+ * page.js - the app's own centre-screen page (Apex Cluster, Apex HUD), in place of BMW's plain settings list.
+ * Look (chase0017-apps, Nov 13 2026, design/settings-v3/): GT3 like the dash, from shared/gt3ui.js: black, sections
+ * framed in the box colour (setting "boxColour") with a header strip, Barlow Condensed caps, a rail of tabs on the
+ * left (icon, name, current value). Tabs: Layouts, Readouts, Units, Shift & alerts, Badge & clock (cluster),
+ * Position & colours (HUD), System.
  *
  * Drawn on the kit's canvas screen (kit/runtime/display.js): on the Store's renderer it fills the screen at
  * up to 60 fps and every tap or controller press lands on a target (cv.target); without the renderer the
@@ -11,14 +13,15 @@
  *   new Page(ctx, hud, {
  *       title, what: 'cluster' | 'HUD',
  *       look: { name: 'Themes', style: 'hero' | 'cards', tags: { gt3: 'race dash', ... } },
- *       tabs: ['look', 'readouts', 'badge', 'map', 'alerts', 'gmeter', 'settings'],
- *       settings: ['units', 'clock', ...],          // the Settings tab's rows, in order
+ *       tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'],   // and 'position' (HUD)
+ *       display: ['showBoost', 'tankLitres', ...],   // the System tab's Display rows, after the box colour
  *   }).start();
  *
  * Theme pictures: previews.js (shot on the bench by tools/previews.py; the centre screen can't draw our
  * cluster-render themes live). Plain Node 8 (the car's 8.16.2).
  */
 const G = require('./kit/gauges');
+const gt3 = require('./gt3ui');
 const themes = require('./kit/themes');
 const previews = require('./previews');
 const sensors = require('./sensors');
@@ -28,31 +31,35 @@ const tz = require('./tz');
 
 const W = 1600, H = 520;
 const A = G.withAlpha;
-// Ice White (the kit's "ice" theme, as cauliflowermossgrape's M Vitals): near-black panels, white text, a pale ice
-// accent; "blue" is the accent fill (selected chips, switches, buttons) and "ink" the text drawn on it
+// GT3: black, white text; "blue" is the box colour (selected chips, switches, frames) and "ink" the text on it.
+// Both follow the boxColour setting: render() fills them in from gt3ui.palette() every frame.
 const C = {
-    bg: '#050607', glow: '#15181d', text: '#ffffff', dim: '#9aa0a8', label: '#7a8089', line: '#ffffff14',
-    blue: '#e9f2ff', blueHi: '#ffffff', blueDeep: '#c9d3df', live: '#e9f2ff', off: '#c3cad6', ink: '#0b0d10',
+    bg: '#050607', glow: '#050607', text: '#ffffff', dim: '#9aa0a8', label: '#9aa0a8', line: '#ffffff2e',
+    blue: '#ffffff', blueHi: '#ffffff', blueDeep: '#ffffff', live: '#ffffff', off: '#c3cad6', ink: '#0b0d10',
 };
-const RAIL = { x: 16, y: 54, w: 252, h: 66, gap: 8 };
-const RAIL7 = { x: 16, y: 54, w: 252, h: 58, gap: 6 };     // seven tabs or more: a little shorter, so they fit
-const CX = 300, CR = 1584, CW = CR - CX;
+const RAIL = { x: 16, y: 50, w: 252 };
+const CX = 288, CR = 1584, CW = CR - CX;
 const MODES = [['inComfort', 'Comfort'], ['inSport', 'Sport'], ['inEco', 'Eco Pro']];
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 const TAB = {
     look: { icon: 'screen' },
     readouts: { name: 'Readouts', icon: 'lines' },
-    position: { name: 'Position', icon: 'move' },
-    map: { name: 'Map', icon: 'map' },
-    badge: { name: 'Badge', icon: 'badge' },
-    alerts: { name: 'Alerts', icon: 'alert' },
-    gmeter: { name: 'G-meter', icon: 'gmeter' },
-    colours: { name: 'Colours', icon: 'colour' },
-    settings: { name: 'Settings', icon: 'cog' },
+    position: { name: 'Position & colours', icon: 'move' },
+    units: { name: 'Units', icon: 'units' },
+    shift: { name: 'Shift & alerts', icon: 'alert' },
+    clock: { name: 'Badge & clock', icon: 'clock' },
+    system: { name: 'System', icon: 'cog' },
 };
+// the warning limits on Shift & alerts: [key, name, what it does, scale low, scale high (C / bar)]
+const WARN_ROWS = [
+    ['warnOil', 'Oil temperature', 'Red over the limit', 90, 160],
+    ['cautionCoolant', 'Coolant caution', 'Yellow over the limit', 90, 130],
+    ['warnCoolant', 'Coolant warning', 'Flashing red over the limit', 90, 130],
+    ['warnBoost', 'Boost warning', 'Red over the limit', 0, 2],
+];
 
-// the kit's own chrome (header, bar, Settings sheet) in BMW blue, to match the page
-Object.assign(themes.THEMES.ice, { sel: C.blue, selText: C.ink, bg: C.bg });
+// the kit's own chrome (header, bar, Settings sheet) in black and white, to match the page
+Object.assign(themes.THEMES.ice, { sel: '#ffffff', selText: '#0b0d10', bg: C.bg });
 
 class Page {
     constructor(ctx, hud, cfg) {
@@ -138,11 +145,11 @@ class Page {
 
     /* ---------- drawing ---------- */
     render() {
-        const cv = this.ctx.canvas(W, H);
+        const cv = gt3.raceText(this.ctx.canvas(W, H));
         const bottom = G.pageBottom(cv);
-        const h = bottom + 8;
+        const P = this.P = gt3.palette(this.get('boxColour'));
+        C.blue = C.blueDeep = P.box; C.ink = P.ink;
         cv.clear(C.bg);
-        cv.gradientRect(0, 0, W, h, [[0, C.glow], [0.55, '#08090b'], [1, C.bg]]);
         const on = this.hud.activeName && this.hud.activeName !== 'off';
         const demo = this.hud.car && this.hud.car.data().demo;
         G.frame(cv, this.theme(), [], -1, [
@@ -153,7 +160,7 @@ class Page {
         const target = cv.target;
         if (this.picker || this.confirm) cv.target = function () { return this; };
         this.rail(cv, bottom);
-        const body = { look: this.lookTab, readouts: this.readoutsTab, position: this.positionTab, map: this.mapTab, colours: this.coloursTab, badge: this.badgeTab, alerts: this.alertsTab, gmeter: this.gmeterTab, settings: this.settingsTab }[this.tab];
+        const body = { look: this.lookTab, readouts: this.readoutsTab, position: this.positionTab, units: this.unitsTab, shift: this.shiftTab, clock: this.clockTab, system: this.systemTab }[this.tab];
         if (body) body.call(this, cv, bottom);
         cv.target = target;
         if (this.picker) this.drawPicker(cv, bottom);
@@ -163,20 +170,8 @@ class Page {
     theme() { return this.ctx.theme(); }
 
     rail(cv, bottom) {
-        cv.fillRect(RAIL.x + RAIL.w + 15, 50, 1, bottom - 56, C.line);
-        const R = this.cfg.tabs.length > 6 ? RAIL7 : RAIL, dy = (66 - R.h) / 2;
-        this.cfg.tabs.forEach((id, i) => {
-            const x = R.x, y = R.y + i * (R.h + R.gap), w = R.w, h = R.h, sel = id === this.tab;
-            if (sel) {
-                cv.card(x, y, w, h, 12, [[0, A(C.blue, 0.30)], [1, A(C.blueDeep, 0.10)]]);
-                cv.strokeRoundRect(x, y, w, h, 12, 1, A(C.blueHi, 0.35));
-                cv.roundRect(x, y + 12, 4, h - 24, 2, C.blue);
-            }
-            icon(cv, (TAB[id] || {}).icon, x + 34, y + h / 2, sel ? C.text : C.dim);
-            cv.text(this.tabName(id), x + 64, y + 30 - dy, 21, sel ? '#ffffff' : C.text, { font: 'bold', literal: true });
-            cv.text(this.tabValue(id), x + 64, y + 53 - dy * 1.5, 15, sel ? A(C.blueHi, 0.95) : C.dim, { literal: true });
-            cv.target(x, y, w, h, () => { this.tab = id; this.picker = null; this.kick(); }, 'tab:' + id, 12);
-        });
+        const tabs = this.cfg.tabs.map((id) => ({ id, name: this.tabName(id), value: this.tabValue(id), icon: (TAB[id] || {}).icon }));
+        gt3.rail(cv, this.P, RAIL.x, RAIL.y, RAIL.w, bottom, tabs, this.tab, (id) => { this.tab = id; this.picker = null; this.kick(); });
     }
     tabName(id) { return id === 'look' ? this.cfg.look.name : TAB[id].name; }
     tabValue(id) {
@@ -184,14 +179,15 @@ class Page {
         if (id === 'readouts') { const l = this.editLayout(); return l ? this.layoutName(l) + ' · ' + this.hud.slotsOf(l).length + ' slots' : 'none here'; }
         if (id === 'position') {
             const p = this.hud.placeInfo();
-            return (p.x || p.y ? 'moved' : 'centred') + ' · ' + Math.round(p.scale * 100) + ' %';
+            return (p.x || p.y ? 'moved' : 'centred') + ' · ' + Math.round(p.scale * 100) + ' % · ' + this.valueText('hudTheme').replace(/ \(.*\)$/, '');
         }
-        if (id === 'map') return this.get('mapInTheme') ? 'Waze map · on' : 'Waze map · off';
-        if (id === 'badge') return badges.text(this.get('badge'), this.get('badgeBMW') === true) || 'none';
-        if (id === 'alerts') { const n = WARN_KEYS.filter((k) => this.get(k) > 0).length; return n ? n + ' warning' + (n > 1 ? 's' : '') + ' on' : 'warnings off'; }
-        if (id === 'gmeter') return this.optLabel('gRange', this.get('gRange')) + ' · trail ' + this.optLabel('gTrail', this.get('gTrail')).toLowerCase();
-        if (id === 'colours') return this.valueText('hudTheme').replace(/ \(.*\)$/, '');
-        if (id === 'settings') return (this.hud.unitUs('speed') ? 'mph' : 'km/h') + ' · ' + (this.hud.unitUs('temp') ? '°F' : '°C') + ' · ' + (this.hud.unitUs('press') ? 'psi' : 'bar');
+        if (id === 'units') return (this.hud.unitUs('speed') ? 'mph' : 'km/h') + ' · ' + (this.hud.unitUs('temp') ? '°F' : '°C') + ' · ' + (this.hud.unitUs('press') ? 'psi' : 'bar');
+        if (id === 'shift') {
+            const n = WARN_KEYS.filter((k) => this.item(k) && this.get(k) > 0).length;
+            return fmtInt(this.get('redline') - (this.get('shiftBefore') || 0)) + ' rpm · ' + n + ' warning' + (n === 1 ? '' : 's');
+        }
+        if (id === 'clock') return (badges.text(this.get('badge'), false) || 'no badge') + ' · ' + (this.get('clock') === '24h' ? '24-hour' : '12-hour');
+        if (id === 'system') return 'v' + this.ctx.spec.version + ' · ' + this.P.name.toLowerCase() + ' boxes';
         return '';
     }
 
@@ -224,8 +220,8 @@ class Page {
             glass(cv, x, yy, gw, gh, sel);
             const ih = Math.min(gh - 34, (gw - 16) * 0.375), iw = ih / 0.375;
             this.picture(cv, v, 'small', x + (gw - iw) / 2, yy + 8, iw, ih);
-            cv.text(this.layoutName(v), x + 12, yy + gh - 10, 16, '#ffffff', { font: 'bold', literal: true });
-            cv.text(this.tag(v), x + gw - 12, yy + gh - 10, 13, C.dim, { align: 'right', literal: true });
+            const nw = cv.text(this.layoutName(v), x + 12, yy + gh - 10, 16, '#ffffff', { font: 'bold', literal: true });
+            if (nw + cv.textWidth(this.tag(v), 13, { literal: true }) + 36 < gw) cv.text(this.tag(v), x + gw - 12, yy + gh - 10, 13, C.dim, { align: 'right', literal: true });
             cv.target(x, yy, gw, gh, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
         });
     }
@@ -359,7 +355,7 @@ class Page {
     positionTab(cv, bottom) {
         const shown = this.shownName(), p = this.hud.placeInfo();
         label(cv, CX, 70, (shown === 'off' ? 'HUD' : this.layoutName(shown)) + ' · where it sits on the glass');
-        const k = Math.min(0.9, (bottom - 96) / 480), bw = 800 * k, bh = 480 * k, bx = CX, by = 84;
+        const k = Math.min(0.66, (bottom - 96 - 150) / 480), bw = 800 * k, bh = 480 * k, bx = CX, by = 84;
         cv.card(bx - 10, by - 10, bw + 20, bh + 20, 18, [[0, '#ffffff0b'], [1, '#ffffff03']]);
         cv.roundRect(bx, by, bw, bh, 10, '#000000');
         const pic = shown !== 'off' && previews.get(shown, 'full');
@@ -389,186 +385,172 @@ class Page {
         this.stepRow(cv, rx, sy, w, 'Size', 'hudScale', (val) => val + ' %');
         cv.text('x ' + p.x + '  y ' + p.y, rx, sy + 92, 16, C.dim, { literal: true });
         note(cv, rx, sy + 122, ['The dashed frame is the part of the HUD you can see.', 'Every tap moves the real HUD right away.']);
+        // the colours on the glass, under the picture (was the Colours tab)
+        const P = this.P, cw = bw + 20, cx0 = bx - 10;
+        let y = gt3.section(cv, P, cx0, by + bh + 22, cw, bottom - (by + bh + 22), 'Colours on the glass');
+        const opts = (k2) => (this.item(k2).options || []).map((o) => [o[0], o[1].replace(/ \(.*\)$/, '')]);
+        let cy = gt3.row(cv, P, cx0, y, cw, 52, 'Theme', null, true);
+        gt3.seg(cv, P, cx0 + cw - 12, cy, opts('hudTheme'), this.get('hudTheme'), (v) => this.set('hudTheme', v), 'set:hudTheme', 17);
+        if (this.get('hudTheme') === 'auto' && this.item('dayTheme')) {
+            y += 52;
+            cy = gt3.row(cv, P, cx0, y, cw, 52, 'In daylight');
+            gt3.seg(cv, P, cx0 + cw - 12, cy, opts('dayTheme'), this.get('dayTheme'), (v) => this.set('dayTheme', v), 'set:dayTheme', 17);
+        }
     }
 
-    /* ---------- Map (cluster) ---------- */
-    mapTab(cv) {
-        label(cv, CX, 70, 'Navigation map on the cluster');
-        let y = 84;
-        const w = CW * 0.6;
-        y = this.toggleRow(cv, CX, y, w, 'Show Waze map inside the theme', 'mapInTheme');
-        // live state from waze.js: the map showing, waiting, the Waze app busy, Waze on Cluster missing
-        const info = this.hud.waze ? this.hud.waze.info() : { text: 'Not available in this app', up: false, ok: false };
-        let text = info.text;
-        if (this.get('mapInTheme') && !this.hud.mapLayout && this.hud.activeName !== 'off') text = 'This theme has no map version (GT3, Sport and M do)';
-        glass(cv, CX, y, w, 46, false);
-        cv.circle(CX + 26, y + 23, 7, info.up ? C.live : info.ok ? C.dim : '#e0a340');
-        cv.text(text, CX + 46, y + 30, 18, info.up ? C.live : C.text, { literal: true });
-        y += 54;
-        note(cv, CX, y + 26, [
-            'On: GT3, Sport and M open a window in the middle and Waze on Cluster draws its map in it, above',
-            'BMW\'s own map view, so nothing shows twice. When the map goes away the theme fills back in.',
-            'While on, Waze\'s map on the HUD is off (the cluster and the HUD share one picture).',
-            'Needs robertnisipeanu\'s Waze on Cluster. Turning this off gives Waze its usual place back.',
-        ]);
-    }
-
-    /* ---------- Badge (cluster) ---------- */
-    /** The series as chips, that series' models to tap, BMW lettering, and what the cluster shows. */
-    badgeTab(cv, bottom) {
-        const model = this.get('badge'), lw = 760;
+    /* ---------- Badge & clock (cluster) ---------- */
+    /** The series as chips and that series' models on the left; the badge, the lettering, the clock and night colours right. */
+    clockTab(cv, bottom) {
+        const P = this.P, model = this.get('badge'), lw = 640;
         const series = this.series || badges.seriesOf(model) || 'X';
         label(cv, CX, 70, 'Series');
         let cx = CX;
-        badges.SERIES.forEach((s) => { cx += chip(cv, cx, 82, s[0], s[0] === series, () => { this.series = s[0]; this.kick(); }, 'series:' + s[0]) + 6; });
-        label(cv, CX, 150, 'Model');
+        badges.SERIES.forEach((s) => { cx += chip(cv, cx, 80, s[0], s[0] === series, () => { this.series = s[0]; this.kick(); }, 'series:' + s[0]) + 6; });
+        label(cv, CX, 144, 'Model');
         const list = (badges.SERIES.find((s) => s[0] === series) || [null, []])[1];
-        const cw = (lw - 12) / 2, rh = Math.min(52, Math.floor((bottom - 162) / Math.ceil(list.length / 2)) - 6);
+        const cw = (lw - 12) / 2, rh = Math.min(50, Math.floor((bottom - 156) / Math.ceil(list.length / 2)) - 6);
         list.forEach((m, i) => {
-            const x = CX + (i % 2) * (cw + 12), y = 162 + Math.floor(i / 2) * (rh + 6), sel = m === model;
+            const x = CX + (i % 2) * (cw + 12), y = 156 + Math.floor(i / 2) * (rh + 6), sel = m === model;
             glass(cv, x, y, cw, rh, sel);
             cv.text(m, x + 18, y + rh / 2 + 7, 19, sel ? '#ffffff' : C.text, { font: sel ? 'bold' : 'label', literal: true });
             if (sel) check(cv, x + cw - 30, y + rh / 2, '#ffffff');
-            cv.target(x, y, cw, rh, () => this.set('badge', m), 'badge:' + m, 14);
+            cv.target(x, y, cw, rh, () => this.set('badge', m), 'badge:' + m, 6);
         });
-        // right: what shows, the lettering, none
-        const rx = CX + lw + 30, rw = CR - rx, shown = badges.text(model, this.get('badgeBMW') === true);
-        label(cv, rx, 70, 'On the cluster');
-        cv.card(rx, 82, rw, 110, 16, [[0, '#000000'], [1, '#05070a']]);
-        cv.strokeRoundRect(rx, 82, rw, 110, 16, 1, C.line);
-        cv.text(shown || 'No badge', rx + rw / 2, 148, shown ? 34 : 22, shown ? '#ffffff' : C.dim, { align: 'center', font: 'bold', literal: true });
-        let y = 204;
-        y = this.toggleRow(cv, rx, y, rw, 'BMW lettering', 'badgeBMW');
-        glass(cv, rx, y, rw, 56, model === 'none');
-        cv.text('No badge', rx + 18, y + 35, 19, C.text, { literal: true });
-        cv.target(rx, y, rw, 56, () => this.set('badge', 'none'), 'badge:none', 14);
-        note(cv, rx, y + 92, ['Drawn as text in the theme\'s own font.', 'GT3: top left. Sport and M: bottom centre.']);
+        // right: the badge as it shows, the lettering, none; then the clock
+        const rx = CX + lw + 16, rw = CR - rx, shown = badges.text(model, this.get('badgeBMW') === true);
+        let y = gt3.section(cv, P, rx, 50, rw, 30 + 64 + 56 + 56, 'Badge', 'top left of the cluster');
+        gt3.fit(cv, shown || 'NO BADGE', rx + rw / 2, y + 46, 40, rw - 40, shown ? P.text : P.dim, { align: 'center' });
+        y += 64;
+        let cy = gt3.row(cv, P, rx, y, rw, 56, 'BMW lettering');
+        gt3.toggle(cv, P, rx + rw - 14, cy, this.get('badgeBMW') === true, () => this.set('badgeBMW', this.get('badgeBMW') !== true), 'set:badgeBMW');
+        y += 56;
+        cy = gt3.row(cv, P, rx, y, rw, 56, 'No badge');
+        gt3.toggle(cv, P, rx + rw - 14, cy, model === 'none', () => this.set('badge', model === 'none' ? 'X3 M40i' : 'none'), 'badge:none');
+        y = 50 + 30 + 64 + 56 + 56 + 12;
+        y = gt3.section(cv, P, rx, y, rw, 30 + 3 * 60, 'Clock and night');
+        cy = gt3.row(cv, P, rx, y, rw, 60, 'Clock', null, true);
+        gt3.seg(cv, P, rx + rw - 14, cy, [['12h', '12-hour'], ['24h', '24-hour']], this.get('clock'), (v) => this.set('clock', v), 'clock');
+        y += 60;
+        cy = gt3.row(cv, P, rx, y, rw, 60, 'Time zone', 'Follows the car until set');
+        gt3.button(cv, P, rx + rw - 14 - gt3.tw(cv, gt3.up(this.valueText('timeZone')), 19) - 36, cy - 19, this.valueText('timeZone'),
+            () => { this.picker = { key: 'timeZone', title: 'Time zone', fmt: tzText }; this.kick(); }, 'set:timeZone', true);
+        y += 60;
+        if (this.item('nightDim')) {
+            cy = gt3.row(cv, P, rx, y, rw, 60, 'Night colours', 'Dimmer after sunset');
+            gt3.seg(cv, P, rx + rw - 14, cy, [['auto', 'Auto'], ['off', 'Off']], this.get('nightDim'), (v) => this.set('nightDim', v), 'nightDim');
+        }
     }
 
-    /* ---------- Alerts (both) ---------- */
-    /** Warning limits (the readout flashes red over one) and the shift-light test. */
-    alertsTab(cv) {
-        label(cv, CX, 70, 'Warnings · the readout flashes red over its limit');
-        let y = 84;
-        const w = CW * 0.62;
-        WARN_KEYS.forEach((k) => { if (this.item(k)) y = this.stepRow(cv, CX, y, w, this.item(k).label.replace(/ warning$/, ''), k); });
-        y += 24;
-        label(cv, CX, y, 'Shift lights');
-        y += 14;
+    /* ---------- Units (both) ---------- */
+    /** US / Metric / Custom, then speed, temperature and pressure each; a live preview of four readouts. */
+    unitsTab(cv) {
+        const P = this.P, lw = 760, x = CX, us = (d) => this.hud.unitUs(d);
+        const pre = us('speed') && us('temp') && us('press') ? 'us' : !us('speed') && !us('temp') && !us('press') ? 'metric' : 'custom';
+        let y = gt3.section(cv, P, x, 50, lw, 30 + 4 * 66, 'Units', 'torque and power follow the preset');
+        let cy = gt3.row(cv, P, x, y, lw, 66, 'Preset', pre === 'custom' ? 'Your own mix, set below' : 'Sets all three below', true);
+        gt3.seg(cv, P, x + lw - 14, cy, [['us', 'US'], ['metric', 'Metric'], ['custom', 'Custom']], pre, (v) => {
+            if (v === 'custom') return;       // custom is what a single row below makes
+            this.set('units', v);
+            ['unitSpeed', 'unitTemp', 'unitPress'].forEach((k) => { if (this.item(k)) this.set(k, 'auto'); });
+        }, 'preset', 21);
+        y += 66;
+        [['Speed and distance', 'unitSpeed', [['mph', 'mph · mi'], ['kmh', 'km/h · km']], 'speed'],
+            ['Temperature', 'unitTemp', [['f', '°F'], ['c', '°C']], 'temp'],
+            ['Pressure', 'unitPress', [['psi', 'psi'], ['bar', 'bar']], 'press']].forEach(([n, k, opts, d]) => {
+            cy = gt3.row(cv, P, x, y, lw, 66, n);
+            gt3.seg(cv, P, x + lw - 14, cy, opts, us(d) ? opts[0][0] : opts[1][0], (v) => this.set(k, v), 'unit:' + k);
+            y += 66;
+        });
+        // the preview: four readouts as the dash draws them, live
+        const px = x + lw + 16, pw = CR - px, bw = (pw - 36) / 2, bh = 112;
+        y = gt3.section(cv, P, px, 50, pw, 30 + 2 * bh + 34, 'Preview', 'live');
+        ['speed', 'coolant', 'boost', 'range'].forEach((id, i) => {
+            const sn = sensors.get(id), bx = px + 12 + (i % 2) * (bw + 12), by = y + 12 + Math.floor(i / 2) * (bh + 10);
+            const u = sn ? this.hud.sensorUnit(sn) : '', v = sn ? this.hud.sensorValue(sn) : '--';
+            cv.roundRect(bx, by, bw, bh, 4, P.box);
+            cv.roundRect(bx + 2, by + 26, bw - 4, bh - 28, 3, P.bg);
+            gt3.txt(cv, sn ? sn.head : '', bx + 10, by + 20, 18, P.ink);
+            gt3.txt(cv, u, bx + bw - 10, by + 20, 18, P.ink, { align: 'right' });
+            gt3.fit(cv, v + (sn && sn.suffix ? sn.suffix : ''), bx + bw - 12, by + bh - 14, 64, bw - 24, P.text, { align: 'right' });
+        });
+    }
+
+    /* ---------- Shift & alerts (both) ---------- */
+    /** The shift lights (redline, shift point, cold guard, test) beside the warning limits with their colour bars. */
+    shiftTab(cv) {
+        const P = this.P, w = (CW - 16) / 2, x = CX, us = (d) => this.hud.unitUs(d);
+        const at = this.get('redline') - (this.get('shiftBefore') || 0);
+        let y = gt3.section(cv, P, x, 50, w, 30 + 3 * 64 + 84, 'Shift lights', fmtInt(at) + ' rpm');
+        let cy = gt3.row(cv, P, x, y, w, 64, 'Redline', null, true);
+        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('redline'), this.get('redline'), (v) => this.set('redline', v), (v) => fmtInt(v) + ' rpm');
+        y += 64;
+        cy = gt3.row(cv, P, x, y, w, 64, 'Shift point', 'Lights flash at ' + fmtInt(at) + ' rpm');
+        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('shiftBefore'), this.get('shiftBefore'), (v) => this.set('shiftBefore', v), (v) => (v ? fmtInt(v) + ' before' : 'At redline'));
+        y += 64;
+        if (this.item('coldGuard')) {
+            cy = gt3.row(cv, P, x, y, w, 64, 'Cold-engine guard', 'Earlier shift point until the oil is warm');
+            gt3.toggle(cv, P, x + w - 14, cy, this.get('coldGuard') === true, () => this.set('coldGuard', this.get('coldGuard') !== true), 'set:coldGuard');
+        }
+        y += 64;
         const testing = this.hud.shiftTesting && this.hud.shiftTesting();
         const d = this.hud.car && this.hud.car.data(), moving = d && !d.demo && d.speed > 3;
-        this.rowBox(cv, CX, y, w, 'Test the shift lights', 56);
-        const bt = testing ? 'Running' : moving ? 'Stop the car first' : 'Run test', bw = cv.textWidth(bt, 16, { font: 'bold', literal: true }) + 40;
-        cv.roundRect(CX + w - bw - 14, y + 10, bw, 36, 18, testing || moving ? '#ffffff12' : C.blue);
-        cv.text(bt, CX + w - 14 - bw / 2, y + 34, 16, testing || moving ? C.dim : C.ink, { align: 'center', font: 'bold', literal: true });
-        if (!testing && !moving) {
-            cv.target(CX, y, w, 56, () => {
-                if (this.hud.testShift()) { this.kick(); setTimeout(() => this.kick(), 4000); }
-            }, 'test:shift', 14);
-        }
-        note(cv, CX, y + 92, [
-            'Runs the rpm up to the shift point for about 4 seconds: the lights fill, go red and flash.',
-            'Only while the car stands. Set a limit to 0 (Off) to turn that warning off.',
-        ]);
-    }
-
-    /* ---------- G-meter (both) ---------- */
-    /** The range, the trail, which way it draws, the bests with a reset, and a live copy of the meter. */
-    gmeterTab(cv, bottom) {
-        const lw = 840, g = this.hud.gState ? this.hud.gState() : null;
-        label(cv, CX, 70, 'G-meter');
-        let y = 84;
-        y = this.chipRow(cv, CX, y, lw, 'Range', 'gRange');
-        y = this.chipRow(cv, CX, y, lw, 'Trail', 'gTrail');
-        const hw = (lw - 12) / 2;
-        this.toggleRow(cv, CX, y, hw, 'Swap left / right', 'gFlipLat');
-        y = this.toggleRow(cv, CX + hw + 12, y, hw, 'Brake on top', 'gFlipLong');
-        // the bests this drive (the car's left / right: gFlipLat turns its sign round)
-        glass(cv, CX, y, lw, 104, false);
-        cv.text('BEST THIS DRIVE, IN G', CX + 18, y + 26, 13, C.label, { font: 'bold', spacing: 2, literal: true });
-        const b = g ? g.best : null, sw = this.get('gFlipLat') === true;
-        const cols = [['Left', b && (sw ? b.right : b.left)], ['Right', b && (sw ? b.left : b.right)], ['Accel', b && b.accel], ['Brake', b && b.brake], ['Peak', b && b.total]];
-        cols.forEach((c, i) => {
-            const x = CX + 18 + i * 118;
-            cv.text(c[1] > 0 ? c[1].toFixed(2) : '--', x, y + 66, 28, i === 4 ? '#ffffff' : C.text, { font: 'bold', literal: true });
-            cv.text(c[0], x, y + 90, 15, C.dim, { literal: true });
+        cy = gt3.row(cv, P, x, y, w, 84, 'Test', testing ? 'Running: watch the cluster' : moving ? 'Only while the car stands' : 'Revs to the shift point for 4 s');
+        ['#2ecc71', '#2ecc71', '#f1c40f', '#e74c3c', '#e74c3c', '#3478ff'].forEach((c, i) => cv.circle(x + 26 + i * 26, cy + 30, 9, c));
+        const bt = testing ? 'Running' : 'Run test';
+        gt3.button(cv, P, x + w - 14 - gt3.tw(cv, gt3.up(bt), 19) - 36, cy - 19, bt, testing || moving ? null : () => {
+            if (this.hud.testShift()) { this.kick(); setTimeout(() => this.kick(), 4000); }
+        }, 'test:shift');
+        // the warning limits, in the display units, each with its colour bar
+        const rx = x + w + 16, rows = WARN_ROWS.filter((r) => this.item(r[0]));
+        y = gt3.section(cv, P, rx, 50, w, 30 + rows.length * 74, 'Warnings', 'in ' + (us('temp') ? '°F' : '°C') + ' and ' + (us('press') ? 'psi' : 'bar') + ' · 0 = off');
+        rows.forEach((r, i) => {
+            const k = r[0], v = this.get(k);
+            cy = gt3.row(cv, P, rx, y, w, 74, r[1], r[2], i === 0);
+            const caution = k === 'cautionCoolant' || k === 'warnCoolant' ? this.get('cautionCoolant') : null;
+            gt3.scaleBar(cv, P, rx + 16, cy + 27, w * 0.4, r[3], r[4], k === 'cautionCoolant' ? v : caution, k === 'cautionCoolant' ? this.get('warnCoolant') : v);
+            gt3.stepSetting(cv, P, rx + w - 14, cy, this.item(k), v, (nv) => this.set(k, nv), (nv) => warnText(k, nv, this.hud.unitUs(k === 'warnBoost' ? 'press' : 'temp')));
+            y += 74;
         });
-        const bw = 150, bx = CX + lw - bw - 18, by = y + 34;
-        cv.roundRect(bx, by, bw, 40, 20, '#ffffff14');
-        cv.text('Reset', bx + bw / 2, by + 26, 17, C.text, { align: 'center', font: 'bold', literal: true });
-        cv.target(bx, by, bw, 40, () => { if (this.hud.resetG) this.hud.resetG(); this.kick(); }, 'g:reset', 20);
-        y += 112;
-        note(cv, CX, y + 22, [
-            'From the car\'s own acceleration sensor. Parked on level ground it reads 0.00; hills add a little.',
-            'The outline is the most g this drive in every direction; Reset clears it with the bests.',
-        ]);
-        // right: the meter as the layout draws it, live
-        const rx = CX + lw + 30, rw = CR - rx, r = Math.min(rw / 2 - 30, (bottom - 120) / 2), cx = rx + rw / 2, cy = 84 + 18 + r;
-        label(cv, rx, 70, 'Live');
-        if (g) this.gPreview(cv, cx, cy, r, g);
-        const now = g && g.live ? (Math.sqrt(g.x * g.x + g.y * g.y)).toFixed(2) + ' g' : 'no g reading';
-        cv.text(now, cx, cy + r + 34, 20, g && g.live ? C.text : C.dim, { align: 'center', font: 'bold', literal: true });
-    }
-    /** The page's copy of the G-meter shader (shaders.js gmeter): bezel, rings, envelope, trail, dot. */
-    gPreview(cv, cx, cy, r, g) {
-        const max = g.max, step = max > 1.2 ? 0.5 : 0.25, k = (r - 6) / max;
-        const ring = (rr, w, c) => cv.arc(cx, cy, Math.max(0, rr - w / 2), rr + w / 2, 0, 360, c);
-        ring(r - 1, 2.5, '#c3cad6');
-        for (let v = step; v < max - 0.01; v += step) ring(v * k, 1, Math.abs(v / 0.5 - Math.round(v / 0.5)) < 0.01 ? '#ffffff55' : '#ffffff26');
-        cv.line(cx - r + 8, cy, cx + r - 8, cy, 1, '#ffffff30');
-        cv.line(cx, cy - r + 8, cx, cy + r - 8, 1, '#ffffff30');
-        cv.text(max.toFixed(1) + ' g', cx + r * 0.72 + 4, cy - r * 0.72 - 2, 14, C.dim, { literal: true });
-        const flipL = this.get('gFlipLong') === true;
-        cv.text(flipL ? 'BRAKE' : 'ACCEL', cx, cy - r + 26, 13, C.label, { align: 'center', font: 'bold', spacing: 1.5, literal: true });
-        cv.text(flipL ? 'ACCEL' : 'BRAKE', cx, cy + r - 14, 13, C.label, { align: 'center', font: 'bold', spacing: 1.5, literal: true });
-        cv.text('L', cx - r + 16, cy - 6, 13, C.label, { align: 'center', font: 'bold', literal: true });
-        cv.text('R', cx + r - 16, cy - 6, 13, C.label, { align: 'center', font: 'bold', literal: true });
-        const P = (x, y) => { const m = Math.sqrt(x * x + y * y), s = m > max ? max / m : 1; return [cx + x * s * k, cy + y * s * k]; };
-        // the envelope: drawn sector m at m * 7.5 degrees, + y up
-        const n = g.env.length;
-        for (let m = 0; m < n; m++) {
-            const a = g.env[m], b = g.env[(m + 1) % n];
-            if (!(a > 0.04 || b > 0.04)) continue;
-            const t0 = m * 2 * Math.PI / n, t1 = (m + 1) * 2 * Math.PI / n;
-            const p0 = P(Math.cos(t0) * a, -Math.sin(t0) * a), p1 = P(Math.cos(t1) * b, -Math.sin(t1) * b);
-            cv.line(p0[0], p0[1], p1[0], p1[1], 2, '#eef2f8cc');
-        }
-        if (!g.live) return;
-        const heat = (v) => (v >= 0.8 ? '#ff4b3e' : v >= 0.5 ? '#ffb028' : '#ffffff');
-        const pts = [[g.x, g.y]].concat(g.trail);
-        for (let i = 0; i + 1 < pts.length; i++) {
-            const a = P(pts[i][0], pts[i][1]), b = P(pts[i + 1][0], pts[i + 1][1]), f = i / 15;
-            cv.line(a[0], a[1], b[0], b[1], 4 - 3 * f, A(heat(Math.sqrt(g.x * g.x + g.y * g.y)), 0.85 - 0.75 * f));
-        }
-        const d = P(g.x, g.y), c = heat(Math.sqrt(g.x * g.x + g.y * g.y));
-        cv.circle(d[0], d[1], 18, A(c, 0.25));
-        cv.circle(d[0], d[1], 10, c);
     }
 
-    /* ---------- Colours (HUD) ---------- */
-    coloursTab(cv) {
-        label(cv, CX, 70, 'Colours on the glass');
-        let y = 84;
-        y = this.chipRow(cv, CX, y, CW, 'Theme', 'hudTheme');
-        if (this.get('hudTheme') === 'auto') y = this.chipRow(cv, CX, y, CW, 'In daylight', 'dayTheme');
-        note(cv, CX, y + 26, ['Auto switches to Night after sunset. The HUD is a projector: bright, solid colours read best.']);
-    }
-
-    /* ---------- Settings ---------- */
-    settingsTab(cv, bottom) {
-        label(cv, CX, 70, 'Settings');
-        const keys = this.cfg.settings.filter((k) => this.item(k));
-        const colW = (CW - 24) / 2, per = Math.ceil(keys.length / 2);
-        keys.forEach((k, i) => {
-            const x = CX + (i < per ? 0 : colW + 24), y = 84 + (i % per) * 64;
-            if (y + 56 > bottom) return;
-            const s = this.item(k);
-            if (s.type === 'bool') this.toggleRow(cv, x, y, colW, s.label, k);
-            else if (s.type === 'number') this.stepRow(cv, x, y, colW, s.label, k);
-            else this.pickRow(cv, x, y, colW, s.label, k);
+    /* ---------- System (both) ---------- */
+    /** Box colour and the app's display rows, demo data; About: version, autostart, what the engine reports. */
+    systemTab(cv, bottom) {
+        const P = this.P, w = (CW - 16) / 2, x = CX, keys = (this.cfg.display || []).filter((k) => this.item(k));
+        const rh = keys.length > 4 ? 52 : 60;
+        let y = gt3.section(cv, P, x, 50, w, 30 + 64 + keys.length * rh, 'Display');
+        let cy = gt3.row(cv, P, x, y, w, 64, 'Box colour', P.name + (this.cfg.what === 'HUD' ? ' · this page (the HUD\'s layouts have no boxes)' : ' · this page and the ' + this.cfg.what + '\'s boxes'), true);
+        gt3.swatches(cv, P, x + w - 14, cy, P.key, (v) => this.set('boxColour', v));
+        y += 64;
+        keys.forEach((k) => {
+            const it = this.item(k);
+            cy = gt3.row(cv, P, x, y, w, rh, it.label);
+            if (it.type === 'bool') gt3.toggle(cv, P, x + w - 14, cy, this.get(k) === true, () => this.set(k, this.get(k) !== true), 'set:' + k);
+            else if (it.type === 'number') gt3.stepSetting(cv, P, x + w - 14, cy, it, this.get(k), (v) => this.set(k, v), () => this.valueText(k));
+            else gt3.seg(cv, P, x + w - 14, cy, it.options.map((o) => [o[0], o[1].replace(/ \(.*\)$/, '')]), this.get(k), (v) => this.set(k, v), 'set:' + k, 17);
+            y += rh;
         });
-        // what the engine says it is doing (layers, pixel memory, why nothing shows): for checking on the car
-        cv.text(this.hud.lastStatus || '', CX, bottom - 6, 15, C.label, { literal: true });
+        // right: Data at the bottom, About above it
+        const rx = x + w + 16, spec = this.ctx.spec, demo = this.hud.car && this.hud.car.data().demo, dataH = this.item('demo') ? 30 + 64 : 0;
+        if (dataH) {
+            y = gt3.section(cv, P, rx, bottom - dataH, w, dataH, 'Data');
+            cy = gt3.row(cv, P, rx, y, w, 64, 'Demo data', 'Auto: only until the car sends data', true);
+            gt3.seg(cv, P, rx + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('demo'), (v) => this.set('demo', v), 'demo');
+        }
+        bottom -= dataH ? dataH + 12 : 0;
+        y = gt3.section(cv, P, rx, 50, w, bottom - 50, 'About');
+        gt3.txt(cv, spec.title, rx + 16, y + 40, 32, P.text);
+        gt3.txt(cv, 'v' + spec.version, rx + 24 + gt3.tw(cv, spec.title, 32), y + 40, 20, P.dim);
+        gt3.txt(cv, 'Starts with the car: ' + (spec.autostart ? 'yes' : 'no, open it from the menu'), rx + 16, y + 74, 20, P.text);
+        gt3.txt(cv, 'Car data: ' + (demo ? 'demo' : 'live'), rx + 16, y + 102, 20, demo ? P.warm : P.ok);
+        gt3.txt(cv, 'All of the settings as a list: the bar button All settings.', rx + 16, y + 130, 17, P.dim);
+        // what the engine reports (layers, memory, why nothing shows), wrapped
+        const words = String(this.hud.lastStatus || '').split(' '), lines = [];
+        let line = '';
+        words.forEach((wd) => { const t = line ? line + ' ' + wd : wd; if (gt3.tw(cv, t, 16) > w - 32 && line) { lines.push(line); line = wd; } else line = t; });
+        if (line) lines.push(line);
+        gt3.txt(cv, 'STATUS', rx + 16, y + 168, 16, P.dim);
+        lines.slice(0, Math.floor((bottom - y - 190) / 21)).forEach((l, i) => gt3.txt(cv, l, rx + 16, y + 192 + i * 21, 16, P.text));
     }
 
     /* ---------- rows ---------- */
@@ -620,13 +602,13 @@ class Page {
         const p = this.picker, s = this.item(p.key), opts = s.type === 'number' ? (s.steps || []).map((v) => [v, null]) : s.options || [];
         cv.fillRect(0, 36, W, bottom + 20, '#000000b0');
         const w = 620, rh = 58, h = 76 + opts.length * rh, x = (W - w) / 2, y = Math.max(52, (bottom + 44 - h) / 2);
-        cv.card(x, y, w, h, 18, [[0, '#18233a'], [1, '#0c111b']]);
-        cv.strokeRoundRect(x, y, w, h, 18, 1, A(C.blueHi, 0.3));
-        cv.text(p.title.toUpperCase(), x + 26, y + 42, 15, C.label, { font: 'bold', spacing: 2.4, literal: true });
+        cv.roundRect(x, y, w, h, 5, C.blue);
+        cv.roundRect(x + 2, y + 44, w - 4, h - 46, 3, C.bg);
+        cv.text(p.title.toUpperCase(), x + 18, y + 31, 22, C.ink, { font: 'race', literal: true });
         const v = this.get(p.key);
         opts.forEach((o, i) => {
             const ry = y + 60 + i * rh, sel = o[0] === v;
-            if (sel) cv.roundRect(x + 12, ry, w - 24, rh - 6, 12, A(C.blue, 0.35));
+            if (sel) cv.roundRect(x + 12, ry, w - 24, rh - 6, 4, A(C.blue, 0.3));
             const text = p.fmt ? p.fmt(o[0]) : o[1] !== null ? o[1] : fmtInt(o[0]) + ' rpm';
             cv.text(text, x + 30, ry + 34, 20, sel ? '#ffffff' : C.text, { font: sel ? 'bold' : 'label', literal: true });
             if (sel) check(cv, x + w - 50, ry + 26, '#ffffff');
@@ -643,19 +625,20 @@ class Page {
         const q = this.confirm, close = () => { this.confirm = null; this.kick(); };
         cv.fillRect(0, 36, W, bottom + 20, '#000000b0');
         const w = 720, h = 96 + q.lines.length * 30 + 84, x = (W - w) / 2, y = Math.max(52, (bottom + 44 - h) / 2);
-        cv.card(x, y, w, h, 18, [[0, '#18233a'], [1, '#0c111b']]);
-        cv.strokeRoundRect(x, y, w, h, 18, 1, A(C.blueHi, 0.3));
+        cv.roundRect(x, y, w, h, 5, C.blue);
+        cv.roundRect(x + 2, y + 2, w - 4, h - 4, 3, C.bg);
         cv.text(q.title, x + 32, y + 56, 28, '#ffffff', { font: 'bold', literal: true });
         q.lines.forEach((s, i) => cv.text(s, x + 32, y + 98 + i * 30, 19, C.text, { literal: true }));
         const bh = 52, by = y + h - bh - 24;
         const yw = cv.textWidth(q.yes, 18, { font: 'bold', literal: true }) + 56, yx = x + w - 32 - yw;
-        cv.roundRect(yx, by, yw, bh, bh / 2, C.blue);
+        cv.roundRect(yx, by, yw, bh, 4, C.blue);
         cv.text(q.yes, yx + yw / 2, by + 33, 18, C.ink, { align: 'center', font: 'bold', literal: true });
-        cv.target(yx, by, yw, bh, () => { this.confirm = null; q.run(); this.kick(); }, 'confirm:yes', bh / 2);
+        cv.target(yx, by, yw, bh, () => { this.confirm = null; q.run(); this.kick(); }, 'confirm:yes', 4);
         const nw = 150, nx = yx - 16 - nw;
-        cv.roundRect(nx, by, nw, bh, bh / 2, '#ffffff14');
+        cv.roundRect(nx, by, nw, bh, 4, '#ffffff3a');
+        cv.roundRect(nx + 2, by + 2, nw - 4, bh - 4, 3, C.bg);
         cv.text('Cancel', nx + nw / 2, by + 33, 18, C.text, { align: 'center', font: 'bold', literal: true });
-        cv.target(nx, by, nw, bh, close, 'confirm:no', bh / 2);
+        cv.target(nx, by, nw, bh, close, 'confirm:no', 4);
         cv.target(0, 36, W, bottom, close, 'confirm:close');
     }
 }
@@ -672,34 +655,33 @@ function warnText(k, v, us) {
 /** a "timeZone" setting value as the row shows it (shared/tz.js) */
 function tzText(v) { return tz.name(v); }
 function fmtInt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
-function label(cv, x, y, s) { cv.text(s.toUpperCase(), x, y, 14, C.label, { font: 'bold', spacing: 2.4, literal: true }); }
+function label(cv, x, y, s) { cv.text(s.toUpperCase(), x, y, 16, C.blue, { font: 'race', spacing: 1, literal: true }); }
 function note(cv, x, y, lines) { lines.forEach((s, i) => cv.text(s, x, y + i * 26, 17, C.dim, { literal: true })); }
+/** a card in the GT3 look: black in a grey frame, or framed in the box colour when selected */
 function glass(cv, x, y, w, h, sel) {
-    if (sel) {
-        cv.card(x, y, w, h, 16, [[0, A(C.blue, 0.16)], [1, A(C.blueDeep, 0.05)]]);
-        cv.strokeRoundRect(x, y, w, h, 16, 2, C.blue);
-    } else {
-        cv.card(x, y, w, h, 16, [[0, '#ffffff0b'], [1, '#ffffff04']]);
-        cv.strokeRoundRect(x, y, w, h, 16, 1, C.line);
-    }
+    cv.roundRect(x, y, w, h, 5, sel ? C.blue : '#ffffff3a');
+    cv.roundRect(x + 2, y + 2, w - 4, h - 4, 3, sel ? '#14161a' : C.bg);
 }
 function chip(cv, x, y, text, on, run, key) {
-    const w = cv.textWidth(text, 16, { font: 'bold', literal: true }) + 30, h = 36;
-    cv.roundRect(x, y, w, h, h / 2, on ? C.blue : '#ffffff12');
-    cv.text(text, x + w / 2, y + 24, 16, on ? C.ink : C.off, { align: 'center', font: 'bold', literal: true });
-    cv.target(x, y, w, h, run, key, h / 2);
+    const w = cv.textWidth(text.toUpperCase(), 17, { font: 'race', literal: true }) + 26, h = 34;
+    cv.roundRect(x, y, w, h, 4, C.blue);
+    if (!on) cv.roundRect(x + 2, y + 2, w - 4, h - 4, 3, C.bg);
+    cv.text(text.toUpperCase(), x + w / 2, y + 23, 17, on ? C.ink : C.text, { align: 'center', font: 'race', literal: true });
+    cv.target(x, y, w, h, run, key, 4);
     return w;
 }
 /** A small chip (the HUD cards' drive modes). */
 function miniChip(cv, x, y, text, on, run, key) {
-    const w = cv.textWidth(text, 13, { font: 'bold', literal: true }) + 18, h = 28;
-    cv.roundRect(x, y, w, h, h / 2, on ? C.blue : '#ffffff12');
-    cv.text(text, x + w / 2, y + 19, 13, on ? C.ink : C.off, { align: 'center', font: 'bold', literal: true });
-    cv.target(x, y, w, h, run, key, h / 2);
+    const w = cv.textWidth(text.toUpperCase(), 14, { font: 'race', literal: true }) + 16, h = 26;
+    cv.roundRect(x, y, w, h, 3, on ? C.blue : '#ffffff3a');
+    if (!on) cv.roundRect(x + 2, y + 2, w - 4, h - 4, 2, C.bg);
+    cv.text(text.toUpperCase(), x + w / 2, y + 18, 14, on ? C.ink : C.off, { align: 'center', font: 'race', literal: true });
+    cv.target(x, y, w, h, run, key, 3);
     return w;
 }
 function stepBtn(cv, x, y, sign, live, run, key) {
-    cv.roundRect(x, y, 48, 38, 10, live ? '#ffffff14' : '#ffffff07');
+    cv.roundRect(x, y, 48, 38, 4, live ? C.blue : '#ffffff20');
+    cv.roundRect(x + 2, y + 2, 44, 34, 3, C.bg);
     const c = live ? C.text : '#ffffff30';
     cv.fillRect(x + 15, y + 18, 18, 2.5, c);
     if (sign === '+') cv.fillRect(x + 22.75, y + 10, 2.5, 18, c);
@@ -715,56 +697,17 @@ function dashed(cv, x, y, w, h, c) {
     for (let t = 0; t < h; t += d + g) { const l = Math.min(d, h - t); cv.fillRect(x, y + t, 2, l, c); cv.fillRect(x + w - 2, y + t, 2, l, c); }
 }
 function padBtn(cv, x, y, s, what, run, key) {
-    cv.card(x, y, s, s, 16, [[0, '#ffffff12'], [1, '#ffffff06']]);
-    cv.strokeRoundRect(x, y, s, s, 16, 1, C.line);
+    cv.roundRect(x, y, s, s, 5, C.blue);
+    cv.roundRect(x + 2, y + 2, s - 4, s - 4, 3, C.bg);
     const cx = x + s / 2, cy = y + s / 2, a = 13, c = '#ffffff';
     if (what === 'up') cv.quad([[cx, cy - a], [cx + a, cy + a * 0.7], [cx, cy + a * 0.7], [cx - a, cy + a * 0.7]], c);
     else if (what === 'down') cv.quad([[cx, cy + a], [cx - a, cy - a * 0.7], [cx, cy - a * 0.7], [cx + a, cy - a * 0.7]], c);
     else if (what === 'left') cv.quad([[cx - a, cy], [cx + a * 0.7, cy - a], [cx + a * 0.7, cy], [cx + a * 0.7, cy + a]], c);
     else if (what === 'right') cv.quad([[cx + a, cy], [cx - a * 0.7, cy + a], [cx - a * 0.7, cy], [cx - a * 0.7, cy - a]], c);
-    else cv.text('Centre', cx, cy + 6, 17, C.blueHi, { align: 'center', font: 'bold', literal: true });
-    cv.target(x, y, s, s, run, key, 16);
+    else cv.text('CENTRE', cx, cy + 6, 18, C.text, { align: 'center', font: 'race', literal: true });
+    cv.target(x, y, s, s, run, key, 5);
 }
 function chevron(cv, x, y, c) { cv.line(x - 4, y - 7, x + 3, y, 2.5, c); cv.line(x + 3, y, x - 4, y + 7, 2.5, c); }
 function check(cv, x, y, c) { cv.line(x - 9, y, x - 3, y + 6, 3, c); cv.line(x - 3, y + 6, x + 9, y - 7, 3, c); }
-
-/** Line icons for the rail, about 26 px, centred on (x, y). */
-function icon(cv, name, x, y, c) {
-    const lw = 2.2;
-    if (name === 'screen') {
-        cv.strokeRoundRect(x - 13, y - 10, 26, 17, 3, lw, c);
-        cv.line(x - 6, y + 12, x + 6, y + 12, lw, c);
-    } else if (name === 'map') {
-        cv.polyline([[x - 13, y - 8], [x - 5, y - 11], [x + 5, y - 7], [x + 13, y - 10], [x + 13, y + 9], [x + 5, y + 12], [x - 5, y + 8], [x - 13, y + 11], [x - 13, y - 8]], lw, c);
-        cv.line(x - 5, y - 11, x - 5, y + 8, lw, c); cv.line(x + 5, y - 7, x + 5, y + 12, lw, c);
-    } else if (name === 'colour') {
-        cv.arc(x, y, 9.5, 12, 0, 360, c);
-        cv.arc(x, y, 0, 10, 180, 360, c);
-    } else if (name === 'lines') {
-        [-8, 0, 8].forEach((d) => { cv.circle(x - 10, y + d, 2.2, c); cv.line(x - 4, y + d, x + 13, y + d, lw, c); });
-    } else if (name === 'move') {
-        cv.line(x - 13, y, x + 13, y, lw, c); cv.line(x, y - 13, x, y + 13, lw, c);
-        [[0, -13, -4, -9, 4, -9], [0, 13, -4, 9, 4, 9], [-13, 0, -9, -4, -9, 4], [13, 0, 9, -4, 9, 4]].forEach((t) => {
-            cv.line(x + t[0], y + t[1], x + t[2], y + t[3], lw, c); cv.line(x + t[0], y + t[1], x + t[4], y + t[5], lw, c);
-        });
-    } else if (name === 'badge') {
-        cv.strokeRoundRect(x - 14, y - 9, 28, 18, 5, lw, c);
-        cv.line(x - 7, y, x + 7, y, lw, c);
-    } else if (name === 'alert') {
-        cv.polyline([[x, y - 12], [x + 13, y + 10], [x - 13, y + 10], [x, y - 12]], lw, c);
-        cv.line(x, y - 4, x, y + 3, lw, c);
-        cv.circle(x, y + 6.5, 1.4, c);
-    } else if (name === 'gmeter') {
-        cv.arc(x, y, 11, 13.2, 0, 360, c);
-        cv.line(x - 8, y, x + 8, y, 1.4, c); cv.line(x, y - 8, x, y + 8, 1.4, c);
-        cv.circle(x + 4.5, y - 4, 3.2, c);
-    } else if (name === 'cog') {
-        cv.arc(x, y, 6.5, 9, 0, 360, c);
-        for (let i = 0; i < 8; i++) {
-            const a = i * Math.PI / 4;
-            cv.line(x + Math.sin(a) * 9, y - Math.cos(a) * 9, x + Math.sin(a) * 13, y - Math.cos(a) * 13, 3, c);
-        }
-    }
-}
 
 module.exports = Page;

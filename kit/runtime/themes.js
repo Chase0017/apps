@@ -43,7 +43,8 @@ const THEMES = {
     },
 };
 
-function theme(id) { return THEMES[id] || THEMES.m_tricolour; }
+// chase0017-apps: the apps have no theme setting any more (Nov 13 2026), so the default is Ice White
+function theme(id) { return THEMES[id] || THEMES.ice; }
 const ids = () => Object.keys(THEMES);
 
 module.exports = { THEMES, theme, ids };

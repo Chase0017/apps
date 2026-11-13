@@ -13,7 +13,8 @@
  *
  * Pure: draw(cv, snap, opt) uses only the kit canvas calls (fillRect, roundRect, strokeRoundRect, gradientRect,
  * circle, text, textWidth), so tools/telemetry-preview/ runs this same file in a browser.
- *   snap: Telemetry.snapshot() (SI units)   opt: { us (mph, mi), tempF (°F), psi, tyreWarn (C), tyreHot (C), frame(cv, badges), target(cb),
+ *   snap: Telemetry.snapshot() (SI units)   opt: { us (mph, mi), tempF (°F), psi, tyreWarn (C), tyreHot (C), tyreLow / tyreOver /
+ *         tyreOverRed (psi off the target), box ({ box, ink }: the box colour), slots ([5 SLOTS ids]), frame(cv, badges), target(cb),
  *         why(name): what the engine unit answered for config.dme[name], shown in a box without a value }
  */
 (function (root) {
@@ -38,6 +39,34 @@
     const high = (v, l) => (!isNum(v) ? null : v >= l[1] ? C.hot : v >= l[0] ? C.warm : null);
     const low = (v, l) => (!isNum(v) ? null : v < l[1] ? C.hot : v < l[0] ? C.warm : null);
     const cold = (v, below) => (isNum(v) && v < below ? C.cold : null);
+
+    /*
+     * What a small box (a slot, setting tBox1..5) can show: id -> { name, head, cat, dme (the config.dme value it needs),
+     * get(s, u) -> [value text, unit, colour, line under it] }. u: { sp, tf, ps, running }.
+     */
+    const PS = (v, u, d) => (isNum(v) ? (u.ps ? fmt(v * 14.5038, d[0]) : fmt(v, d[1])) : '--');
+    const TT = (c, u) => (isNum(c) ? fmt(u.tf ? c * 9 / 5 + 32 : c, 0) + '°' : '--');
+    const SLOTS = {
+        gearbox: { name: 'Gearbox oil', head: 'TRANS', cat: 'Temps', dme: 'egs', get: (s, u) => { const gc = cold(s.gearbox, LIM.cold.gearbox); return [TT(s.gearbox, u), U.temp(u.tf), high(s.gearbox, LIM.gearbox) || gc, gc ? 'WARMING UP' : 'GEARBOX', gc]; } },
+        ambient: { name: 'Outside', head: 'OUTSIDE', cat: 'Temps', get: (s, u) => { const ice = isNum(s.ambient) && s.ambient <= LIM.ice; return [TT(s.ambient, u), U.temp(u.tf), ice ? C.cold : null, ice ? 'ICE POSSIBLE' : '', C.warm]; } },
+        coolant: { name: 'Coolant', head: 'COOLANT', cat: 'Temps', get: (s, u) => [TT(s.coolant, u), U.temp(u.tf), high(s.coolant, [113, 120]) || cold(s.coolant, 40), ''] },
+        oil: { name: 'Oil temperature', head: 'OIL TEMP', cat: 'Temps', get: (s, u) => { const oc = cold(s.oil, 70); return [TT(s.oil, u), U.temp(u.tf), high(s.oil, [125, 135]) || oc, oc ? 'WARMING UP' : '', oc]; } },
+        intake: { name: 'Intake air', head: 'INTAKE', cat: 'Temps', dme: 'intake', get: (s, u) => [TT(s.intake, u), U.temp(u.tf), high(s.intake, LIM.icAfter), 'AFTER THE INTERCOOLER'] },
+        range: { name: 'Range', head: 'RANGE', cat: 'Fuel', get: (s, u) => [isNum(s.rangeKm) ? fmt(u.sp ? s.rangeKm / 1.609344 : s.rangeKm, 0) : '--', u.sp ? 'MI' : 'KM', low(s.rangeKm, LIM.range), ''] },
+        fuel: { name: 'Fuel level', head: 'FUEL', cat: 'Fuel', get: (s, u) => [isNum(s.fuelL) ? (u.sp ? fmt(s.fuelL / 3.78541, 1) : fmt(s.fuelL, 0)) : '--', u.sp ? 'GAL' : 'L', low(s.fuelL, [9, 5]), ''] },
+        hpfp: { name: 'Fuel rail', head: 'FUEL RAIL', cat: 'Fuel', dme: 'hpfp', get: (s, u) => [PS(s.hpfp, u, [0, 0]), U.press(u.ps), u.running ? low(s.hpfp, LIM.hpfp) : null, 'HIGH PRESSURE'] },
+        lpfp: { name: 'Low fuel pressure', head: 'LOW FUEL', cat: 'Fuel', dme: 'lpfp', get: (s, u) => [PS(s.lpfp, u, [0, 1]), U.press(u.ps), u.running ? low(s.lpfp, LIM.lpfp) : null, 'LOW PRESSURE PUMP'] },
+        oilP: { name: 'Oil pressure', head: 'OIL PRESS', cat: 'Engine', dme: 'oilPressure', get: (s, u) => [PS(s.oilP, u, [0, 1]), U.press(u.ps), u.running ? low(s.oilP, [1.0, 0.5]) : null, ''] },
+        afr: { name: 'Air-fuel ratio', head: 'AFR', cat: 'Engine', dme: 'afr', get: (s) => [fmt(s.afr, 1), '', isNum(s.afr) && s.afr > 15.5 && isNum(s.boost) && s.boost > 0.3 ? C.hot : null, isNum(s.afr) ? 'LAMBDA ' + (s.afr / 14.7).toFixed(2) : ''] },
+        timing: { name: 'Ignition timing', head: 'TIMING', cat: 'Engine', dme: 'timing', get: (s) => [isNum(s.timing) ? fmt(s.timing, 1) + '°' : '--', 'BTDC', null, ''] },
+        load: { name: 'Engine load', head: 'LOAD', cat: 'Engine', get: (s) => [fmt(s.loadActual, 0), '%', null, isNum(s.loadTarget) ? 'TARGET ' + fmt(s.loadTarget, 0) + ' %' : ''] },
+        boost: { name: 'Boost', head: 'BOOST', cat: 'Engine', get: (s, u) => [PS(s.boost, u, [1, 2]), U.press(u.ps), null, ''] },
+        rpm: { name: 'Engine speed', head: 'RPM', cat: 'Engine', get: (s) => [isNum(s.rpm) ? String(Math.round(s.rpm / 10) * 10) : '--', '', null, ''] },
+        speed: { name: 'Speed', head: 'SPEED', cat: 'Chassis', get: (s, u) => [isNum(s.speed) ? fmt(u.sp ? s.speed * 0.621371 : s.speed, 0) : '--', u.sp ? 'MPH' : 'KM/H', null, ''] },
+        gLat: { name: 'Lateral g', head: 'LAT G', cat: 'Chassis', get: (s) => [isNum(s.gLat) ? Math.abs(s.gLat).toFixed(2) : '--', 'G', null, ''] },
+    };
+    const SLOT_DEFAULTS = ['gearbox', 'ambient', 'range', 'hpfp', 'lpfp'];
+    const SLOT_WHERE = ['Top right, left', 'Top right, middle', 'Top right, right', 'Bottom left', 'Bottom left, right'];
 
     /* ---------- units ---------- */
     const fmt = (v, d) => (isNum(v) ? v.toFixed(d) : '--');
@@ -113,6 +142,13 @@
             cv.text(delta, px, y + h - 16, 32, dc, Object.assign({ align: 'right' }, F));
             cv.text(target !== null ? 'VS TARGET' : 'VS OTHER SIDE', px, y + h - 50, 16, C.dim, Object.assign({ align: 'right' }, F));
         }
+    }
+
+    /** a small box showing slot sensor `id` (SLOTS); its sub line says what the engine unit answered while it has no value */
+    function slotBox(cv, x, y, w, h, id, s, u, why) {
+        const sn = SLOTS[id] || SLOTS.gearbox, r = sn.get(s, u), none = r[0] === '--';
+        const note = none && sn.dme ? why(null, sn.dme) : '';
+        readout(cv, x, y, w, h, sn.head, r[1], r[0], r[2], note || r[3], note ? C.dim : r[4]);
     }
 
     /** the car from above, wheels lit while their tyre is warm or hot */
@@ -209,6 +245,9 @@
     }
 
     function draw(cv, s, opt) {
+        if (opt.box) { C.line = C.head = opt.box.box; C.ink = opt.box.ink; }
+        LIM.tyreLow = (opt.tyreLow || 3) / 14.5038;
+        LIM.tyreHigh = [(opt.tyreOver || 3) / 14.5038, (opt.tyreOverRed || 5) / 14.5038];
         const us = !!opt.us;                                                       // speed and distance
         const tf = opt.tempF === undefined ? us : !!opt.tempF, ps = opt.psi === undefined ? us : !!opt.psi;
         opt = Object.assign({}, opt, { tempF: tf, psi: ps });
@@ -223,10 +262,9 @@
         const L = [16, 16 + bw + g];
         const running = isNum(s.rpm) ? s.rpm > 500 : true;
         boostPanel(cv, L[0], ry(0), 2 * bw + g, 2 * rh + gap, s, ps);
-        readout(cv, L[0], ry(2), bw, rh, 'FUEL RAIL', U.press(ps), isNum(s.hpfp) ? (ps ? fmt(s.hpfp * 14.5038, 0) : fmt(s.hpfp, 0)) : '--',
-            running ? low(s.hpfp, LIM.hpfp) : null, why(s.hpfp, 'hpfp') || 'HIGH PRESSURE', isNum(s.hpfp) ? null : C.dim);
-        readout(cv, L[1], ry(2), bw, rh, 'LOW FUEL', U.press(ps), isNum(s.lpfp) ? (ps ? fmt(s.lpfp * 14.5038, 0) : fmt(s.lpfp, 1)) : '--',
-            running ? low(s.lpfp, LIM.lpfp) : null, why(s.lpfp, 'lpfp') || 'LOW PRESSURE PUMP', isNum(s.lpfp) ? null : C.dim);
+        const slots = (opt.slots || []).slice(0, 5), u = { sp: us, tf, ps, running }, slot = (i) => slots[i] || SLOT_DEFAULTS[i];
+        slotBox(cv, L[0], ry(2), bw, rh, slot(3), s, u, why);
+        slotBox(cv, L[1], ry(2), bw, rh, slot(4), s, u, why);
 
         /* ---------- tyres, middle ---------- */
         const mx0 = L[1] + bw + g, mx1 = W - 16 - 2 * bw - g - g, mw = mx1 - mx0;
@@ -247,17 +285,12 @@
         /* ---------- car, right ---------- */
         const R = [W - 16 - 2 * bw - g, W - 16 - bw];
         const sw = (2 * bw - g) / 3, S3 = [R[0], R[0] + sw + g, R[0] + 2 * (sw + g)];
-        const gc = cold(s.gearbox, LIM.cold.gearbox);
-        readout(cv, S3[0], ry(0), sw, rh, 'TRANS', U.temp(tf), T(s.gearbox), high(s.gearbox, LIM.gearbox) || gc, gc ? 'WARMING UP' : why(s.gearbox, 'egs') || 'GEARBOX', gc);
-        const ice = isNum(s.ambient) && s.ambient <= LIM.ice;
-        readout(cv, S3[1], ry(0), sw, rh, 'OUTSIDE', U.temp(tf), T(s.ambient), ice ? C.cold : null, ice ? 'ICE POSSIBLE' : '', C.warm);
-        readout(cv, S3[2], ry(0), sw, rh, 'RANGE', us ? 'MI' : 'KM', isNum(s.rangeKm) ? fmt(us ? s.rangeKm / 1.609344 : s.rangeKm, 0) : '--',
-            low(s.rangeKm, LIM.range));
+        [0, 1, 2].forEach((i) => slotBox(cv, S3[i], ry(0), sw, rh, slot(i), s, u, why));
         icBox(cv, R[0], ry(1), 2 * bw + g, rh, s, tf, why(isNum(s.chargeBefore) && isNum(s.intake) ? 0 : null, 'chargeBefore', 'intake'));
         gBox(cv, R[0], ry(2), 2 * bw + g, rh, s);
         if (opt.target) opt.target(cv, R[0], ry(2), 2 * bw + g, rh);     // a tap here resets the peaks
     }
 
-    const api = { draw, W, colors: C };
+    const api = { draw, W, colors: C, SLOTS, SLOT_DEFAULTS, SLOT_WHERE };
     if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ApexTelemetryDraw = api;
 })(this);

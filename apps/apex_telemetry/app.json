@@ -2,11 +2,13 @@
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
   "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
-  "shared": [],
+  "shared": [
+    "gt3ui.js"
+  ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
       "statusEngineSpeed2": "rs",
@@ -62,6 +64,10 @@
       "kind": "canvas",
       "title": "Apex Telemetry",
       "buttons": [
+        [
+          "BTN_SETUP",
+          "Setup"
+        ],
         [
           "BTN_SETTINGS",
           "All settings"
@@ -204,6 +210,461 @@
       ]
     },
     {
+      "key": "tBox1",
+      "label": "Small box 1 (top right, left)",
+      "type": "choice",
+      "default": "gearbox",
+      "options": [
+        [
+          "gearbox",
+          "Gearbox oil"
+        ],
+        [
+          "ambient",
+          "Outside"
+        ],
+        [
+          "coolant",
+          "Coolant"
+        ],
+        [
+          "oil",
+          "Oil temperature"
+        ],
+        [
+          "intake",
+          "Intake air"
+        ],
+        [
+          "range",
+          "Range"
+        ],
+        [
+          "fuel",
+          "Fuel level"
+        ],
+        [
+          "hpfp",
+          "Fuel rail"
+        ],
+        [
+          "lpfp",
+          "Low fuel pressure"
+        ],
+        [
+          "oilP",
+          "Oil pressure"
+        ],
+        [
+          "afr",
+          "Air-fuel ratio"
+        ],
+        [
+          "timing",
+          "Ignition timing"
+        ],
+        [
+          "load",
+          "Engine load"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "rpm",
+          "Engine speed"
+        ],
+        [
+          "speed",
+          "Speed"
+        ],
+        [
+          "gLat",
+          "Lateral g"
+        ]
+      ]
+    },
+    {
+      "key": "tBox2",
+      "label": "Small box 2 (top right, middle)",
+      "type": "choice",
+      "default": "ambient",
+      "options": [
+        [
+          "gearbox",
+          "Gearbox oil"
+        ],
+        [
+          "ambient",
+          "Outside"
+        ],
+        [
+          "coolant",
+          "Coolant"
+        ],
+        [
+          "oil",
+          "Oil temperature"
+        ],
+        [
+          "intake",
+          "Intake air"
+        ],
+        [
+          "range",
+          "Range"
+        ],
+        [
+          "fuel",
+          "Fuel level"
+        ],
+        [
+          "hpfp",
+          "Fuel rail"
+        ],
+        [
+          "lpfp",
+          "Low fuel pressure"
+        ],
+        [
+          "oilP",
+          "Oil pressure"
+        ],
+        [
+          "afr",
+          "Air-fuel ratio"
+        ],
+        [
+          "timing",
+          "Ignition timing"
+        ],
+        [
+          "load",
+          "Engine load"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "rpm",
+          "Engine speed"
+        ],
+        [
+          "speed",
+          "Speed"
+        ],
+        [
+          "gLat",
+          "Lateral g"
+        ]
+      ]
+    },
+    {
+      "key": "tBox3",
+      "label": "Small box 3 (top right, right)",
+      "type": "choice",
+      "default": "range",
+      "options": [
+        [
+          "gearbox",
+          "Gearbox oil"
+        ],
+        [
+          "ambient",
+          "Outside"
+        ],
+        [
+          "coolant",
+          "Coolant"
+        ],
+        [
+          "oil",
+          "Oil temperature"
+        ],
+        [
+          "intake",
+          "Intake air"
+        ],
+        [
+          "range",
+          "Range"
+        ],
+        [
+          "fuel",
+          "Fuel level"
+        ],
+        [
+          "hpfp",
+          "Fuel rail"
+        ],
+        [
+          "lpfp",
+          "Low fuel pressure"
+        ],
+        [
+          "oilP",
+          "Oil pressure"
+        ],
+        [
+          "afr",
+          "Air-fuel ratio"
+        ],
+        [
+          "timing",
+          "Ignition timing"
+        ],
+        [
+          "load",
+          "Engine load"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "rpm",
+          "Engine speed"
+        ],
+        [
+          "speed",
+          "Speed"
+        ],
+        [
+          "gLat",
+          "Lateral g"
+        ]
+      ]
+    },
+    {
+      "key": "tBox4",
+      "label": "Small box 4 (bottom left)",
+      "type": "choice",
+      "default": "hpfp",
+      "options": [
+        [
+          "gearbox",
+          "Gearbox oil"
+        ],
+        [
+          "ambient",
+          "Outside"
+        ],
+        [
+          "coolant",
+          "Coolant"
+        ],
+        [
+          "oil",
+          "Oil temperature"
+        ],
+        [
+          "intake",
+          "Intake air"
+        ],
+        [
+          "range",
+          "Range"
+        ],
+        [
+          "fuel",
+          "Fuel level"
+        ],
+        [
+          "hpfp",
+          "Fuel rail"
+        ],
+        [
+          "lpfp",
+          "Low fuel pressure"
+        ],
+        [
+          "oilP",
+          "Oil pressure"
+        ],
+        [
+          "afr",
+          "Air-fuel ratio"
+        ],
+        [
+          "timing",
+          "Ignition timing"
+        ],
+        [
+          "load",
+          "Engine load"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "rpm",
+          "Engine speed"
+        ],
+        [
+          "speed",
+          "Speed"
+        ],
+        [
+          "gLat",
+          "Lateral g"
+        ]
+      ]
+    },
+    {
+      "key": "tBox5",
+      "label": "Small box 5 (bottom left, right)",
+      "type": "choice",
+      "default": "lpfp",
+      "options": [
+        [
+          "gearbox",
+          "Gearbox oil"
+        ],
+        [
+          "ambient",
+          "Outside"
+        ],
+        [
+          "coolant",
+          "Coolant"
+        ],
+        [
+          "oil",
+          "Oil temperature"
+        ],
+        [
+          "intake",
+          "Intake air"
+        ],
+        [
+          "range",
+          "Range"
+        ],
+        [
+          "fuel",
+          "Fuel level"
+        ],
+        [
+          "hpfp",
+          "Fuel rail"
+        ],
+        [
+          "lpfp",
+          "Low fuel pressure"
+        ],
+        [
+          "oilP",
+          "Oil pressure"
+        ],
+        [
+          "afr",
+          "Air-fuel ratio"
+        ],
+        [
+          "timing",
+          "Ignition timing"
+        ],
+        [
+          "load",
+          "Engine load"
+        ],
+        [
+          "boost",
+          "Boost"
+        ],
+        [
+          "rpm",
+          "Engine speed"
+        ],
+        [
+          "speed",
+          "Speed"
+        ],
+        [
+          "gLat",
+          "Lateral g"
+        ]
+      ]
+    },
+    {
+      "key": "tyreLow",
+      "label": "Tyre pressure low (blue) under target, psi",
+      "type": "number",
+      "default": 3,
+      "steps": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "key": "tyreOver",
+      "label": "Tyre pressure high (yellow) over target, psi",
+      "type": "number",
+      "default": 3,
+      "steps": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "key": "tyreOverRed",
+      "label": "Tyre pressure high (red) over target, psi",
+      "type": "number",
+      "default": 5,
+      "steps": [
+        3,
+        4,
+        5,
+        6,
+        8
+      ]
+    },
+    {
+      "key": "boxColour",
+      "label": "Box colour",
+      "type": "choice",
+      "default": "white",
+      "options": [
+        [
+          "white",
+          "White"
+        ],
+        [
+          "silver",
+          "Silver"
+        ],
+        [
+          "yellow",
+          "Yellow"
+        ],
+        [
+          "orange",
+          "Orange"
+        ],
+        [
+          "red",
+          "Red"
+        ],
+        [
+          "mblue",
+          "M blue"
+        ],
+        [
+          "green",
+          "Green"
+        ]
+      ]
+    },
+    {
       "key": "demo",
       "label": "Demo data",
       "type": "choice",
@@ -222,28 +683,12 @@
           "Off"
         ]
       ]
-    },
-    {
-      "key": "theme",
-      "label": "Colour theme (center screen)",
-      "type": "choice",
-      "default": "ice",
-      "options": [
-        [
-          "ice",
-          "Ice White"
-        ],
-        [
-          "m_tricolour",
-          "M Tricolour"
-        ]
-      ]
     }
   ],
   "config": {
     "_comment": "Colours: yellow = warning, red = near critical. Tyres show no colour while fine. Temperature (the air inside the tyre): yellow from tyreWarn (130 F), red from tyreHot (150 F), nothing for cold. Pressure against the car's target: blue 3 psi under, yellow 3 psi over, red 5 psi over (UNEVEN against the other side of the axle when the car sends no target). Boost against target (only while the target is over 0.2 bar): white while fine, red when 3 psi (0.21 bar) off for 0.75 s.4 psi). Low pressure fuel (engine running): yellow under 4 bar, red under 3. Fuel rail: yellow under 25 bar, red under 15. Gearbox oil: yellow from 110 C, red from 125. Outside: yellow at 3 C and below (ice). Range: yellow under 80 km, red under 40. Intercooler: air after it yellow from 50 C, red from 60 C; heat soak (after minus outside) yellow from 20 C (36 F), red from 30 C (54 F).",
     "dme": {
-      "comment": "Read from the engine unit (DME, ecu 18) with UDS 0x22 over the kit's read-only link, only while the page shows; candidates are tried in order, the first plausible one wins (value = raw * factor + offset). The identifiers M Vitals reads (cauliflowermossgrape, MIT). boostTarget / boostActual: intake manifold pressure setpoint and actual, absolute kPa (the outside air pressure, baro, is subtracted). hpfp: fuel rail (high pressure) bar. lpfp: low pressure fuel bar. loadTarget / loadActual: requested and actual relative air charge %. egs: gearbox oil temperature from the gearbox unit (ecu 24), asked only while the car's basic data set has none. chargeBefore / intake: the charge air before the throttle (ahead of the B58's water-to-air intercooler) and in the plenum after it: the intercooler's drop and heat soak (after minus outside). The B58 has no temperature sensor in the intercooler's water circuit. Boost is intake MANIFOLD pressure (after the throttle): never the charge pipe (pressure before the throttle: PID 0x70 'boost pressure sensor A', DME 4205 IPLAD), which spikes when the throttle shuts on a lift or a shift (seen at 27 psi, Nov 13 2026).",
+      "comment": "Read from the engine unit (DME, ecu 18) with UDS 0x22 over the kit's read-only link, only while the page shows; candidates are tried in order, the first plausible one wins (value = raw * factor + offset). The identifiers M Vitals reads (cauliflowermossgrape, MIT). boostTarget / boostActual: intake manifold pressure setpoint and actual, absolute kPa (the outside air pressure, baro, is subtracted). hpfp: fuel rail (high pressure) bar. lpfp: low pressure fuel bar. loadTarget / loadActual: requested and actual relative air charge %. egs: gearbox oil temperature from the gearbox unit (ecu 24), asked only while the car's basic data set has none. chargeBefore / intake: the charge air before the throttle (ahead of the B58's water-to-air intercooler) and in the plenum after it: the intercooler's drop and heat soak (after minus outside). The B58 has no temperature sensor in the intercooler's water circuit. Boost is intake MANIFOLD pressure (after the throttle): never the charge pipe (pressure before the throttle: PID 0x70 'boost pressure sensor A', DME 4205 IPLAD), which spikes when the throttle shuts on a lift or a shift (seen at 27 psi, Nov 13 2026). oilPressure / afr / timing: as Apex Cluster reads them, asked only while a small box shows one.",
       "ecu": 18,
       "baro": [
         {
@@ -515,6 +960,113 @@
           "min": -40,
           "max": 160,
           "note": "gearbox unit (EGS, 0x18) transmission oil temperature, deg C + 48 (from a forum report, not confirmed on a car: only shown once it changes; the replies go to the log, \"raw EGS\")"
+        }
+      ],
+      "oilPressure": [
+        {
+          "did": "4436",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "I_DRUCK_OEL_IST_ABS, oil pressure actual (absolute), u16 hPa -> bar. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "586F",
+          "bytes": 2,
+          "at": 0,
+          "signed": true,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "OELDRUCK, oil pressure, s16 hPa -> bar (absolute, as Live Data reads it). DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        }
+      ],
+      "afr": [
+        {
+          "did": "5889",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0035888671875,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "ILAG1, lambda actual bank 1, u16 x 1/4096, times 14.7 for gasoline AFR. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "5640",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.003588858,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "LAMBDA_SONDE_IST, lambda from the probe, as 5889. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "F434",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD PID 0x34 wide-range O2 sensor bank 1 sensor 1: equivalence ratio (lambda) 2/65536 per bit, times 14.7 for gasoline AFR. Unverified on this car."
+        },
+        {
+          "obd": "34",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD service 01 PID 0x34 (same as F434)"
+        },
+        {
+          "did": "F424",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD PID 0x24 O2 sensor 1: equivalence ratio, as F434"
+        },
+        {
+          "obd": "24",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD service 01 PID 0x24 (same as F424)"
+        }
+      ],
+      "timing": [
+        {
+          "obd": "0E",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.5,
+          "offset": -64,
+          "min": -64,
+          "max": 63.5,
+          "note": "OBD service 01 PID 0x0E timing advance, degrees before TDC (cylinder 1); the candidates M Vitals (cauliflowermossgrape, MIT) reads"
+        },
+        {
+          "did": "F40E",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.5,
+          "offset": -64,
+          "min": -64,
+          "max": 63.5,
+          "note": "the same PID over UDS 0x22"
         }
       ]
     }

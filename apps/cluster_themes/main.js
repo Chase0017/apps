@@ -40,9 +40,9 @@ mgu.run({
         if (!hud) return;
         new Page(ctx, hud, {
             title: ctx.spec.title, what: 'cluster',
-            look: { name: 'Themes', style: 'hero', tags: { apex: 'GT3 race dash' } },
-            tabs: ['look', 'readouts', 'badge', 'alerts', 'settings'],
-            settings: ['units', 'unitSpeed', 'unitTemp', 'unitPress', 'clock', 'timeZone', 'tankLitres', 'redline', 'shiftBefore', 'coldGuard', 'showBoost', 'nightDim', 'stripClear', 'demo'],
+            look: { name: 'Layouts', style: 'hero', tags: { apex: 'GT3 race dash' } },
+            tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'],
+            display: ['showBoost', 'stripClear', 'tankLitres'],
         }).start();
     },
 });

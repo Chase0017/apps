@@ -1,0 +1,196 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Apex settings pages (real code)</title>
+<style>
+  body { background: #111; color: #ddd; font: 14px system-ui, sans-serif; margin: 12px; }
+  .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .bar button { background: #222; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  .bar button.on { background: #fff; color: #0b0d10; }
+  canvas { display: block; width: 1600px; max-width: 100%; border: 1px solid #333; cursor: pointer; }
+  #log { color: #f88; white-space: pre-wrap; font: 12px monospace; margin-top: 6px; }
+</style>
+</head>
+<body>
+<!-- The apps' own centre-screen pages as the car draws them: shared/page.js (Apex Cluster, Apex HUD) and
+     apps/apex_telemetry/setup.js + draw.js, the real files, on a stand-in for the kit's canvas (the baked race font
+     from kit/runtime/fonts) with the car's settings schemas from each app.json. Taps work: click the page.
+     Serve the repo root and open /tools/settings-preview/. -->
+<div class="bar">
+  <button data-app="cluster_themes" class="on">Apex Cluster</button><button data-app="idrive_hud_widgets">Apex HUD</button><button data-app="apex_telemetry">Apex Telemetry</button>
+  <button id="setupBtn" style="display:none">Setup (bar button)</button>
+  <span id="info" style="color:#888"></span>
+</div>
+<canvas id="c" width="1600" height="520"></canvas>
+<div id="log"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const V = '?v=' + Date.now();
+const logErr = (e) => { $('log').textContent += (e && e.stack || e) + '\n'; console.error(e); };
+
+/* ---------- fonts (kit format) ---------- */
+const FONTS = {};
+async function loadFont(name) {
+  const j = await (await fetch('/kit/runtime/fonts/' + name + '.json' + V)).json();
+  FONTS[name] = [];
+  for (const s of j.sizes) {
+    const bin = Uint8Array.from(atob(s.alpha), (c) => c.charCodeAt(0));
+    const atlas = new Uint8Array(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+    FONTS[name].push({ size: s.size, glyphs: s.glyphs, atlas, atlasW: s.atlasW, cache: new Map() });
+  }
+}
+function pick(name, size) { const fam = FONTS[name] || FONTS.race; let b = null; for (const f of fam) if (f.size >= size && (!b || f.size < b.size)) b = f; return b || fam[fam.length - 1]; }
+
+/* ---------- the kit canvas, on a 2D canvas ---------- */
+function makeCv(g) {
+  const targets = [];
+  const col = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + ((c[3] == null ? 255 : c[3]) / 255) + ')' : '#f0f');
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, Math.max(0, w), Math.max(0, h), Math.max(0, Math.min(r || 0, w / 2, h / 2))); };
+  const gimg = (f, cp, color) => {
+    const k = cp + color; let im = f.cache.get(k); if (im) return im;
+    const [gx, gy, gw, gh] = f.glyphs[cp];
+    im = document.createElement('canvas'); im.width = Math.max(1, gw); im.height = Math.max(1, gh);
+    const ig = im.getContext('2d'); ig.fillStyle = color; ig.fillRect(0, 0, 1, 1);
+    const [r, gg, b, a] = ig.getImageData(0, 0, 1, 1).data, d = ig.createImageData(im.width, im.height);
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { const o = (y * gw + x) * 4; d.data[o] = r; d.data[o + 1] = gg; d.data[o + 2] = b; d.data[o + 3] = f.atlas[(gy + y) * f.atlasW + gx + x] * a / 255; }
+    ig.putImageData(d, 0, 0); f.cache.set(k, im); return im;
+  };
+  const glyph = (f, ch) => f.glyphs[ch.codePointAt(0)] || f.glyphs[63];
+  const width = (s, size, o) => { const f = pick((o && o.font) || 'label', size); let w = 0; for (const ch of String(s)) { const gl = glyph(f, ch); if (gl) w += gl[6]; } return w * size / f.size + ((o && o.spacing) || 0) * Math.max(0, String(s).length - 1); };
+  return {
+    w: 1600, h: 520, extra: 0, targets,
+    clear(c) { targets.length = 0; g.fillStyle = col(c); g.fillRect(0, 0, 1600, 520); },
+    fillRect(x, y, w, h, c) { g.fillStyle = col(c); g.fillRect(x, y, w, h); },
+    roundRect(x, y, w, h, r, c) { g.fillStyle = col(c); rr(x, y, w, h, r); g.fill(); },
+    strokeRoundRect(x, y, w, h, r, lw, c) { g.strokeStyle = col(c); g.lineWidth = lw; rr(x + lw / 2, y + lw / 2, w - lw, h - lw, r); g.stroke(); },
+    card(x, y, w, h, r, stops) { const gr = g.createLinearGradient(0, y, 0, y + h); stops.forEach(([p, c]) => gr.addColorStop(p, col(c))); g.fillStyle = gr; rr(x, y, w, h, r); g.fill(); },
+    gradientRect(x, y, w, h, stops) { const gr = g.createLinearGradient(0, y, 0, y + h); stops.forEach(([p, c]) => gr.addColorStop(p, col(c))); g.fillStyle = gr; g.fillRect(x, y, w, h); },
+    circle(cx, cy, r, c) { g.fillStyle = col(c); g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); },
+    arc(cx, cy, r0, r1, a0, a1, c) { g.fillStyle = col(c); g.beginPath(); const s = (a0 - 90) * Math.PI / 180, e = (a1 - 90) * Math.PI / 180; g.arc(cx, cy, r1, s, e); g.arc(cx, cy, r0, e, s, true); g.fill(); },
+    line(xa, ya, xb, yb, w, c) { g.strokeStyle = col(c); g.lineWidth = w; g.beginPath(); g.moveTo(xa, ya); g.lineTo(xb, yb); g.stroke(); },
+    polyline(pts, w, c) { g.strokeStyle = col(c); g.lineWidth = w; g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.stroke(); },
+    convex(pts, c) { g.fillStyle = col(c); g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.fill(); },
+    quad(pts, c) { this.convex(pts, c); }, triangle(pts, c) { this.convex(pts, c); },
+    image() {}, clip(x, y, w, h) { g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); }, noclip() { g.restore(); },
+    textWidth(s, size, o) { return width(s, size, o); },
+    text(s, x, y, size, c, o) {
+      o = o || {}; s = String(s); const f = pick(o.font || 'label', size), sc = size / f.size, w = width(s, size, o);
+      let pen = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+      for (const ch of s) {
+        const gl = glyph(f, ch); if (!gl) continue;
+        const cp = f.glyphs[ch.codePointAt(0)] ? ch.codePointAt(0) : 63, [, , gw, gh, ox, oy, adv] = gl;
+        if (gw && gh) g.drawImage(gimg(f, cp, col(c)), pen + ox * sc, y + oy * sc, gw * sc, gh * sc);
+        pen += adv * sc + (o.spacing || 0);
+      }
+      return w;
+    },
+    target(x, y, w, h, fn, key) { targets.push({ x, y, w, h, fn, key }); return this; },
+  };
+}
+
+/* ---------- a small CommonJS loader for the real files ---------- */
+const SRC = {};
+async function src(path) { if (!(path in SRC)) SRC[path] = await (await fetch(path + V)).text(); return SRC[path]; }
+function loader(map) {
+  const cache = {};
+  const req = (name) => {
+    if (cache[name]) return cache[name].exports;
+    const m = map[name];
+    if (!m) throw new Error('no module ' + name);
+    if (typeof m !== 'string') return m;
+    const module = { exports: {} }; cache[name] = module;
+    new Function('require', 'module', 'exports', SRC[m])(req, module, module.exports);
+    return module.exports;
+  };
+  return req;
+}
+
+/* ---------- settings from an app.json ---------- */
+function makeSettings(spec, over) {
+  const vals = {}; spec.settings.forEach((s) => { vals[s.key] = s.default; });
+  Object.assign(vals, over || {});
+  const fns = [];
+  return {
+    get: (k) => vals[k], item: (k) => { const s = spec.settings.find((x) => x.key === k); return s; },
+    set: (k, v) => { vals[k] = v; fns.forEach((f) => f(k)); }, onChange: (f) => fns.push(f), vals,
+  };
+}
+
+let app = 'cluster_themes', page = null, render = null, cv = null;
+const g = $('c').getContext('2d');
+
+async function start() {
+  $('log').textContent = '';
+  cv = makeCv(g);
+  const spec = JSON.parse(await src('/apps/' + app + '/app.json'));
+  const settings = makeSettings(spec, window.__keep && window.__keep[app]);
+  window.__keep = window.__keep || {}; window.__keep[app] = settings.vals;
+  const theme = { bg: '#050607', text: '#fff', dim: '#9aa0a8', sel: '#fff', warn: '#ffb020' };
+  const gauges = { withAlpha: (c, a) => c.slice(0, 7) + Math.round(a * 255).toString(16).padStart(2, '0'), pageBottom: () => 512,
+    frame: (c, t, tabs, sel, badges) => { c.fillRect(0, 0, 1600, 36, '#141518'); c.fillRect(0, 35, 1600, 1, '#ffffff2e'); c.text(spec.title.toUpperCase(), 16, 25, 18, '#9aa0a8', { font: 'race' }); let x = 1584; (badges || []).filter(Boolean).forEach((b) => { const w = c.textWidth(b.text, 16, { font: 'race' }) + 24; c.roundRect(x - w, 7, w, 22, 4, (b.color || '#fff') + '33'); c.text(b.text, x - w / 2, 24, 16, b.color, { font: 'race', align: 'center' }); x -= w + 8; }); } };
+  const loop = { kick: () => draw() };
+  const ctx = { settings, spec, log: { info() {}, warn() {}, error: logErr }, theme: () => theme, canvas: () => cv, ui: { image() {}, onClick(n, f) { ctx.clicks[n] = f; } }, clicks: {},
+    loop: (n, fps, fn) => { render = fn; return loop; }, onLayout() {} };
+  for (const f of ['/shared/gt3ui.js', '/shared/sensors.js', '/shared/badges.js', '/shared/tz.js', '/shared/visible.js', '/shared/page.js', '/kit/runtime/themes.js',
+    '/apps/apex_telemetry/draw.js', '/apps/apex_telemetry/setup.js']) await src(f);
+  if (app === 'apex_telemetry') {
+    const req = loader({ './gt3ui': '/shared/gt3ui.js', './draw': '/apps/apex_telemetry/draw.js', './setup': '/apps/apex_telemetry/setup.js' });
+    const D = req('./draw'), Setup = req('./setup');
+    let mode = 'setup';
+    const t = Date.now() / 1000;
+    const snapshot = () => ({ tyres: { FL: { p: 2.42, t: 31, target: 2.34 }, FR: { p: 2.44, t: 33, target: 2.34 }, RL: { p: 2.58, t: 35, target: 2.41 }, RR: { p: 2.31, t: 36, target: 2.41 } },
+      boostTarget: 0.08, boost: 0.05, hpfp: null, lpfp: 5.2, loadTarget: 34, loadActual: 33, gearbox: null, ambient: 15, rangeKm: 362, fuelL: 41, chargeBefore: 36, intake: 31,
+      coolant: 98, oil: 104, oilP: 3.9, afr: 14.7, timing: 18.5, rpm: 1900, speed: 70, gLat: 0.12, gLong: 0.05, peak: { gLat: 0.56, gLong: 0.78, boost: 1.22 }, demo: false });
+    const rows = [{ name: 'Boost (actual)', ids: '4A2D · 580B · F487 · F40B · OBD 0B', answer: 'ok', age: 0.3, ok: true }, { name: 'Boost target', ids: '57DB', answer: 'ok', age: 0.3, ok: true },
+      { name: 'Fuel rail', ids: 'F423 · F459 · OBD 23', answer: 'F423 NRC 31, F459 NRC 31, OBD 23 NO REPLY', age: null, ok: false }, { name: 'Low fuel', ids: 'F40A · F422 · OBD 0A · OBD 22', answer: 'ok', age: 1.8, ok: true },
+      { name: 'Oil pressure', ids: '4436 · 586F', answer: 'not shown, not asked', age: null, ok: false }, { name: 'Tyres', ids: 'TPMS', answer: 'ok', age: 4.1, ok: true }];
+    const tel = { dataRows: () => rows, car: { data: () => ({ demo: false }) } };
+    const setup = new Setup(ctx, tel, { kick: () => draw(), close: () => { mode = 'board'; draw(); } });
+    ctx.clicks.BTN_SETUP = () => { mode = mode === 'setup' ? 'board' : 'setup'; draw(); };
+    const unit = (k, y, n) => { const v = settings.get(k); return v === y ? true : v === n ? false : settings.get('units') !== 'metric'; };
+    const gt3 = req('./gt3ui');
+    render = () => {
+      const u = { sp: unit('unitSpeed', 'mph', 'kmh'), tf: unit('unitTemp', 'f', 'c'), ps: unit('unitPress', 'psi', 'bar') }, snap = snapshot();
+      const sl = [1, 2, 3, 4, 5].map((i) => { const v = settings.get('tBox' + i); return D.SLOTS[v] ? v : D.SLOT_DEFAULTS[i - 1]; });
+      if (mode === 'setup') { setup.draw(cv, 512, snap, u); gauges.frame(cv, theme, [], -1, [{ text: 'SETUP', color: '#ffffff' }]); }
+      else D.draw(cv, snap, { us: u.sp, tempF: u.tf, psi: u.ps, slots: sl, box: gt3.palette(settings.get('boxColour')), tyreWarn: Number(settings.get('tyreWarn')), tyreHot: Number(settings.get('tyreHot')),
+        tyreLow: settings.get('tyreLow'), tyreOver: settings.get('tyreOver'), tyreOverRed: settings.get('tyreOverRed'), frame: (c, b) => gauges.frame(c, theme, [], -1, b), why: (k) => (k === 'hpfp' ? 'F423 NRC 31' : '') });
+    };
+    $('setupBtn').style.display = '';
+    $('setupBtn').onclick = () => ctx.clicks.BTN_SETUP();
+  } else {
+    $('setupBtn').style.display = 'none';
+    const req = loader({ './kit/gauges': gauges, './gt3ui': '/shared/gt3ui.js', './kit/themes': '/kit/runtime/themes.js', './previews': { get: () => null }, './sensors': '/shared/sensors.js',
+      './visible': '/shared/visible.js', './badges': '/shared/badges.js', './tz': '/shared/tz.js', './page': '/shared/page.js' });
+    const sensors = req('./sensors');
+    const hud = app === 'cluster_themes';
+    const slots = hud ? [{ id: '1', default: 'speed' }, { id: '2', default: 'rpm' }, { id: '3', default: 'fuel' }, { id: '4', default: 'boost' }, { id: '5', default: 'coolant' }]
+      : [{ id: '1', default: 'speed' }, { id: '2', default: 'oil' }, { id: '3', default: 'coolant' }, { id: '4', default: 'boost' }];
+    const VAL = { speed: '47', rpm: '1900', fuel: '62', boost: '14.2', coolant: '199', oil: '221', range: '318' };
+    const stub = { activeName: hud ? 'apex' : 'redline', driveMode: 'sport', screen: null, lastStatus: 'drawing Apex · 9 layers · 3.1 MB · cluster-render 2.4 · oil pressure 4436 ok', car: { data: () => ({ demo: false, speed: 0 }) },
+      setting: (k) => settings.get(k), _layoutName: () => (hud ? 'apex' : 'redline'), onStatus() {}, slotsOf: () => slots, placeInfo: () => ({ x: 0, y: 0, scale: 1, box: { x: 200, y: 120, w: 400, h: 200 } }),
+      slotSensor: (l, id, sl) => sensors.get((sl || slots).find((x) => x.id === id).default), setSlot() {}, sensorValue: (sn) => VAL[sn.id] || '--',
+      sensorUnit(sn) { return sn.unit ? sn.unit(this.unitUs(sn.dim || 'units')) : ''; }, shiftTesting: () => false, testShift: () => true,
+      unitUs(dim) { const v = settings.get({ speed: 'unitSpeed', temp: 'unitTemp', press: 'unitPress' }[dim]); if (v === 'mph' || v === 'f' || v === 'psi') return true; if (v === 'kmh' || v === 'c' || v === 'bar') return false; return settings.get('units') === 'us'; } };
+    const Page = req('./page');
+    const cfg = hud ? { title: spec.title, what: 'cluster', look: { name: 'Layouts', style: 'hero', tags: { apex: 'GT3 race dash' } }, tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'], display: ['showBoost', 'stripClear', 'tankLitres'] }
+      : { title: spec.title, what: 'HUD', look: { name: 'Layouts', style: 'cards', tags: {} }, tabs: ['look', 'readouts', 'position', 'units', 'shift', 'system'], display: ['showClock', 'showOil', 'showCoolant', 'showBoost', 'clock', 'tankLitres'] };
+    page = new Page(ctx, stub, cfg);
+    page.tab = window.__tab || 'units';
+    page.start();
+  }
+  draw();
+}
+function draw() { try { render && render(); $('info').textContent = cv.targets.length + ' tap targets'; } catch (e) { logErr(e); } }
+$('c').addEventListener('click', (e) => {
+  const r = $('c').getBoundingClientRect(), x = (e.clientX - r.left) * 1600 / r.width, y = (e.clientY - r.top) * 520 / r.height;
+  const t = cv.targets.slice().reverse().find((q) => x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h);
+  if (t) { try { t.fn(); } catch (err) { logErr(err); } window.__tab = page && page.tab; draw(); }
+});
+window.tapKey = (key) => { const t = cv.targets.find((q) => q.key === key); if (!t) return 'no target ' + key; try { t.fn(); } catch (err) { logErr(err); return String(err); } window.__tab = page && page.tab; draw(); return 'ok'; };
+document.querySelectorAll('[data-app]').forEach((b) => b.onclick = () => { app = b.dataset.app; document.querySelectorAll('[data-app]').forEach((x) => x.classList.toggle('on', x === b)); start().catch(logErr); });
+(async () => { await loadFont('race'); FONTS.label = FONTS.bold = FONTS.race; start().catch(logErr); })();
+</script>
+</body>
+</html>
