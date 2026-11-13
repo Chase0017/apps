@@ -13,7 +13,7 @@
  *
  * Pure: draw(cv, snap, opt) uses only the kit canvas calls (fillRect, roundRect, strokeRoundRect, gradientRect,
  * circle, text, textWidth), so tools/telemetry-preview/ runs this same file in a browser.
- *   snap: Telemetry.snapshot() (SI units)   opt: { us, tyreHot (C), tyreCold (C), frame(cv, badges), target(cb) }
+ *   snap: Telemetry.snapshot() (SI units)   opt: { us, tyreWarn (C), tyreHot (C), frame(cv, badges), target(cb) }
  */
 (function (root) {
     const W = 1600, TOP = 52, BOTTOM = 512;
@@ -32,7 +32,7 @@
         ice: 3,                                      // C
         icAfter: [50, 60], icSoak: [20, 30],          // C: air after the intercooler; after minus outside (heat soak)
         cold: { gearbox: 40, ambient: 3, icAfter: 10 }, // C: blue (cold) below these
-        tyreLow: [0.10, 0.21], tyreHigh: [0.41, 0.62], // bar under / over the car's (cold) target: 1.5 / 3 psi low, 6 / 9 psi high (hot tyres gain pressure)
+        tyreLow: 0.207, tyreHigh: [0.207, 0.345],    // bar against the car's target: blue 3 psi under, yellow 3 / red 5 psi over
     };
     const high = (v, l) => (!isNum(v) ? null : v >= l[1] ? C.hot : v >= l[0] ? C.warm : null);
     const low = (v, l) => (!isNum(v) ? null : v < l[1] ? C.hot : v < l[0] ? C.warm : null);
@@ -65,37 +65,31 @@
         }
     }
 
+    /** a tyre temperature: no colour while fine, yellow from tyreWarn, red from tyreHot (nothing for cold) */
     function tyreState(c, opt) {
-        if (!isNum(c)) return C.dim;
-        if (c >= opt.tyreHot) return C.hot;
-        if (c >= opt.tyreHot - 15) return C.warm;
-        if (c < opt.tyreCold) return C.cold;
-        return C.ok;
+        if (!isNum(c)) return null;
+        return c >= opt.tyreHot ? C.hot : c >= opt.tyreWarn ? C.warm : null;
     }
-    /** colour of a pressure against its target (bar): within ~1 psi green, ~3 psi amber, else red */
-    /** a tyre pressure against its target: yellow / red when low, or well over (hot tyres are meant to be over) */
+    /** a tyre pressure against the car's target: no colour while fine, blue 3 psi under, yellow 3 / red 5 psi over */
     function tyreOff(p, target) {
         if (!isNum(p) || !isNum(target)) return null;
         const d = p - target;
-        return d < 0 ? high(-d, LIM.tyreLow) : high(d, LIM.tyreHigh);
+        return d <= -LIM.tyreLow ? C.cold : high(d, LIM.tyreHigh);
     }
-    function pressState(p, target) {
-        if (!isNum(p) || !isNum(target)) return C.text;
-        return tyreOff(p, target) || C.ok;
-    }
+    function pressState(p, target) { return tyreOff(p, target) || C.text; }
 
     function tyreBox(cv, x, y, w, h, name, t, partner, opt, right) {
         const us = opt.us;
         box(cv, x, y, w, h, name, U.press(us));
         const sc = tyreState(t.t, opt);
-        // the temperature stripe on the side towards the car
-        cv.fillRect(right ? x + 2 : x + w - 10, y + HEAD, 8, h - HEAD - 2, sc);
+        // the temperature stripe on the side towards the car, only while it is warm or hot
+        if (sc) cv.fillRect(right ? x + 2 : x + w - 10, y + HEAD, 8, h - HEAD - 2, sc);
         const pv = isNum(t.p) ? (us ? fmt(t.p * 14.5038, 1) : fmt(t.p, 2)) : '--';
         const px = right ? x + w - 16 : x + w - 22;
         cv.text(pv, px, y + HEAD + 98, 96, pressState(t.p, t.target), Object.assign({ align: 'right' }, F));
         // temperature (left) and the difference to target (right)
         const tl = right ? x + 22 : x + 14;
-        cv.text(isNum(t.t) ? fmt(temp(t.t, us), 0) + U.temp(us) : '--', tl, y + h - 16, 44, sc, F);
+        cv.text(isNum(t.t) ? fmt(temp(t.t, us), 0) + U.temp(us) : '--', tl, y + h - 16, 44, sc || (isNum(t.t) ? C.text : C.dim), F);
         const target = isNum(t.target) ? t.target : null;
         let delta = '', dc = C.dim;
         if (isNum(t.p) && target !== null) {
@@ -104,7 +98,7 @@
             dc = pressState(t.p, target);
         } else if (isNum(t.p) && isNum(partner)) {
             const d = Math.abs(t.p - partner);
-            if (d > LIM.tyreLow[0] * 1.5) { delta = 'UNEVEN'; dc = d > LIM.tyreLow[1] * 1.5 ? C.hot : C.warm; }
+            if (d >= LIM.tyreHigh[0]) { delta = 'UNEVEN'; dc = d >= LIM.tyreHigh[1] ? C.hot : C.warm; }
         }
         if (delta) {
             cv.text(delta, px, y + h - 16, 32, dc, Object.assign({ align: 'right' }, F));
@@ -112,7 +106,7 @@
         }
     }
 
-    /** the car from above, wheels lit by their temperature */
+    /** the car from above, wheels lit while their tyre is warm or hot */
     function car(cv, cx, top, bottom, s, opt) {
         const bw = 120, x = cx - bw / 2, h = bottom - top;
         cv.roundRect(x, top, bw, h, 46, '#2a2f37');
@@ -123,7 +117,7 @@
         cv.roundRect(x + 14, top + h * 0.41, bw - 28, h * 0.23, 8, '#1b2027');
         const ww = 26, wh = 74, fy = top + h * 0.12, ry = top + h * 0.70;
         [['FL', x - ww + 4, fy], ['FR', x + bw - 4, fy], ['RL', x - ww + 4, ry], ['RR', x + bw - 4, ry]].forEach(([k, wx, wy]) => {
-            const c = tyreState((s.tyres[k] || {}).t, opt);
+            const c = tyreState((s.tyres[k] || {}).t, opt) || '#3a414b';
             cv.roundRect(wx, wy, ww, wh, 7, c);
             cv.roundRect(wx + 4, wy + 6, ww - 8, wh - 12, 4, '#0b0d10aa');
         });

@@ -16,10 +16,12 @@ Nothing Apex Cluster already shows (coolant, oil, oil pressure, AFR, intake and 
   under 25 bar (363 psi), red under 15 bar (218 psi); low pressure yellow under 4 bar (58 psi), red under 3 bar (44 psi).
 - **Tyres (middle):** the car from above, each tyre's pressure, its temperature and the difference to the car's own
   target pressure (the header shows the targets).
-  - Pressure, coloured by how far it is from target (green on it): yellow 1.5 psi under target, red 3 psi under. Over target is normal once tyres are warm: yellow
-    only from 6 psi over, red from 9 psi. A car that sends no targets gets UNEVEN when the two sides of an axle differ.
-  - Temperature (the air inside the tyre, as the TPMS measures it): blue under **Tyre cold below**, green, yellow
-    within 15 °C (27 °F) of **Tyre hot from**, red from it. The wheels on the car glow in the same colours.
+  - No colour while a tyre is fine: only what needs a look lights up.
+  - Pressure against target: **blue** 3 psi under (low), **yellow** 3 psi over, **red** 5 psi over. A car that sends no
+    targets gets UNEVEN when the two sides of an axle differ by 3 psi.
+  - Temperature (the air inside the tyre, as the TPMS measures it): **yellow** from **Tyre warm from** (130 °F),
+    **red** from **Tyre hot from** (150 °F), nothing for cold. The stripe beside the tyre and the wheel on the car light
+    up in the same colour.
 - **Right:** gearbox oil (blue WARMING UP under 40 °C / 104 °F, yellow from 110 °C / 230 °F, red from 125 °C / 257 °F),
   outside (blue with ICE POSSIBLE at 3 °C / 37 °F and below), range (yellow under 50 mi / 80 km, red under 25 mi / 40 km).
 - **Intercooler (right):** the B58 has no sensor in the intercooler's water circuit, so it is judged by its air: the
@@ -42,7 +44,7 @@ Read only, nothing is written to the car.
 
 ## Settings
 
-Units (US / metric), Tyre hot from, Tyre cold below, Demo data, Colour theme. All under **All settings**.
+Units (US / metric), Tyre warm (yellow) from, Tyre hot (red) from, Demo data, Colour theme. All under **All settings**.
 
 ## Working on it
 

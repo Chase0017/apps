@@ -37,7 +37,7 @@ mgu.run({
             const cv = ctx.canvas(W, H);
             D.draw(cv, tel.snapshot(), {
                 us: settings.get('units') !== 'metric',
-                tyreHot: num('tyreHot', 70), tyreCold: num('tyreCold', 15),
+                tyreWarn: num('tyreWarn', 54), tyreHot: num('tyreHot', 66),
                 frame: (c, badges) => G.frame(c, ctx.theme(), [], -1, badges),
                 target: (c, x, y, w, h) => { if (c.target) c.target(x, y, w, h, () => { tel.resetPeaks(); if (loop && loop.kick) loop.kick(); }, 'peaks', 5); },
             });
