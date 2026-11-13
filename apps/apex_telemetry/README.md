@@ -5,27 +5,33 @@ header strip, Barlow Condensed numbers. One still page, nothing to scroll or pag
 
 ## The page
 
-- **Tyres (middle):** the car from above with each tyre's pressure in big numbers, its temperature, and how far it
-  is from the car's own target pressure (the placard values the TPMS reports). The header shows the targets.
-  - Temperature colours (air inside the tyre, as the TPMS measures it): blue under **Tyre cold below**, green,
-    amber within 15 °C (27 °F) of **Tyre hot from**, red from it. The wheels on the car glow in the same colours.
-  - Pressure against target: green within 1 psi, amber within 3 psi, red beyond. A car that sends no targets
-    gets UNEVEN when a tyre is more than 2 psi off the other side of its axle.
-- **Engine (left):** coolant, oil temperature (blue with WARMING UP under 70 °C / 158 °F), oil pressure, intake air
-  (with how far it is above outside), AFR (with lambda), ignition timing.
-- **Car (right):** boost with its peak, gearbox oil temperature, outside temperature (ICE POSSIBLE at 3 °C / 37 °F and
-  below), fuel, range, and g-force with the peak lateral and longitudinal. Tap the g-force box to reset the peaks.
+Nothing Apex Cluster already shows (coolant, oil, oil pressure, AFR, intake and timing are on the dash). Colours:
+**yellow** = warning, **red** = near critical, blue = cold.
+
+- **Boost control (left):** actual boost, the engine's target and the deviation between them, a bar with the target
+  marked, the peak, and a word for it: ON TARGET, UNDERBOOST, OVERBOOST or OFF BOOST (target under 0.2 bar / 3 psi).
+  Deviation yellow from 2.2 psi (0.15 bar) off target, red from 4.4 psi (0.3 bar).
+- **Fuel (left, under it):** fuel rail (high pressure) and low pressure fuel. With the engine running: rail yellow
+  under 25 bar (363 psi), red under 15 bar (218 psi); low pressure yellow under 4 bar (58 psi), red under 3 bar (44 psi).
+- **Tyres (middle):** the car from above, each tyre's pressure, its temperature and the difference to the car's own
+  target pressure (the header shows the targets).
+  - Pressure: yellow 1.5 psi under target, red 3 psi under. Over target is normal once tyres are warm: yellow
+    only from 6 psi over, red from 9 psi. A car that sends no targets gets UNEVEN when the two sides of an axle differ.
+  - Temperature (the air inside the tyre, as the TPMS measures it): blue under **Tyre cold below**, green, yellow
+    within 15 °C (27 °F) of **Tyre hot from**, red from it. The wheels on the car glow in the same colours.
+- **Right:** gearbox oil (yellow from 110 °C / 230 °F, red from 125 °C / 257 °F), outside (yellow ICE POSSIBLE at
+  3 °C / 37 °F and below), range (yellow under 50 mi / 80 km, red under 25 mi / 40 km), engine load against its
+  target, and g-force: lateral and longitudinal with their peaks. Tap the g-force box to reset the peaks.
 
 ## Data
 
 Read only, nothing is written to the car.
 - Tyres from the TPMS (polled every 5 s: the car doesn't announce them), in the car's own display units.
-- Coolant, oil, speed, rpm and g-force from the car's signals; outside temperature, fuel and range from the
-  instrument cluster's signals; boost from the sport display.
-- Oil pressure, AFR, intake, timing and boost (when the sport display has none) from the engine unit, and gearbox
-  oil from the gearbox unit when the car's data set has none, over the kit's read-only diagnostic link. These are the
-  identifiers Apex Cluster reads (and M Vitals for timing and the gearbox), asked only while the page is open.
-- While a value has no reading, its box shows `--`; oil pressure says what the engine unit answered.
+- Boost target and actual, fuel rail and low pressure fuel, requested and actual load from the engine unit, gearbox
+  oil from the gearbox unit when the car's data set has none, over the kit's read-only diagnostic link: the
+  identifiers cauliflowermossgrape's M Vitals reads, asked only while the page is open. Boost falls back to the sport
+  display while the engine unit gives none (then there is no target).
+- Outside temperature and range from the instrument cluster's signals, rpm and g-force from the car's signals.
 
 ## Settings
 

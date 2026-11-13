@@ -1,8 +1,8 @@
 {
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
-  "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, engine temperatures, oil pressure, AFR, timing, boost, gearbox, fuel, range and g-force",
-  "version": "0.1.0",
+  "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
+  "version": "0.2.0",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
@@ -180,52 +180,10 @@
     }
   ],
   "config": {
-    "_comment": "Tyre colours: TPMS temperature is the air inside the tyre, not the tread: blue under tyreCold, green, amber within 15 °C of tyreHot, red from tyreHot. Pressure against the car's own target (TPMS statusTargetTyrePressure): within 1 psi green, 3 psi amber, else red; without a target, a tyre more than 2 psi off the other side of its axle says UNEVEN.",
+    "_comment": "Colours: yellow = warning, red = near critical. Tyre temperature is the air inside the tyre: blue under tyreCold, yellow within 15 C of tyreHot, red from tyreHot. Tyre pressure against the car's target: yellow over 1 psi off, red over 3 psi (UNEVEN against the other side of the axle when the car sends no target). Boost against target (only while the target is over 0.2 bar): yellow 0.15 bar (2.2 psi) off, red 0.3 bar (4.4 psi). Low pressure fuel (engine running): yellow under 4 bar, red under 3. Fuel rail: yellow under 25 bar, red under 15. Gearbox oil: yellow from 110 C, red from 125. Outside: yellow at 3 C and below (ice). Range: yellow under 80 km, red under 40.",
     "dme": {
-      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car. Oil pressure (config.dme.oilPressure, absolute bar; the outside air pressure from baro is subtracted), AFR (config.dme.afr, lambda x 14.7) and the first intake / baro candidates: BMW's own DME8FF_R identifiers, as cauliflowermossgrape's Live Data reads them; the OBD ones stay as fallbacks. egs: gearbox oil temperature from the gearbox unit (EGS, ecu 24), as M Vitals reads it (cauliflowermossgrape, MIT), asked only while the basic data set has none.",
+      "comment": "Read from the engine unit (DME, ecu 18) with UDS 0x22 over the kit's read-only link, only while the page shows; candidates are tried in order, the first plausible one wins (value = raw * factor + offset). The identifiers M Vitals reads (cauliflowermossgrape, MIT). boostTarget / boostActual: boost setpoint and actual, absolute kPa (the outside air pressure, baro, is subtracted). hpfp: fuel rail (high pressure) bar. lpfp: low pressure fuel bar. loadTarget / loadActual: requested and actual relative air charge %. egs: gearbox oil temperature from the gearbox unit (ecu 24), asked only while the car's basic data set has none.",
       "ecu": 18,
-      "boost": [
-        {
-          "did": "F470",
-          "bytes": 2,
-          "at": 3,
-          "factor": 0.03125,
-          "offset": 0,
-          "min": 20,
-          "max": 600,
-          "note": "OBD PID 0x70 boost pressure control: actual boost pressure sensor A (absolute), 1/32 kPa"
-        },
-        {
-          "did": "F487",
-          "bytes": 2,
-          "at": 1,
-          "factor": 0.03125,
-          "offset": 0,
-          "min": 20,
-          "max": 600,
-          "note": "OBD PID 0x87 intake manifold absolute pressure sensor A, 1/32 kPa"
-        },
-        {
-          "did": "F40B",
-          "bytes": 1,
-          "at": 0,
-          "factor": 1,
-          "offset": 0,
-          "min": 20,
-          "max": 255,
-          "note": "OBD PID 0x0B intake manifold absolute pressure, kPa (max 255 = 1.5 bar boost)"
-        },
-        {
-          "obd": "0B",
-          "bytes": 1,
-          "at": 0,
-          "factor": 1,
-          "offset": 0,
-          "min": 20,
-          "max": 255,
-          "note": "OBD service 01 PID 0x0B (same as F40B)"
-        }
-      ],
       "baro": [
         {
           "did": "4201",
@@ -258,153 +216,166 @@
           "note": "OBD service 01 PID 0x33 (same as F433)"
         }
       ],
-      "intake": [
+      "boostTarget": [
         {
-          "did": "580F",
+          "did": "4AB0",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.00390625,
+          "offset": 0,
+          "min": 20,
+          "max": 400,
+          "note": "BMW boost pressure setpoint (absolute), hPa = raw * 10 / 256"
+        },
+        {
+          "did": "F470",
+          "bytes": 2,
+          "at": 1,
+          "factor": 0.03125,
+          "offset": 0,
+          "min": 20,
+          "max": 600,
+          "note": "OBD PID 0x70: commanded boost pressure A (absolute), 1/32 kPa"
+        },
+        {
+          "obd": "70",
+          "bytes": 2,
+          "at": 1,
+          "factor": 0.03125,
+          "offset": 0,
+          "min": 20,
+          "max": 600,
+          "note": "OBD service 01 PID 0x70 (same as F470)"
+        }
+      ],
+      "boostActual": [
+        {
+          "did": "580B",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.00390625,
+          "offset": 0,
+          "min": 20,
+          "max": 400,
+          "note": "BMW boost pressure actual (absolute), hPa = raw * 10 / 256"
+        },
+        {
+          "did": "F470",
+          "bytes": 2,
+          "at": 3,
+          "factor": 0.03125,
+          "offset": 0,
+          "min": 20,
+          "max": 600,
+          "note": "OBD PID 0x70: boost pressure sensor A (absolute), 1/32 kPa"
+        },
+        {
+          "obd": "70",
+          "bytes": 2,
+          "at": 3,
+          "factor": 0.03125,
+          "offset": 0,
+          "min": 20,
+          "max": 600,
+          "note": "OBD service 01 PID 0x70 (same as F470)"
+        }
+      ],
+      "hpfp": [
+        {
+          "did": "F423",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.1,
+          "offset": 0,
+          "min": 0,
+          "max": 500,
+          "note": "fuel rail gauge pressure (direct injection), 10 kPa per bit"
+        },
+        {
+          "did": "F459",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.1,
+          "offset": -1,
+          "min": 0,
+          "max": 500,
+          "note": "fuel rail absolute pressure, 10 kPa per bit"
+        },
+        {
+          "obd": "23",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.1,
+          "offset": 0,
+          "min": 0,
+          "max": 500,
+          "note": "OBD service 01 PID 0x23 (same as F423)"
+        }
+      ],
+      "lpfp": [
+        {
+          "did": "F40A",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.03,
+          "offset": 0,
+          "min": 0.5,
+          "max": 8,
+          "note": "fuel pressure (gauge), 3 kPa per bit"
+        },
+        {
+          "did": "F422",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.00079,
+          "offset": 0,
+          "min": 0.5,
+          "max": 15,
+          "note": "fuel rail pressure relative to manifold, 0.079 kPa per bit"
+        },
+        {
+          "obd": "0A",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.03,
+          "offset": 0,
+          "min": 0.5,
+          "max": 8,
+          "note": "OBD service 01 PID 0x0A (same as F40A)"
+        },
+        {
+          "obd": "22",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.00079,
+          "offset": 0,
+          "min": 0.5,
+          "max": 15,
+          "note": "OBD service 01 PID 0x22 (same as F422)"
+        }
+      ],
+      "loadTarget": [
+        {
+          "did": "480C",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0234375,
+          "offset": 0,
+          "min": 0,
+          "max": 250,
+          "note": "BMW requested relative air charge, % = raw * 0.75 / 32"
+        }
+      ],
+      "loadActual": [
+        {
+          "did": "5813",
           "bytes": 1,
           "at": 0,
           "factor": 0.75,
-          "offset": -48,
-          "min": -35,
-          "max": 150,
-          "note": "ITANS, intake air temperature, u8 x 0.75 - 48 C. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
-        },
-        {
-          "did": "F40F",
-          "bytes": 1,
-          "at": 0,
-          "factor": 1,
-          "offset": -40,
-          "min": -35,
-          "max": 150,
-          "note": "OBD PID 0x0F intake air temperature, C + 40"
-        },
-        {
-          "did": "F477",
-          "bytes": 1,
-          "at": 1,
-          "factor": 1,
-          "offset": -40,
-          "min": -35,
-          "max": 150,
-          "note": "OBD PID 0x77 charge air cooler temperature, bank 1 sensor 1 (byte after the support byte), C + 40"
-        },
-        {
-          "obd": "0F",
-          "bytes": 1,
-          "at": 0,
-          "factor": 1,
-          "offset": -40,
-          "min": -35,
-          "max": 150,
-          "note": "OBD service 01 PID 0x0F (same as F40F)"
-        }
-      ],
-      "timing": [
-        {
-          "obd": "0E",
-          "bytes": 1,
-          "at": 0,
-          "factor": 0.5,
-          "offset": -64,
-          "min": -64,
-          "max": 63.5,
-          "note": "OBD service 01 PID 0x0E timing advance, degrees before TDC (cylinder 1); the candidates M Vitals (cauliflowermossgrape, MIT) reads"
-        },
-        {
-          "did": "F40E",
-          "bytes": 1,
-          "at": 0,
-          "factor": 0.5,
-          "offset": -64,
-          "min": -64,
-          "max": 63.5,
-          "note": "the same PID over UDS 0x22"
-        }
-      ],
-      "afr": [
-        {
-          "did": "5889",
-          "bytes": 2,
-          "at": 0,
-          "factor": 0.0035888671875,
           "offset": 0,
-          "min": 8,
-          "max": 30,
-          "note": "ILAG1, lambda actual bank 1, u16 x 1/4096, times 14.7 for gasoline AFR. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
-        },
-        {
-          "did": "5640",
-          "bytes": 2,
-          "at": 0,
-          "factor": 0.003588858,
-          "offset": 0,
-          "min": 8,
-          "max": 30,
-          "note": "LAMBDA_SONDE_IST, lambda from the probe, as 5889. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
-        },
-        {
-          "did": "F434",
-          "bytes": 2,
-          "at": 0,
-          "factor": 0.0004486083984375,
-          "offset": 0,
-          "min": 8,
-          "max": 30,
-          "note": "OBD PID 0x34 wide-range O2 sensor bank 1 sensor 1: equivalence ratio (lambda) 2/65536 per bit, times 14.7 for gasoline AFR. Unverified on this car."
-        },
-        {
-          "obd": "34",
-          "bytes": 2,
-          "at": 0,
-          "factor": 0.0004486083984375,
-          "offset": 0,
-          "min": 8,
-          "max": 30,
-          "note": "OBD service 01 PID 0x34 (same as F434)"
-        },
-        {
-          "did": "F424",
-          "bytes": 2,
-          "at": 0,
-          "factor": 0.0004486083984375,
-          "offset": 0,
-          "min": 8,
-          "max": 30,
-          "note": "OBD PID 0x24 O2 sensor 1: equivalence ratio, as F434"
-        },
-        {
-          "obd": "24",
-          "bytes": 2,
-          "at": 0,
-          "factor": 0.0004486083984375,
-          "offset": 0,
-          "min": 8,
-          "max": 30,
-          "note": "OBD service 01 PID 0x24 (same as F424)"
-        }
-      ],
-      "oilPressure": [
-        {
-          "did": "4436",
-          "bytes": 2,
-          "at": 0,
-          "factor": 0.001,
-          "offset": 0,
-          "min": 0.5,
-          "max": 12,
-          "note": "I_DRUCK_OEL_IST_ABS, oil pressure actual (absolute), u16 hPa -> bar. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
-        },
-        {
-          "did": "586F",
-          "bytes": 2,
-          "at": 0,
-          "signed": true,
-          "factor": 0.001,
-          "offset": 0,
-          "min": 0.5,
-          "max": 12,
-          "note": "OELDRUCK, oil pressure, s16 hPa -> bar (absolute, as Live Data reads it). DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+          "min": 0,
+          "max": 191.25,
+          "note": "BMW actual relative air charge, % = raw * 0.75"
         }
       ],
       "egs": [

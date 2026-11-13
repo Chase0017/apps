@@ -1,9 +1,9 @@
 'use strict';
 /**
- * Apex Telemetry (chase0017-apps): a GT3 pit board on the centre screen. One still page, nothing to page through:
- * the four tyres (pressure against the car's target, temperature) round a car seen from above, engine values on
- * the left (coolant, oil, oil pressure, intake, AFR, timing), boost, gearbox, outside, fuel, range and g-force on
- * the right. Tap the g-force box to reset the peaks.
+ * Apex Telemetry (chase0017-apps): a GT3 pit board on the centre screen. One still page, nothing to page through,
+ * and nothing the Apex Cluster dash already shows: the four tyres (pressure against the car's target, temperature)
+ * round a car seen from above, boost against its target and the fuel pressures on the left, gearbox, outside, range,
+ * load and g-force on the right. Yellow = warning, red = near critical. Tap the g-force box to reset the peaks.
  *
  *   telemetry.js  the values (car signals, TPMS, the engine unit over the kit's read-only link)
  *   draw.js       the page (pure canvas calls; tools/telemetry-preview/ draws the same file in a browser)
@@ -39,7 +39,6 @@ mgu.run({
                 us: settings.get('units') !== 'metric',
                 tyreHot: num('tyreHot', 70), tyreCold: num('tyreCold', 15),
                 frame: (c, badges) => G.frame(c, ctx.theme(), [], -1, badges),
-                why: (k) => tel.why(k),
                 target: (c, x, y, w, h) => { if (c.target) c.target(x, y, w, h, () => { tel.resetPeaks(); if (loop && loop.kick) loop.kick(); }, 'peaks', 5); },
             });
             return ctx.ui.image('MAIN_GFX', cv);

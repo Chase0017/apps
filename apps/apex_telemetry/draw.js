@@ -2,14 +2,14 @@
 /**
  * draw.js - Apex Telemetry's page: a GT3 pit board on the centre screen, 1600 x 520 logical px (the kit's page).
  *
- *   ENGINE (left)        TYRES (middle)                         CAR (right)
- *   coolant  oil         FL box   [car, wheels lit by temp]  FR   boost     gearbox
- *   oil psi  intake      RL box                              RR   outside   fuel
- *   AFR      timing                                               range     g-force
+ *   BOOST CONTROL (left)   TYRES (middle)                         CAR (right)
+ *   actual target dev.     FL box   [car, wheels lit by temp]  FR   gearbox   outside
+ *   [bar: actual, target]  RL box                              RR   range     load
+ *   rail fuel  low fuel                                             g-force (lat, long, peaks)
  *
- * Black, white boxes with a white header strip and dark text on it (Apex Cluster's look), Barlow Condensed
- * numbers (the kit font family 'race', tools/bake_kit_font.py). Tyres: big pressure, temperature in its state
- * colour (cold blue, ok green, warm amber, hot red) and the difference to the car's target pressure.
+ * Nothing the Apex Cluster dash already shows. Black, white boxes with a white header strip and dark text on it
+ * (Apex Cluster's look), Barlow Condensed numbers (the kit font family 'race', tools/bake_kit_font.py).
+ * Colours: yellow = warning, red = near critical (limits in LIM, app.json config._comment); blue = cold.
  *
  * Pure: draw(cv, snap, opt) uses only the kit canvas calls (fillRect, roundRect, strokeRoundRect, gradientRect,
  * circle, text, textWidth), so tools/telemetry-preview/ runs this same file in a browser.
@@ -19,11 +19,21 @@
     const W = 1600, TOP = 52, BOTTOM = 512;
     const C = {
         bg: '#050607', line: '#ffffff', head: '#ffffff', ink: '#0b0d10', text: '#ffffff', dim: '#9aa0a8', faint: '#ffffff1f',
-        cold: '#4aa3ff', ok: '#3ddc84', warm: '#ffb020', hot: '#ff3b30', body: '#14171c',
+        cold: '#4aa3ff', ok: '#3ddc84', warm: '#ffd60a', hot: '#ff3b30', body: '#14171c', track: '#1c2027', mark: '#e9f2ff',
     };
     const F = { font: 'race', literal: true };
     const isNum = (x) => typeof x === 'number' && isFinite(x);
     const HEAD = 30;
+    // warning (yellow) / near critical (red) limits, SI units
+    const LIM = {
+        boostDev: [0.15, 0.30], boostFrom: 0.2,      // bar off target, while the target is over boostFrom
+        lpfp: [4.0, 3.0], hpfp: [25, 15],            // bar, low = bad (engine running)
+        gearbox: [110, 125], range: [80, 40],        // C high = bad; km low = bad
+        ice: 3,                                      // C
+        tyreLow: [0.10, 0.21], tyreHigh: [0.41, 0.62], // bar under / over the car's (cold) target: 1.5 / 3 psi low, 6 / 9 psi high (hot tyres gain pressure)
+    };
+    const high = (v, l) => (!isNum(v) ? null : v >= l[1] ? C.hot : v >= l[0] ? C.warm : null);
+    const low = (v, l) => (!isNum(v) ? null : v < l[1] ? C.hot : v < l[0] ? C.warm : null);
 
     /* ---------- units ---------- */
     const fmt = (v, d) => (isNum(v) ? v.toFixed(d) : '--');
@@ -59,10 +69,15 @@
         return C.ok;
     }
     /** colour of a pressure against its target (bar): within ~1 psi green, ~3 psi amber, else red */
+    /** a tyre pressure against its target: yellow / red when low, or well over (hot tyres are meant to be over) */
+    function tyreOff(p, target) {
+        if (!isNum(p) || !isNum(target)) return null;
+        const d = p - target;
+        return d < 0 ? high(-d, LIM.tyreLow) : high(d, LIM.tyreHigh);
+    }
     function pressState(p, target) {
         if (!isNum(p) || !isNum(target)) return C.text;
-        const d = Math.abs(p - target);
-        return d <= 0.07 ? C.ok : d <= 0.21 ? C.warm : C.hot;
+        return tyreOff(p, target) || C.ok;
     }
 
     function tyreBox(cv, x, y, w, h, name, t, partner, opt, right) {
@@ -73,7 +88,8 @@
         cv.fillRect(right ? x + 2 : x + w - 10, y + HEAD, 8, h - HEAD - 2, sc);
         const pv = isNum(t.p) ? (us ? fmt(t.p * 14.5038, 1) : fmt(t.p, 2)) : '--';
         const px = right ? x + w - 16 : x + w - 22;
-        cv.text(pv, px, y + HEAD + 98, 96, C.text, Object.assign({ align: 'right' }, F));
+        const pc = tyreOff(t.p, t.target);
+        cv.text(pv, px, y + HEAD + 98, 96, pc || C.text, Object.assign({ align: 'right' }, F));
         // temperature (left) and the difference to target (right)
         const tl = right ? x + 22 : x + 14;
         cv.text(isNum(t.t) ? fmt(temp(t.t, us), 0) + U.temp(us) : '--', tl, y + h - 16, 44, sc, F);
@@ -85,7 +101,7 @@
             dc = pressState(t.p, target);
         } else if (isNum(t.p) && isNum(partner)) {
             const d = Math.abs(t.p - partner);
-            if (d > 0.14) { delta = 'UNEVEN'; dc = C.warm; }
+            if (d > LIM.tyreLow[0] * 1.5) { delta = 'UNEVEN'; dc = d > LIM.tyreLow[1] * 1.5 ? C.hot : C.warm; }
         }
         if (delta) {
             cv.text(delta, px, y + h - 16, 32, dc, Object.assign({ align: 'right' }, F));
@@ -110,6 +126,54 @@
         });
     }
 
+    /** boost against its target: the three numbers, a bar with the target marked, the peak and what it means */
+    function boostPanel(cv, x, y, w, h, s, us) {
+        box(cv, x, y, w, h, 'BOOST CONTROL', U.press(us));
+        const k = us ? 14.5038 : 1, dp = us ? 1 : 2, a = s.boost, t = s.boostTarget;
+        const on = isNum(t) && t > LIM.boostFrom, dev = isNum(a) && isNum(t) ? a - t : null;
+        const dc = on && isNum(dev) ? high(Math.abs(dev), LIM.boostDev) || C.ok : C.dim;
+        const cw = (w - 28) / 3, R = Object.assign({ align: 'right' }, F);
+        [['ACTUAL', fmt(isNum(a) ? a * k : null, dp), C.text], ['TARGET', fmt(isNum(t) ? t * k : null, dp), C.mark],
+            ['DEVIATION', isNum(dev) ? (dev >= 0 ? '+' : '') + (dev * k).toFixed(dp) : '--', dc]].forEach(([l, v, c], i) => {
+            const cx = x + 14 + cw * (i + 1) - 8;
+            cv.text(l, cx, y + HEAD + 26, 18, C.dim, R);
+            cv.text(v, cx, y + HEAD + 92, 64, c, R);
+        });
+        // the bar: 0 .. max, actual filled (in the deviation's colour when off), the target a tall tick
+        const max = us ? 25 / 14.5038 : 1.75, bx = x + 16, bw = w - 32, by = y + HEAD + 118, bh = 34;
+        const X = (v) => bx + bw * Math.max(0, Math.min(1, v / max));
+        cv.roundRect(bx, by, bw, bh, 4, C.track);
+        if (isNum(a) && a > 0) cv.roundRect(bx, by, Math.max(8, X(a) - bx), bh, 4, on && dc !== C.ok ? dc : C.text);
+        if (isNum(t) && t > 0) cv.fillRect(X(t) - 2, by - 8, 4, bh + 16, C.mark);
+        const ticks = us ? [0, 5, 10, 15, 20, 25] : [0, 0.5, 1, 1.5];
+        ticks.forEach((v, i) => {
+            const tx = X(v / k);
+            cv.fillRect(tx - 0.5, by + bh + 4, 1, 8, C.dim);
+            cv.text(String(v), tx, by + bh + 30, 18, C.dim, Object.assign({ align: i === 0 ? 'left' : i === ticks.length - 1 && !us ? 'center' : i === ticks.length - 1 ? 'right' : 'center' }, F));
+        });
+        // the word for it, and the peak
+        let word = 'OFF BOOST', wc = C.dim;
+        if (on && isNum(dev)) {
+            const big = Math.abs(dev) >= LIM.boostDev[0];
+            word = !big ? 'ON TARGET' : dev > 0 ? 'OVERBOOST' : 'UNDERBOOST'; wc = dc;
+        } else if (!isNum(t)) word = 'NO TARGET FROM THE ENGINE';
+        cv.text(word, x + 16, y + h - 14, 26, wc, F);
+        if (s.peak && s.peak.boost > 0) cv.text('PEAK ' + fmt(s.peak.boost * k, dp), x + w - 16, y + h - 14, 26, C.dim, R);
+    }
+
+    /** g-force: lateral and longitudinal now, their peaks under them */
+    function gBox(cv, x, y, w, h, s) {
+        box(cv, x, y, w, h, 'G-FORCE', 'TAP TO RESET PEAKS');
+        const R = Object.assign({ align: 'right' }, F), cw = (w - 28) / 2;
+        [['LATERAL', s.gLat, s.peak && s.peak.gLat], ['LONGITUDINAL', s.gLong, s.peak && s.peak.gLong]].forEach(([l, v, pk], i) => {
+            const rx = x + 14 + cw * (i + 1) - 8;
+            cv.text(l, x + 22 + cw * i, y + HEAD + 26, 18, C.dim, F);
+            cv.text(isNum(v) ? Math.abs(v).toFixed(2) : '--', rx, y + HEAD + 86, 64, C.text, R);
+            cv.text('PEAK ' + fmt(pk, 2), rx, y + h - 12, 20, C.dim, R);
+        });
+        cv.fillRect(x + w / 2, y + HEAD + 12, 1, h - HEAD - 24, C.faint);
+    }
+
     function draw(cv, s, opt) {
         const us = !!opt.us;
         cv.clear(C.bg);
@@ -118,19 +182,14 @@
         const ry = (i) => TOP + i * (rh + gap);
         const T = (c) => (isNum(c) ? fmt(temp(c, us), 0) + '°' : '--');
 
-        /* ---------- engine, left ---------- */
+        /* ---------- boost control and fuel, left ---------- */
         const L = [16, 16 + bw + g];
-        const oilPc = isNum(s.oilP) && s.oilP < 0.5 && isNum(s.rpm) && s.rpm > 500 ? C.hot : null;
-        readout(cv, L[0], ry(0), bw, rh, 'COOLANT', U.temp(us), T(s.coolant), isNum(s.coolant) && s.coolant >= 115 ? C.hot : null);
-        readout(cv, L[1], ry(0), bw, rh, 'OIL TEMP', U.temp(us), T(s.oil), isNum(s.oil) && s.oil >= 140 ? C.hot : isNum(s.oil) && s.oil < 70 ? C.cold : null,
-            isNum(s.oil) && s.oil < 70 ? 'WARMING UP' : '', C.cold);
-        readout(cv, L[0], ry(1), bw, rh, 'OIL PRESS', U.press(us), isNum(s.oilP) ? (us ? fmt(s.oilP * 14.5038, 0) : fmt(s.oilP, 1)) : '--', oilPc,
-            !isNum(s.oilP) && opt.why ? opt.why('oilPressure') : '');
-        readout(cv, L[1], ry(1), bw, rh, 'INTAKE', U.temp(us), T(s.intake), null,
-            isNum(s.intake) && isNum(s.ambient) ? '+' + fmt(Math.max(0, (s.intake - s.ambient) * (us ? 1.8 : 1)), 0) + '° OVER OUTSIDE' : '');
-        readout(cv, L[0], ry(2), bw, rh, 'AFR', '', fmt(s.afr, 1), isNum(s.afr) && s.afr > 15.5 && isNum(s.boost) && s.boost > 0.3 ? C.hot : null,
-            isNum(s.afr) ? 'LAMBDA ' + (s.afr / 14.7).toFixed(2) : '');
-        readout(cv, L[1], ry(2), bw, rh, 'TIMING', 'BTDC', isNum(s.timing) ? fmt(s.timing, 1) + '°' : '--');
+        const running = isNum(s.rpm) ? s.rpm > 500 : true;
+        boostPanel(cv, L[0], ry(0), 2 * bw + g, 2 * rh + gap, s, us);
+        readout(cv, L[0], ry(2), bw, rh, 'FUEL RAIL', U.press(us), isNum(s.hpfp) ? (us ? fmt(s.hpfp * 14.5038, 0) : fmt(s.hpfp, 0)) : '--',
+            running ? low(s.hpfp, LIM.hpfp) : null, 'HIGH PRESSURE');
+        readout(cv, L[1], ry(2), bw, rh, 'LOW FUEL', U.press(us), isNum(s.lpfp) ? (us ? fmt(s.lpfp * 14.5038, 0) : fmt(s.lpfp, 1)) : '--',
+            running ? low(s.lpfp, LIM.lpfp) : null, 'LOW PRESSURE PUMP');
 
         /* ---------- tyres, middle ---------- */
         const mx0 = L[1] + bw + g, mx1 = W - 16 - 2 * bw - g - g, mw = mx1 - mx0;
@@ -150,20 +209,14 @@
 
         /* ---------- car, right ---------- */
         const R = [W - 16 - 2 * bw - g, W - 16 - bw];
-        const bv = isNum(s.boost) ? (us ? fmt(s.boost * 14.5038, 1) : fmt(s.boost, 2)) : '--';
-        const bp = s.peak && s.peak.boost > 0 ? 'PEAK ' + (us ? fmt(s.peak.boost * 14.5038, 1) : fmt(s.peak.boost, 2)) : '';
-        readout(cv, R[0], ry(0), bw, rh, 'BOOST', U.press(us), bv, null, bp);
-        readout(cv, R[1], ry(0), bw, rh, 'TRANS', U.temp(us), T(s.gearbox), isNum(s.gearbox) && s.gearbox >= 120 ? C.hot : null);
-        readout(cv, R[0], ry(1), bw, rh, 'OUTSIDE', U.temp(us), T(s.ambient), isNum(s.ambient) && s.ambient <= 3 ? C.cold : null,
-            isNum(s.ambient) && s.ambient <= 3 ? 'ICE POSSIBLE' : '', C.cold);
-        readout(cv, R[1], ry(1), bw, rh, 'FUEL', us ? 'GAL' : 'L', isNum(s.fuelL) ? (us ? fmt(s.fuelL / 3.78541, 1) : fmt(s.fuelL, 0)) : '--',
-            isNum(s.fuelL) && s.fuelL < 9 ? C.warm : null);
-        readout(cv, R[0], ry(2), bw, rh, 'RANGE', us ? 'MI' : 'KM', isNum(s.rangeKm) ? fmt(us ? s.rangeKm / 1.609344 : s.rangeKm, 0) : '--',
-            isNum(s.rangeKm) && s.rangeKm < 80 ? C.warm : null);
-        const gNow = isNum(s.gLat) && isNum(s.gLong) ? Math.sqrt(s.gLat * s.gLat + s.gLong * s.gLong) : null;
-        readout(cv, R[1], ry(2), bw, rh, 'G-FORCE', 'G', fmt(gNow, 2), null,
-            s.peak ? 'MAX ' + fmt(s.peak.gLat, 2) + ' LAT  ' + fmt(s.peak.gLong, 2) + ' LONG' : '');
-        if (opt.target) opt.target(cv, R[1], ry(2), bw, rh);     // a tap here resets the peaks
+        readout(cv, R[0], ry(0), bw, rh, 'TRANS', U.temp(us), T(s.gearbox), high(s.gearbox, LIM.gearbox), 'GEARBOX OIL');
+        const ice = isNum(s.ambient) && s.ambient <= LIM.ice;
+        readout(cv, R[1], ry(0), bw, rh, 'OUTSIDE', U.temp(us), T(s.ambient), ice ? C.warm : null, ice ? 'ICE POSSIBLE' : '', C.warm);
+        readout(cv, R[0], ry(1), bw, rh, 'RANGE', us ? 'MI' : 'KM', isNum(s.rangeKm) ? fmt(us ? s.rangeKm / 1.609344 : s.rangeKm, 0) : '--',
+            low(s.rangeKm, LIM.range));
+        readout(cv, R[1], ry(1), bw, rh, 'LOAD', '%', fmt(s.loadActual, 0), null, isNum(s.loadTarget) ? 'TARGET ' + fmt(s.loadTarget, 0) + ' %' : '');
+        gBox(cv, R[0], ry(2), 2 * bw + g, rh, s);
+        if (opt.target) opt.target(cv, R[0], ry(2), 2 * bw + g, rh);     // a tap here resets the peaks
     }
 
     const api = { draw, W, colors: C };

@@ -13,11 +13,11 @@
 <!-- Apex Telemetry's page as the car draws it: apps/apex_telemetry/draw.js on a stand-in for the kit's canvas
      (same calls, the same baked 'race' font from kit/runtime/fonts). Serve the repo root, open /tools/telemetry-preview/. -->
 <div class="bar">
-  Scene <select id="scene"><option value="street">Street, warm</option><option value="cold">Cold start</option><option value="track">Hot track lap</option><option value="none">No data yet</option></select>
+  Scene <select id="scene"><option value="street">Street, warm</option><option value="pull">Full-throttle pull</option><option value="cold">Cold start</option><option value="track">Hot track lap (trouble)</option><option value="none">No data yet</option></select>
   Units <select id="units"><option value="us">US</option><option value="metric">Metric</option></select>
 </div>
 <canvas id="c" width="1600" height="520"></canvas>
-<script src="../../apps/apex_telemetry/draw.js?v=2"></script>
+<script src="../../apps/apex_telemetry/draw.js?v=5"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let FONT = null;   // [{ size, glyphs, atlas: Uint8Array, atlasW, atlasH }]
@@ -81,17 +81,22 @@ function scene(name) {
   if (name === 'none') return { tyres: { FL: {}, FR: {}, RL: {}, RR: {} }, peak: { gLat: 0, gLong: 0, boost: 0 } };
   if (name === 'cold') return {
     tyres: { FL: ty(2.31, 4, 2.4), FR: ty(2.33, 4, 2.4), RL: ty(2.49, 5, 2.6), RR: ty(2.47, 5, 2.6) },
-    coolant: 31, oil: 22, oilP: 5.6, intake: 6, afr: 13.9, timing: 8.5, boost: 0, gearbox: 9, ambient: 2, fuelL: 22, rangeKm: 260, rpm: 1100,
+    boostTarget: 0, boost: -0.55, hpfp: 52, lpfp: 5.4, loadTarget: 21, loadActual: 20, gearbox: 9, ambient: 2, rangeKm: 260, rpm: 1100,
     gLat: 0, gLong: 0, peak: { gLat: 0, gLong: 0, boost: 0 },
   };
   if (name === 'track') return {
     tyres: { FL: ty(2.71, 79, 2.4), FR: ty(2.66, 72, 2.4), RL: ty(2.83, 61, 2.6), RR: ty(2.95, 88, 2.6) },
-    coolant: 109, oil: 136, oilP: 4.8, intake: 49, afr: 12.1, timing: 9.5, boost: 1.18, gearbox: 112, ambient: 27, fuelL: 7, rangeKm: 72, rpm: 6400,
+    boostTarget: 1.25, boost: 0.91 + w(0.03, 1), hpfp: 22, lpfp: 3.6, loadTarget: 148, loadActual: 121, gearbox: 118, ambient: 27, rangeKm: 35, rpm: 6400,
     gLat: 0.9 + w(0.05, 1), gLong: 0.3, peak: { gLat: 1.02, gLong: 0.96, boost: 1.24 },
+  };
+  if (name === 'pull') return {
+    tyres: { FL: ty(2.47, 44, 2.4), FR: ty(2.48, 46, 2.4), RL: ty(2.66, 49, 2.6), RR: ty(2.67, 51, 2.6) },
+    boostTarget: 1.18, boost: 1.16 + w(0.03, 0.7), hpfp: 318, lpfp: 5.1, loadTarget: 141, loadActual: 139, gearbox: 92, ambient: 24, rangeKm: 410, rpm: 5600,
+    gLat: 0.04, gLong: 0.52, peak: { gLat: 0.61, gLong: 0.58, boost: 1.2 },
   };
   return {
     tyres: { FL: ty(2.42, 31, 2.4), FR: ty(2.44, 33, 2.4), RL: ty(2.58, 35, 2.6), RR: ty(2.39, 36, 2.6) },
-    coolant: 98, oil: 104, oilP: 3.9 + w(0.3, 3), intake: 34, afr: 14.7, timing: 18.5, boost: 0.12, gearbox: 81, ambient: 24, fuelL: 41, rangeKm: 512, rpm: 1900,
+    boostTarget: 0.08, boost: 0.05, hpfp: 58, lpfp: 5.2, loadTarget: 34, loadActual: 33, gearbox: 81, ambient: 24, rangeKm: 512, rpm: 1900,
     gLat: 0.12, gLong: 0.05, peak: { gLat: 0.61, gLong: 0.48, boost: 1.05 },
   };
 }
