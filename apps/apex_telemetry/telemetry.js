@@ -24,7 +24,7 @@ const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
 const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v : null);
 const FRESH = { dme: 6000, fes: 1500 };
 // the DME values read in turn while the page shows: [names in config.dme (read back to back), ms between reads]
-const DME_READS = [[['boostTarget', 'boostActual'], 250], [['hpfp'], 500], [['lpfp'], 800], [['loadTarget', 'loadActual'], 600], [['chargeBefore', 'intake'], 1000], [['egs'], 3000]];
+const DME_READS = [[['boostTarget', 'boostActual'], 250], [['hpfp'], 1000], [['lpfp'], 2000], [['loadTarget', 'loadActual'], 1500], [['chargeBefore', 'intake'], 2000], [['egs'], 5000]];
 const ABS_KPA = { boostTarget: 1, boostActual: 1 };     // absolute kPa: shown as bar over the outside air
 
 class Telemetry {
@@ -116,17 +116,29 @@ class Telemetry {
             rd = new DidReader(link, { ecu: dme.ecu || 18 });
         } catch (e) { this.log.info('engine unit off: ' + (e && e.message || e)); return; }
         this.reader = rd;
-        const asked = {};
+        // a candidate that gets no reply costs its whole timeout: keep that short, so one missing value can't stall the rest
+        const lists = {};
+        Object.keys(dme).forEach((k) => { if (Array.isArray(dme[k])) lists[k] = dme[k].map((c) => Object.assign({ timeoutMs: 1200 }, c)); });
+        const groups = DME_READS.filter(([ks]) => ks.every((k) => lists[k] && lists[k].length));
+        const st = {};          // first name of a group -> { asked, miss } (miss: reads in a row that got nothing)
         let busy = false, baro = 101.3, baroAt = 0;
         this.dmeTimer = setInterval(() => {
             const now = Date.now();
             if (busy || now - this.wantAt > 3000 || this.car.data().demo) return;
-            // the next group due (the gearbox unit only while the car's data set has no gearbox temperature)
-            const due = DME_READS.find(([ks, ms]) => ks.every((k) => Array.isArray(dme[k]) && dme[k].length) && now - (asked[ks[0]] || 0) >= ms
-                && !(ks[0] === 'egs' && this._fresh('gearboxBds', 30000)));
+            // the most overdue group goes next (overdue = time since its last read / its interval). Taking simply the
+            // first one due starved everything after boost on the car (Nov 13 2026): one boost read took longer than
+            // boost's own interval. A group that got nothing 3 times in a row is asked every 15 s only; the gearbox unit
+            // only while the car's data set has no gearbox temperature.
+            let due = null, most = 1;
+            groups.forEach((gr) => {
+                const k0 = gr[0][0], g = st[k0] || (st[k0] = { asked: 0, miss: 0 });
+                if (k0 === 'egs' && this._fresh('gearboxBds', 30000)) return;
+                const r = (now - g.asked) / (g.miss >= 3 ? Math.max(gr[1], 15000) : gr[1]);
+                if (r >= most) { most = r; due = gr; }
+            });
             if (!due) return;
-            const ks = due[0];
-            asked[ks[0]] = now;
+            const ks = due[0], g = st[ks[0]];
+            g.asked = now;
             busy = true;
             (async () => {
                 if (ks[0] === 'boostTarget' && now - baroAt > 60000 && Array.isArray(dme.baro)) {
@@ -134,26 +146,37 @@ class Telemetry {
                     const b = await rd.value('baro', dme.baro);
                     if (isNum(b)) baro = b;
                 }
+                let got = 0;
                 for (const k of ks) {
-                    const v = await rd.value(k, dme[k]);
+                    const v = await rd.value(k, lists[k]);
                     if (!isNum(v)) continue;
+                    got++;
                     const at = Date.now();
                     if (ABS_KPA[k]) this.v[k] = { v: (v - baro) / 100, at };                         // absolute kPa -> bar boost
                     else if (k === 'egs') this.v.gearboxEgs = { v, at };
                     else this.v[k] = { v, at };
                 }
+                if (got) g.miss = 0;
+                else if (++g.miss === 3) this.log.info('engine unit: no ' + ks.join(' / ') + ' (' + ks.map((k) => this.why(k)).join('; ') + '), asked every 15 s');
             })().catch((e) => this.log.info('engine unit: ' + (e && e.message || e))).then(() => { busy = false; });
         }, 100);
     }
 
     _fresh(k, ms) { const x = this.v[k]; return x && Date.now() - x.at < ms ? x.v : null; }
 
-    /** What the engine unit answered for config.dme[name] while it has no value ('NRC 31', 'not asked yet'), else ''. */
+    /** What the engine unit answered for config.dme[name], per candidate ('F423 NRC 31, OBD 23 NO REPLY'), for a box
+     *  that has no value; '' while it has one or before it was asked. */
     why(name) {
         const rd = this.reader, list = (this.cfg.dme || {})[name];
         if (!rd || !Array.isArray(list)) return '';
-        const r = rd.raws[rd.key(list[0])];
-        return !r ? '' : r.ok ? '' : (r.why || '');
+        const out = [];
+        for (const c of list) {
+            const r = rd.raws[rd.key(c)];
+            if (!r) continue;
+            if (r.ok) return '';
+            out.push(rd.constructor.label(c) + ' ' + String(r.why || '?').replace(/^NRC (\w+).*/, 'NRC $1').toUpperCase());
+        }
+        return out.length ? out.join(', ') : 'ASKING';
     }
 
     resetPeaks() { this.peak = { gLat: 0, gLong: 0, boost: 0 }; }

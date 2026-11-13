@@ -17,7 +17,7 @@
   Units <select id="units"><option value="us">US</option><option value="metric">Metric</option></select>
 </div>
 <canvas id="c" width="1600" height="520"></canvas>
-<script src="../../apps/apex_telemetry/draw.js?v=13"></script>
+<script src="../../apps/apex_telemetry/draw.js?v=15"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let FONT = null;   // [{ size, glyphs, atlas: Uint8Array, atlasW, atlasH }]
@@ -106,7 +106,7 @@ function scene(name) {
   const g = $('c').getContext('2d'), cv = makeCv(g);
   const paint = () => {
     const s = scene($('scene').value); s.demo = false;
-    ApexTelemetryDraw.draw(cv, s, { us: $('units').value === 'us', tyreWarn: 54, tyreHot: 66, frame, why: () => 'not asked yet' });
+    ApexTelemetryDraw.draw(cv, s, { us: $('units').value === 'us', tyreWarn: 54, tyreHot: 66, frame, why: (k) => ({ hpfp: 'F423 NRC 31, F459 NRC 31, OBD 23 NO REPLY', egs: '6000 NO REPLY', chargeBefore: '59D4 NRC 31' })[k] || '' });
     requestAnimationFrame(paint);
   };
   paint();

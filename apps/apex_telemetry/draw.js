@@ -13,7 +13,8 @@
  *
  * Pure: draw(cv, snap, opt) uses only the kit canvas calls (fillRect, roundRect, strokeRoundRect, gradientRect,
  * circle, text, textWidth), so tools/telemetry-preview/ runs this same file in a browser.
- *   snap: Telemetry.snapshot() (SI units)   opt: { us, tyreWarn (C), tyreHot (C), frame(cv, badges), target(cb) }
+ *   snap: Telemetry.snapshot() (SI units)   opt: { us, tyreWarn (C), tyreHot (C), frame(cv, badges), target(cb),
+ *         why(name): what the engine unit answered for config.dme[name], shown in a box without a value }
  */
 (function (root) {
     const W = 1600, TOP = 52, BOTTOM = 512;
@@ -60,8 +61,16 @@
         const size = tw > room ? Math.max(40, base * room / tw) : base;
         cv.text(value, x + w - 14, y + HEAD + (sub ? 70 : 84), size, color || C.text, Object.assign({ align: 'right' }, F));
         if (sub) {
-            const ss = Math.max(16, Math.min(22, 22 * (w - 24) / Math.max(1, cv.textWidth(sub, 22, F))));
-            cv.text(sub, x + w - 14, y + h - 12, ss, subColor || C.dim, Object.assign({ align: 'right' }, F));
+            const room = w - 24, RA = Object.assign({ align: 'right' }, F), fit = (t, max) => Math.min(max, max * room / Math.max(1, cv.textWidth(t, max, F)));
+            const parts = sub.split(', ');
+            if (fit(sub, 22) >= 16 || parts.length < 2) cv.text(sub, x + w - 14, y + h - 12, Math.max(16, fit(sub, 22)), subColor || C.dim, RA);
+            else {
+                // a long note (what the engine unit answered): two lines
+                const half = Math.ceil(parts.length / 2), l1 = parts.slice(0, half).join(', '), l2 = parts.slice(half).join(', ');
+                const sz = Math.max(12, Math.min(fit(l1, 16), fit(l2, 16)));
+                cv.text(l1, x + w - 14, y + h - 12 - sz - 2, sz, subColor || C.dim, RA);
+                cv.text(l2, x + w - 14, y + h - 12, sz, subColor || C.dim, RA);
+            }
         }
     }
 
@@ -165,7 +174,7 @@
     }
 
     /** the intercooler: charge air before and after it, the drop across it, and heat soak (after minus outside) */
-    function icBox(cv, x, y, w, h, s, us) {
+    function icBox(cv, x, y, w, h, s, us, note) {
         box(cv, x, y, w, h, 'INTERCOOLER', U.temp(us));
         const R = Object.assign({ align: 'right' }, F), cw = (w - 28) / 3, b = s.chargeBefore, a = s.intake;
         const drop = isNum(b) && isNum(a) ? b - a : null, soak = isNum(a) && isNum(s.ambient) ? a - s.ambient : null;
@@ -178,7 +187,8 @@
             cv.text(l, rx, y + HEAD + 26, 18, C.dim, R);
             cv.text(v, rx, y + HEAD + 84, 60, c, R);
         });
-        if (isNum(soak)) {
+        if (note) cv.text(note, x + w - 14, y + h - 12, Math.max(14, Math.min(20, 20 * (w - 28) / Math.max(1, cv.textWidth(note, 20, F)))), C.dim, R);
+        else if (isNum(soak)) {
             const sc = high(soak, LIM.icSoak);
             cv.text('HEAT SOAK ' + (soak >= 0 ? '+' : '') + fmt(soak * k, 0) + '° OVER OUTSIDE' + (sc === C.hot ? '  ·  LET IT COOL' : ''),
                 x + w - 14, y + h - 12, 20, sc || C.dim, R);
@@ -200,6 +210,7 @@
 
     function draw(cv, s, opt) {
         const us = !!opt.us;
+        const why = (v, ...names) => (isNum(v) || !opt.why ? '' : names.map((n) => opt.why(n)).filter(Boolean).join(', '));
         cv.clear(C.bg);
         if (opt.frame) opt.frame(cv, [s.demo ? { text: 'DEMO DATA', color: '#ffb020' } : null]);
         const rows = 3, gap = 11, rh = (BOTTOM - TOP - gap * (rows - 1)) / rows, bw = 210, g = 16;
@@ -211,9 +222,9 @@
         const running = isNum(s.rpm) ? s.rpm > 500 : true;
         boostPanel(cv, L[0], ry(0), 2 * bw + g, 2 * rh + gap, s, us);
         readout(cv, L[0], ry(2), bw, rh, 'FUEL RAIL', U.press(us), isNum(s.hpfp) ? (us ? fmt(s.hpfp * 14.5038, 0) : fmt(s.hpfp, 0)) : '--',
-            running ? low(s.hpfp, LIM.hpfp) : null, 'HIGH PRESSURE');
+            running ? low(s.hpfp, LIM.hpfp) : null, why(s.hpfp, 'hpfp') || 'HIGH PRESSURE', isNum(s.hpfp) ? null : C.dim);
         readout(cv, L[1], ry(2), bw, rh, 'LOW FUEL', U.press(us), isNum(s.lpfp) ? (us ? fmt(s.lpfp * 14.5038, 0) : fmt(s.lpfp, 1)) : '--',
-            running ? low(s.lpfp, LIM.lpfp) : null, 'LOW PRESSURE PUMP');
+            running ? low(s.lpfp, LIM.lpfp) : null, why(s.lpfp, 'lpfp') || 'LOW PRESSURE PUMP', isNum(s.lpfp) ? null : C.dim);
 
         /* ---------- tyres, middle ---------- */
         const mx0 = L[1] + bw + g, mx1 = W - 16 - 2 * bw - g - g, mw = mx1 - mx0;
@@ -235,12 +246,12 @@
         const R = [W - 16 - 2 * bw - g, W - 16 - bw];
         const sw = (2 * bw - g) / 3, S3 = [R[0], R[0] + sw + g, R[0] + 2 * (sw + g)];
         const gc = cold(s.gearbox, LIM.cold.gearbox);
-        readout(cv, S3[0], ry(0), sw, rh, 'TRANS', U.temp(us), T(s.gearbox), high(s.gearbox, LIM.gearbox) || gc, gc ? 'WARMING UP' : 'GEARBOX', gc);
+        readout(cv, S3[0], ry(0), sw, rh, 'TRANS', U.temp(us), T(s.gearbox), high(s.gearbox, LIM.gearbox) || gc, gc ? 'WARMING UP' : why(s.gearbox, 'egs') || 'GEARBOX', gc);
         const ice = isNum(s.ambient) && s.ambient <= LIM.ice;
         readout(cv, S3[1], ry(0), sw, rh, 'OUTSIDE', U.temp(us), T(s.ambient), ice ? C.cold : null, ice ? 'ICE POSSIBLE' : '', C.warm);
         readout(cv, S3[2], ry(0), sw, rh, 'RANGE', us ? 'MI' : 'KM', isNum(s.rangeKm) ? fmt(us ? s.rangeKm / 1.609344 : s.rangeKm, 0) : '--',
             low(s.rangeKm, LIM.range));
-        icBox(cv, R[0], ry(1), 2 * bw + g, rh, s, us);
+        icBox(cv, R[0], ry(1), 2 * bw + g, rh, s, us, why(isNum(s.chargeBefore) && isNum(s.intake) ? 0 : null, 'chargeBefore', 'intake'));
         gBox(cv, R[0], ry(2), 2 * bw + g, rh, s);
         if (opt.target) opt.target(cv, R[0], ry(2), 2 * bw + g, rh);     // a tap here resets the peaks
     }

@@ -39,6 +39,7 @@ mgu.run({
                 us: settings.get('units') !== 'metric',
                 tyreWarn: num('tyreWarn', 54), tyreHot: num('tyreHot', 66),
                 frame: (c, badges) => G.frame(c, ctx.theme(), [], -1, badges),
+                why: (k) => tel.why(k),
                 target: (c, x, y, w, h) => { if (c.target) c.target(x, y, w, h, () => { tel.resetPeaks(); if (loop && loop.kick) loop.kick(); }, 'peaks', 5); },
             });
             return ctx.ui.image('MAIN_GFX', cv);
