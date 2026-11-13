@@ -1,0 +1,436 @@
+{
+  "id": "apex_telemetry",
+  "title": "Apex Telemetry",
+  "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, engine temperatures, oil pressure, AFR, timing, boost, gearbox, fuel, range and g-force",
+  "version": "0.1.0",
+  "vendor": "custom",
+  "loggingId": "OAT1",
+  "iconGlyph": "TEL",
+  "shared": [],
+  "signals": {
+    "de.bmw.infotainment.vehicle.CDS": {
+      "statusEngineSpeed2": "rs",
+      "statusEngineTemperature": "rs"
+    },
+    "de.bmw.infotainment.vehicle.CDS2": {
+      "statusLongitudinalAccelerationMassCenter": "rs",
+      "statusLateralAccelerationMassCenter": "rs"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
+    },
+    "de.bmw.infrastructure.VehicleInformation": {
+      "statusGearboxDrive": "s",
+      "DataPowerTrain2": "s"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle": {
+      "statusNewCurrentUnitsStatusExt": "rs",
+      "_optional": "the car's pressure and temperature units, for the tyres"
+    },
+    "de.bmw.infotainment.vehicle.TPMS": {
+      "statusTyrePressure": "rs",
+      "statusTyreTemperature": "rs",
+      "statusTargetTyrePressure": "rs",
+      "_optional": "tyre pressures, temperatures and the car's target pressures"
+    },
+    "de.bmw.infrastructure.EnvironmentalInformation": {
+      "ExteriorTemperature": "s"
+    },
+    "de.bmw.infotainment.KombiIF": {
+      "statusRangeTankStatus": "rs"
+    },
+    "de.bmw.infotainment.drivingexcitement.FES": {
+      "statusSwitchDriveDynamicSport2": "rs"
+    },
+    "de.bmw.infrastructure.analytics.BasicDataSet": {
+      "basicDataSet": "s",
+      "_optional": "gearbox oil temperature"
+    },
+    "com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu": {
+      "_instances": "SystemFunctionsInternalTasuInst1",
+      "_methods": [
+        "sendTasuRequest"
+      ],
+      "_broadcasts": [
+        "sendTasuResponse"
+      ]
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "canvas",
+      "title": "Apex Telemetry",
+      "buttons": [
+        [
+          "BTN_SETTINGS",
+          "All settings"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "units",
+      "label": "Units",
+      "type": "choice",
+      "default": "us",
+      "options": [
+        [
+          "us",
+          "mph, °F, psi"
+        ],
+        [
+          "metric",
+          "km/h, °C, bar"
+        ]
+      ]
+    },
+    {
+      "key": "tyreHot",
+      "label": "Tyre hot from",
+      "type": "choice",
+      "default": "70",
+      "options": [
+        [
+          "55",
+          "55 °C / 131 °F"
+        ],
+        [
+          "60",
+          "60 °C / 140 °F"
+        ],
+        [
+          "70",
+          "70 °C / 158 °F"
+        ],
+        [
+          "80",
+          "80 °C / 176 °F"
+        ],
+        [
+          "90",
+          "90 °C / 194 °F"
+        ]
+      ]
+    },
+    {
+      "key": "tyreCold",
+      "label": "Tyre cold below",
+      "type": "choice",
+      "default": "15",
+      "options": [
+        [
+          "5",
+          "5 °C / 41 °F"
+        ],
+        [
+          "10",
+          "10 °C / 50 °F"
+        ],
+        [
+          "15",
+          "15 °C / 59 °F"
+        ],
+        [
+          "20",
+          "20 °C / 68 °F"
+        ],
+        [
+          "25",
+          "25 °C / 77 °F"
+        ]
+      ]
+    },
+    {
+      "key": "demo",
+      "label": "Demo data",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (until the car sends data)"
+        ],
+        [
+          "on",
+          "On"
+        ],
+        [
+          "off",
+          "Off"
+        ]
+      ]
+    },
+    {
+      "key": "theme",
+      "label": "Colour theme (center screen)",
+      "type": "choice",
+      "default": "ice",
+      "options": [
+        [
+          "ice",
+          "Ice White"
+        ],
+        [
+          "m_tricolour",
+          "M Tricolour"
+        ]
+      ]
+    }
+  ],
+  "config": {
+    "_comment": "Tyre colours: TPMS temperature is the air inside the tyre, not the tread: blue under tyreCold, green, amber within 15 °C of tyreHot, red from tyreHot. Pressure against the car's own target (TPMS statusTargetTyrePressure): within 1 psi green, 3 psi amber, else red; without a target, a tyre more than 2 psi off the other side of its axle says UNEVEN.",
+    "dme": {
+      "comment": "Boost from the engine unit (DME, ecu 18) over read-only UDS 0x22, only while the sport display sends no boost and a boost readout is shown. Absolute kPa, the outside air pressure (baro) is subtracted. Candidates tried in order, the first plausible one wins. From cauliflowermossgrape's car_vitals (MIT). Intake air temperature the same way (config.dme.intake, every 2 s, only while an intake readout shows); candidates from cruzen991/Cluster's signal table (MIT), unverified on this car. Oil pressure (config.dme.oilPressure, absolute bar; the outside air pressure from baro is subtracted), AFR (config.dme.afr, lambda x 14.7) and the first intake / baro candidates: BMW's own DME8FF_R identifiers, as cauliflowermossgrape's Live Data reads them; the OBD ones stay as fallbacks. egs: gearbox oil temperature from the gearbox unit (EGS, ecu 24), as M Vitals reads it (cauliflowermossgrape, MIT), asked only while the basic data set has none.",
+      "ecu": 18,
+      "boost": [
+        {
+          "did": "F470",
+          "bytes": 2,
+          "at": 3,
+          "factor": 0.03125,
+          "offset": 0,
+          "min": 20,
+          "max": 600,
+          "note": "OBD PID 0x70 boost pressure control: actual boost pressure sensor A (absolute), 1/32 kPa"
+        },
+        {
+          "did": "F487",
+          "bytes": 2,
+          "at": 1,
+          "factor": 0.03125,
+          "offset": 0,
+          "min": 20,
+          "max": 600,
+          "note": "OBD PID 0x87 intake manifold absolute pressure sensor A, 1/32 kPa"
+        },
+        {
+          "did": "F40B",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": 0,
+          "min": 20,
+          "max": 255,
+          "note": "OBD PID 0x0B intake manifold absolute pressure, kPa (max 255 = 1.5 bar boost)"
+        },
+        {
+          "obd": "0B",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": 0,
+          "min": 20,
+          "max": 255,
+          "note": "OBD service 01 PID 0x0B (same as F40B)"
+        }
+      ],
+      "baro": [
+        {
+          "did": "4201",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.00390625,
+          "offset": 0,
+          "min": 50,
+          "max": 115,
+          "note": "IPUMG, ambient pressure, u16 x 0.0390625 hPa -> kPa. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "F433",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": 0,
+          "min": 50,
+          "max": 115,
+          "note": "OBD PID 0x33 barometric pressure, kPa (101.3 when not available)"
+        },
+        {
+          "obd": "33",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": 0,
+          "min": 50,
+          "max": 115,
+          "note": "OBD service 01 PID 0x33 (same as F433)"
+        }
+      ],
+      "intake": [
+        {
+          "did": "580F",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.75,
+          "offset": -48,
+          "min": -35,
+          "max": 150,
+          "note": "ITANS, intake air temperature, u8 x 0.75 - 48 C. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "F40F",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": -40,
+          "min": -35,
+          "max": 150,
+          "note": "OBD PID 0x0F intake air temperature, C + 40"
+        },
+        {
+          "did": "F477",
+          "bytes": 1,
+          "at": 1,
+          "factor": 1,
+          "offset": -40,
+          "min": -35,
+          "max": 150,
+          "note": "OBD PID 0x77 charge air cooler temperature, bank 1 sensor 1 (byte after the support byte), C + 40"
+        },
+        {
+          "obd": "0F",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": -40,
+          "min": -35,
+          "max": 150,
+          "note": "OBD service 01 PID 0x0F (same as F40F)"
+        }
+      ],
+      "timing": [
+        {
+          "obd": "0E",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.5,
+          "offset": -64,
+          "min": -64,
+          "max": 63.5,
+          "note": "OBD service 01 PID 0x0E timing advance, degrees before TDC (cylinder 1); the candidates M Vitals (cauliflowermossgrape, MIT) reads"
+        },
+        {
+          "did": "F40E",
+          "bytes": 1,
+          "at": 0,
+          "factor": 0.5,
+          "offset": -64,
+          "min": -64,
+          "max": 63.5,
+          "note": "the same PID over UDS 0x22"
+        }
+      ],
+      "afr": [
+        {
+          "did": "5889",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0035888671875,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "ILAG1, lambda actual bank 1, u16 x 1/4096, times 14.7 for gasoline AFR. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "5640",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.003588858,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "LAMBDA_SONDE_IST, lambda from the probe, as 5889. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "F434",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD PID 0x34 wide-range O2 sensor bank 1 sensor 1: equivalence ratio (lambda) 2/65536 per bit, times 14.7 for gasoline AFR. Unverified on this car."
+        },
+        {
+          "obd": "34",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD service 01 PID 0x34 (same as F434)"
+        },
+        {
+          "did": "F424",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD PID 0x24 O2 sensor 1: equivalence ratio, as F434"
+        },
+        {
+          "obd": "24",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.0004486083984375,
+          "offset": 0,
+          "min": 8,
+          "max": 30,
+          "note": "OBD service 01 PID 0x24 (same as F424)"
+        }
+      ],
+      "oilPressure": [
+        {
+          "did": "4436",
+          "bytes": 2,
+          "at": 0,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "I_DRUCK_OEL_IST_ABS, oil pressure actual (absolute), u16 hPa -> bar. DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        },
+        {
+          "did": "586F",
+          "bytes": 2,
+          "at": 0,
+          "signed": true,
+          "factor": 0.001,
+          "offset": 0,
+          "min": 0.5,
+          "max": 12,
+          "note": "OELDRUCK, oil pressure, s16 hPa -> bar (absolute, as Live Data reads it). DME8FF_R (MG1 DME: B58 / B48 / B38, G series), the identifiers cauliflowermossgrape's Live Data reads (MIT)"
+        }
+      ],
+      "egs": [
+        {
+          "ecu": 24,
+          "did": "6000",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": -40,
+          "min": -40,
+          "max": 160,
+          "note": "ZF 8HP (GSZFBCE) _GETRIEBEOELTEMPERATUR, deg C + 40 (idrive7-apps PR #29, read on a G22)"
+        },
+        {
+          "ecu": 24,
+          "did": "DA12",
+          "bytes": 1,
+          "at": 0,
+          "factor": 1,
+          "offset": -48,
+          "min": -40,
+          "max": 160,
+          "note": "gearbox unit (EGS, 0x18) transmission oil temperature, deg C + 48 (from a forum report, not confirmed on a car: only shown once it changes; the replies go to the log, \"raw EGS\")"
+        }
+      ]
+    }
+  }
+}

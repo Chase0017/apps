@@ -4,6 +4,12 @@
 
 <p align="center"><img src="docs/images/cluster-gt3.gif" width="900" alt="GT3 race dash on the instrument cluster"></p>
 
+## Apex Telemetry
+
+<img src="apps/apex_telemetry/icon.png" width="72" align="left" alt="Apex Telemetry icon">
+
+A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets around a car seen from above, engine temperatures, oil pressure, AFR, timing, boost, gearbox, fuel, range and g-force. [Read more](apps/apex_telemetry/README.md)
+
 ## Cluster Themes
 
 <img src="apps/cluster_themes/icon.png" width="72" align="left" alt="Cluster Themes icon">

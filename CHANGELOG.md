@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 13 2026
+
+- **Apex Telemetry 0.1.0 (chase0017-apps, new app):** a GT3 pit board on the center screen. Tyres (TPMS pressure against the car's target, temperature in cold / ok / warm / hot colours) round a car seen from above; coolant, oil, oil pressure, intake, AFR and timing; boost with its peak, gearbox oil, outside, fuel, range and g-force with peaks. Engine unit values over the kit's read-only link (Apex Cluster's identifiers, M Vitals' for timing and the gearbox). New kit font family `race` (Barlow Condensed Bold, `tools/bake_kit_font.py`), browser preview in `tools/telemetry-preview/`.
+
 ## Nov 12 2026
 
 - **Apex Cluster 0.19.2 (chase0017-apps fork):** TRACTION reads just ON / DTC / OFF.

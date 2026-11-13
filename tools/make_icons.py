@@ -1,6 +1,6 @@
 """Apex Cluster / Apex HUD icons: a chevron (the apex) built from shift lights, green at the base to blue at the tip.
 
-    python tools/make_icons.py <repo root> <out dir>   then copy cluster.png / hud.png to each app's icon.png (needs Pillow)
+    python tools/make_icons.py <repo root> <out dir>   then copy cluster.png / hud.png / telemetry.png to each app's icon.png (needs Pillow)
 """
 import sys, os
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -82,10 +82,35 @@ def hud():
     d.rounded_rectangle([30 * S, 124 * S, 110 * S, 134 * S], 5 * S, fill=(16, 19, 24, 255), outline=(233, 242, 255, 255), width=2 * S)
     return img.resize((140, 140), Image.LANCZOS)
 
-cluster().save(os.path.join(OUT, 'cluster.png')); hud().save(os.path.join(OUT, 'hud.png'))
+def telemetry():
+    """Apex Telemetry: the car from above, its four tyres lit by temperature, on the cluster's dark slab."""
+    img = Image.new('RGBA', (N, N), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    shadow = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle([10 * S, 16 * S, 130 * S, 132 * S], 26 * S, fill=(0, 0, 0, 150))
+    img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(5 * S)))
+    slab(d, [8 * S, 10 * S, 132 * S, 128 * S], 26 * S, (16, 19, 24, 255), (233, 242, 255, 255))
+    # body
+    d.rounded_rectangle([52 * S, 24 * S, 88 * S, 114 * S], 15 * S, fill=(58, 64, 74, 255))
+    d.rounded_rectangle([54 * S, 26 * S, 86 * S, 112 * S], 13 * S, fill=(28, 32, 39, 255))
+    d.rounded_rectangle([58 * S, 44 * S, 82 * S, 56 * S], 4 * S, fill=(52, 66, 86, 255))
+    d.rounded_rectangle([59 * S, 90 * S, 81 * S, 98 * S], 3 * S, fill=(52, 66, 86, 255))
+    # tyres, glowing in their temperature colours
+    lay = Image.new('RGBA', img.size, (0, 0, 0, 0)); ld = ImageDraw.Draw(lay)
+    for (x, y), c in zip([(38, 30), (90, 30), (38, 82), (90, 82)], [LED[0], LED[0], LED[2], LED[3]]):
+        ld.rounded_rectangle([x * S, y * S, (x + 12) * S, (y + 26) * S], 4 * S, fill=c + (255,))
+    glow(img, lay, 3 * S)
+    d = ImageDraw.Draw(img)
+    # pressure ticks beside each tyre
+    for x, y in [(18, 36), (106, 36), (18, 88), (106, 88)]:
+        for i in range(3):
+            d.rounded_rectangle([x * S, (y + i * 6) * S, (x + 16) * S, (y + i * 6 + 3) * S], 1 * S, fill=(233, 242, 255, 255 if i == 0 else 110))
+    return img.resize((140, 140), Image.LANCZOS)
+
+
+cluster().save(os.path.join(OUT, 'cluster.png')); hud().save(os.path.join(OUT, 'hud.png')); telemetry().save(os.path.join(OUT, 'telemetry.png'))
 # a side-by-side on dark and light, to look at
-sheet = Image.new('RGBA', (600, 170), (20, 20, 20, 255))
-ImageDraw.Draw(sheet).rectangle([300, 0, 600, 170], fill=(235, 238, 242, 255))
-for i, n in enumerate(['cluster', 'hud', 'cluster', 'hud']):
+sheet = Image.new('RGBA', (900, 170), (20, 20, 20, 255))
+ImageDraw.Draw(sheet).rectangle([450, 0, 900, 170], fill=(235, 238, 242, 255))
+for i, n in enumerate(['cluster', 'hud', 'telemetry', 'cluster', 'hud', 'telemetry']):
     sheet.alpha_composite(Image.open(os.path.join(OUT, n + '.png')), (10 + i * 150, 15))
 sheet.save(os.path.join(OUT, 'sheet.png'))
