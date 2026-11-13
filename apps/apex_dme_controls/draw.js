@@ -30,7 +30,7 @@ const T = (c, f, held) => (typeof c === 'number' ? Math.round(f ? c * 9 / 5 + 32
 
 function mapBox(cv, P, v, opt, act, bottom) {
     const [x, w] = COLS[0], f = v.features.map;
-    const right = v.tuner === 'off' ? 'no tuning software' : v.tuner === 'bm3' ? 'BM3' + (v.bm3Rom ? ' · ROM ' + v.bm3Rom : '') : 'MHD';
+    const right = v.tuner === 'off' ? 'no tuning software' : v.tuner === 'bm3' ? 'BM3' + (v.bm3Rom ? ' · ROM ' + v.bm3Rom : '') : v.tuner === 'mgf' ? 'MG Flasher · on the wheel' : 'MHD';
     const y0 = gt3.section(cv, P, x, TOP, w, bottom - TOP, 'Engine map', right);
     const tw2 = (w - 24 - 12) / 2, th = Math.floor((bottom - y0 - 36 - 76) / 2), can = f && !v.mapBlock && !v.busy && v.map.pending === null;
     for (let i = 0; i < 4; i++) {
@@ -58,7 +58,7 @@ function mapBox(cv, P, v, opt, act, bottom) {
 
 function valveBox(cv, P, v, opt, act, bottom) {
     const [x, w] = COLS[1];
-    const right = v.tuner === 'off' ? 'BMW job' : v.tuner.toUpperCase();
+    const right = v.tuner === 'off' || v.tuner === 'mgf' ? 'BMW job' : v.tuner.toUpperCase();
     const y0 = gt3.section(cv, P, x, TOP, w, bottom - TOP, 'Exhaust valve', right);
     // three big buttons
     const bx = x + 12, bw = w - 24, bh = 96, by = y0 + 12, ow = (bw - 4) / 3;
@@ -95,7 +95,7 @@ function valveBox(cv, P, v, opt, act, bottom) {
 
 function coolBox(cv, P, v, opt, act, bottom) {
     const [x, w] = COLS[2], f = v.features.cooling, on = v.cooling.on === true;
-    const y0 = gt3.section(cv, P, x, TOP, w, bottom - TOP, 'Max cooling', 'MHD');
+    const y0 = gt3.section(cv, P, x, TOP, w, bottom - TOP, 'Max cooling', v.tuner === 'mgf' ? 'MG Flasher · on the wheel' : 'MHD');
     const bx = x + 12, bw = w - 24, bh = 176, by = y0 + 12, can = !v.coolBlock && !v.busy;
     cv.roundRect(bx, by, bw, bh, 4, !f ? P.off : on ? P.cold : P.box);
     if (!on) cv.roundRect(bx + 2, by + 2, bw - 4, bh - 4, 3, P.bg);

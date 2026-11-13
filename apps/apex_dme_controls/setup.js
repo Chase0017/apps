@@ -15,7 +15,7 @@ const gt3 = require('./gt3ui');
 
 const CX = 288, CR = 1584, CW = CR - CX;
 const TABS = [['back', 'Controls', 'back'], ['tuning', 'Tuning', 'cog'], ['maps', 'Maps', 'lines'], ['units', 'Units', 'units'], ['valve', 'Valve & cooling', 'alert'], ['system', 'System', 'screen']];
-const TUNER = { off: 'Off', mhd: 'MHD', bm3: 'BM3' };
+const TUNER = { off: 'Off', mhd: 'MHD', bm3: 'BM3', mgf: 'MG Flasher' };
 
 class Setup {
     /** opts: { kick(), close(), openList() } */
@@ -30,7 +30,7 @@ class Setup {
         cv.clear(P.bg);
         const lim = this.get('closeLimit');
         const value = {
-            back: 'map, valve, Max Cooling', tuning: TUNER[v.tuner] + (v.tuner === 'off' ? ' · valve only' : ''),
+            back: 'map, valve, Max Cooling', tuning: TUNER[v.tuner] + (v.tuner === 'off' || v.tuner === 'mgf' ? ' · valve only' : ''),
             maps: [1, 2, 3, 4].map((i) => this.label('map' + i)).join(' · '), units: (u.tf ? '°F' : '°C') + ' · ' + (u.sp ? 'mph' : 'km/h'),
             valve: 'start ' + this.label('valveStart') + ' · closed to ' + (lim === 'off' ? 'any rpm' : lim + ' rpm'),
             system: 'v' + this.ctx.spec.version + ' · ' + P.name.toLowerCase() + ' boxes',
@@ -45,17 +45,19 @@ class Setup {
         const P = this.P, w = (CW - 16) / 2, x = CX;
         let y = gt3.section(cv, P, x, 50, w, 30 + 2 * 70, 'Tuning software', 'on the engine unit');
         let cy = gt3.row(cv, P, x, y, w, 70, 'Software', 'The flash on your DME', true);
-        gt3.seg(cv, P, x + w - 14, cy, [['off', 'Off'], ['mhd', 'MHD'], ['bm3', 'BM3']], v.tuner, (t) => this.set('tuner', t), 'tuner', 21);
+        gt3.seg(cv, P, x + w - 14, cy, [['off', 'Off'], ['mhd', 'MHD'], ['bm3', 'BM3'], ['mgf', 'MG Flasher']], v.tuner, (t) => this.set('tuner', t), 'tuner', 21);
         cy = gt3.row(cv, P, x, y + 70, w, 70, 'Confirm map switch', 'Ask before a map is sent');
         gt3.toggle(cv, P, x + w - 14, cy, this.get('confirmMap') !== false, () => this.set('confirmMap', this.get('confirmMap') === false), 'confirmMap');
         gt3.note(cv, P, x + 4, 50 + 30 + 140 + 30, [
             'Pick what is flashed: MHD and BM3 can\'t be told apart from here.',
             v.tuner === 'bm3' ? (v.bm3Rom ? 'BM3 ROM ' + v.bm3Rom + ' found on the DME.' : 'BM3: the ROM is read from the DME at start.') : '',
+            v.tuner === 'mgf' ? 'MG Flasher: maps and Max Cooling stay on its Custom Code Menu (cruise buttons).' : '',
+            v.tuner === 'mgf' ? 'Its own commands aren\'t public yet; the valve works here.' : '',
         ].filter(Boolean));
         const rx = x + w + 16;
-        y = gt3.section(cv, P, rx, 50, w, 30 + 3 * 70, 'What each one does');
+        y = gt3.section(cv, P, rx, 50, w, 30 + 4 * 70, 'What each one does');
         [['Off', 'Exhaust valve only (BMW\'s own job, any DME)'], ['MHD', 'Engine map 1 to 4, exhaust valve, Max Cooling'],
-            ['BM3', 'Engine map 1 to 4 (read back), exhaust valve']].forEach((r, i) => {
+            ['BM3', 'Engine map 1 to 4 (read back), exhaust valve'], ['MG Flasher', 'Exhaust valve; map and Max Cooling on the wheel']].forEach((r, i) => {
             gt3.row(cv, P, rx, y + i * 70, w, 70, r[0], r[1], !i);
         });
     }

@@ -34,7 +34,13 @@ MHD and BM3 can't be told apart from the head unit (MHD's marker sits at a ROM-d
 software** is picked in Settings. An MHD press counts only when the DME echoes it; an untuned DME refuses it and the
 page says so. BM3 needs its ROM in `bm3_profiles.js`; an unknown ROM is refused and nothing is written.
 
+**MG Flasher:** pick it in Settings and the exhaust valve works through BMW's own job (as with Off). Map switching and
+Max Cooling stay on MG Flasher's Custom Code Menu (the cruise control buttons on the steering wheel), and the page says
+so: MG Flasher's own Live Control commands (its phone app over ENET) aren't published, and this app doesn't guess
+commands for an engine unit. A capture of them on a car (as a1-mapping's MHD capture, idrive7-apps PR #23) would let
+them in.
+
 ## Settings (the header's Settings tab)
 
-Tuning (software, confirm map switch), Maps (a name per map), Units (US / Metric, temperature and speed each), Valve
+Tuning (Off / MHD / BM3 / MG Flasher, confirm map switch), Maps (a name per map), Units (US / Metric, temperature and speed each), Valve
 & cooling (valve at every start, hold, close limit), System (box colour, about, BMW's plain list).

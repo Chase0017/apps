@@ -2,7 +2,7 @@
  "id": "apex_dme_controls",
  "title": "Apex DME Controls",
  "description": "One GT3 page on the center screen: engine map switching (MHD or BM3), the exhaust valve (OEM, open, closed) and MHD's Max Cooling. Maps switch only with the car stopped and the engine running. No xDrive control",
- "version": "0.2.0",
+ "version": "0.3.0",
  "vendor": "custom",
  "loggingId": "OAD1",
  "iconGlyph": "DME",
@@ -62,6 +62,10 @@
     [
      "bm3",
      "BM3: map, valve"
+    ],
+    [
+     "mgf",
+     "MG Flasher: valve (map, Max Cooling on the wheel)"
     ]
    ]
   },

@@ -31,12 +31,17 @@ const { Bm3Protocol } = require('./bm3_protocol');
 const bm3Profiles = require('./bm3_profiles');
 
 const DME = 0x12;
-const TUNERS = ['off', 'mhd', 'bm3'];
+const TUNERS = ['off', 'mhd', 'bm3', 'mgf'];
+// MG Flasher (mgf): its Live Control commands (the MG Flasher app over ENET) aren't published, so this app doesn't
+// guess them: the valve goes through BMW's own job (as with Off), map and Max Cooling stay on its Custom Code Menu
+// (the cruise control buttons). A capture of MG Flasher's own commands would let them in, as a1-mapping's did for MHD.
 const FEATURES = {
     off: { map: false, cooling: false },
     mhd: { map: true, cooling: true },
     bm3: { map: true, cooling: false },
+    mgf: { map: false, cooling: false },
 };
+const NAMES = { off: 'Off', mhd: 'MHD', bm3: 'BM3', mgf: 'MG Flasher' };
 const MIN_RPM = 500;            // the engine counts as running above this
 const STOP_KMH = 5;             // a map is switched only below this
 const HOLD_MS = 15000;          // Open / Closed sent again this often (the DME lets go after ~20 s)
@@ -207,6 +212,7 @@ class Control {
     /* ---------------- engine map ---------------- */
     /** Why a map can't be switched now, or null. */
     mapBlock() {
+        if (this.tuner === 'mgf') return 'MG Flasher: switch maps on the steering wheel (its Custom Code Menu on the cruise control buttons)';
         if (!this.features().map) return 'Pick MHD or BM3 in Settings, Tuning';
         if (this.demo) return null;
         if (!this.available) return 'Waiting for the diagnostic link';
@@ -246,7 +252,10 @@ class Control {
 
     /* ---------------- Max Cooling ---------------- */
     coolBlock() {
-        if (!this.features().cooling) return this.tuner === 'bm3' ? 'BM3 has no Max Cooling' : 'Max Cooling needs MHD (Settings, Tuning)';
+        if (!this.features().cooling) {
+            return this.tuner === 'bm3' ? 'BM3 has no Max Cooling' : this.tuner === 'mgf' ? 'MG Flasher: Max Cooling from its Custom Code Menu on the wheel'
+                : 'Max Cooling needs MHD (Settings, Tuning)';
+        }
         if (this.demo) return null;
         if (!this.available) return 'Waiting for the diagnostic link';
         return null;
@@ -277,4 +286,4 @@ class Control {
     }
 }
 
-module.exports = { Control, TUNERS, FEATURES, MIN_RPM, STOP_KMH, MG1, MHD };
+module.exports = { Control, TUNERS, FEATURES, NAMES, MIN_RPM, STOP_KMH, MG1, MHD };
