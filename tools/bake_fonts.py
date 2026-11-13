@@ -156,6 +156,17 @@ def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck=''
     print('%-6s %3dpx  cell height %3d  atlas %dx%d  %d glyphs' % (name, size, height, ATLAS_W, atlas_h, len(glyphs)))
 
 
+def with_stale(spec):
+    """'!' next to a held value (no signal for a while, Nov 13 2026) in every font with digits, except the seven-segment
+    ones (DSEG7 has no '!'). Tucked, so no font's cell height (and no layout) changes."""
+    name, file, size, chars = spec[:4]
+    rest = list(spec[4:]) + [0, None, None, ''][len(spec) - 4:]
+    if 'DSEG' in file or not any(d in chars for d in DIGITS) or '!' in chars:
+        return spec
+    rest[3] = (rest[3] or '') + '!'
+    return (name, file, size, chars + '!') + tuple(rest)
+
+
 if __name__ == '__main__':
     import sys
     # --only name,name: bake just those fonts (leaves the others' files as they are)
@@ -168,4 +179,4 @@ if __name__ == '__main__':
         print(app)
         for spec in FONTS[app]:
             if only is None or spec[0] in only:
-                bake(out, *spec)
+                bake(out, *with_stale(spec))

@@ -542,7 +542,8 @@ class Page {
         gt3.txt(cv, spec.title, rx + 16, y + 40, 32, P.text);
         gt3.txt(cv, 'v' + spec.version, rx + 24 + gt3.tw(cv, spec.title, 32), y + 40, 20, P.dim);
         gt3.txt(cv, 'Starts with the car: ' + (spec.autostart ? 'yes' : 'no, open it from the menu'), rx + 16, y + 74, 20, P.text);
-        gt3.txt(cv, 'Car data: ' + (demo ? 'demo' : 'live'), rx + 16, y + 102, 20, demo ? P.warm : P.ok);
+        const live = !demo && this.hud.car && this.hud.car.carPresent && this.hud.car.carPresent();
+        gt3.txt(cv, 'Car data: ' + (demo ? 'demo' : live ? 'live' : 'waiting for the car'), rx + 16, y + 102, 20, live ? P.ok : P.warm);
         gt3.txt(cv, 'All of the settings as a list: the bar button All settings.', rx + 16, y + 130, 17, P.dim);
         // what the engine reports (layers, memory, why nothing shows), wrapped
         const words = String(this.hud.lastStatus || '').split(' '), lines = [];

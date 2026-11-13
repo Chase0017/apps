@@ -117,20 +117,18 @@ class Setup {
     }
 
     system(cv, bottom, v) {
+        let cy;
         const P = this.P, w = (CW - 16) / 2, x = CX;
         let y = gt3.section(cv, P, x, 50, w, 30 + 64, 'Display');
-        let cy = gt3.row(cv, P, x, y, w, 64, 'Box colour', P.name, true);
+        cy = gt3.row(cv, P, x, y, w, 64, 'Box colour', P.name, true);
         gt3.swatches(cv, P, x + w - 14, cy, P.key, (val) => this.set('boxColour', val));
-        y = 50 + 30 + 64 + 12;
-        y = gt3.section(cv, P, x, y, w, 30 + 64, 'Data');
-        cy = gt3.row(cv, P, x, y, w, 64, 'Demo data', 'Nothing is sent to the car while it shows', true);
-        gt3.seg(cv, P, x + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('demo'), (val) => this.set('demo', val), 'demo');
+        gt3.note(cv, P, x + 4, 50 + 30 + 64 + 34, ['A value the car stops sending stays with a "!" after it,', 'held until the car answers again.']);
         const rx = x + w + 16, spec = this.ctx.spec;
         y = gt3.section(cv, P, rx, 50, w, 30 + 200, 'About');
         gt3.txt(cv, spec.title, rx + 16, y + 40, 32, P.text);
         gt3.txt(cv, 'v' + spec.version, rx + 24 + gt3.tw(cv, spec.title, 32), y + 40, 20, P.dim);
         gt3.txt(cv, 'Commands from cauliflowermossgrape\'s Engine Config', rx + 16, y + 74, 20, P.text);
-        gt3.txt(cv, 'Car data: ' + (v.demo ? 'demo, nothing sent' : 'live') + ' · link ' + (v.link ? 'up' : 'down'), rx + 16, y + 102, 20, v.demo ? P.warm : P.ok);
+        gt3.txt(cv, 'Car data: ' + (v.live ? 'live' : 'waiting for the car') + ' · link ' + (v.link ? 'up' : 'down'), rx + 16, y + 102, 20, v.live && v.link ? P.ok : P.warm);
         gt3.txt(cv, 'Back to the controls: Settings again, or the Controls tab.', rx + 16, y + 130, 17, P.dim);
         if (this.opts.openList) gt3.button(cv, P, rx + 16, y + 146, 'Every setting as a list', () => this.opts.openList(), 'list', true, 17);
     }

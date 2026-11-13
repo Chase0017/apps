@@ -54,7 +54,7 @@ mgu.run({
             const cv = ctx.canvas(W, H);
             if (mode === 'setup') {
                 setup.draw(cv, G.pageBottom(cv), snap, u);
-                G.frame(cv, ctx.theme(), [], -1, [snap.demo ? { text: 'DEMO DATA', color: '#ffb020' } : null]);
+                G.frame(cv, ctx.theme(), [], -1, []);
             } else {
                 D.draw(cv, snap, {
                     us: u.sp, tempF: u.tf, psi: u.ps, slots: sl, box: gt3.palette(settings.get('boxColour')),

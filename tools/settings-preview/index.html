@@ -140,7 +140,8 @@ async function start() {
     for (const f of ['main.js', 'control.js', 'draw.js', 'setup.js', 'bm3_protocol.js', 'bm3_profiles.js']) await src('/apps/apex_dme_controls/' + f);
     window.CAR = window.CAR || { rpm: 760, speed: 0, coolant: 96, oil: 104, demo: false };
     window.DME = window.DME || 'mhd'; window.SENT = [];
-    class FakeCar { constructor() {} data() { return Object.assign({}, window.CAR); } }
+    // window.HELD = { coolant: true, ... }: values the car stopped sending (kit car.stale)
+    class FakeCar { constructor() {} data() { return Object.assign({}, window.CAR); } stale(k) { return !!(window.HELD || {})[k]; } carPresent() { return !window.CAR.demo; } }
     const hex = (n, w) => n.toString(16).toUpperCase().padStart(w || 2, '0');
     // a stand-in DME: MHD echoes 2F 01/02/03, any DME takes BMW's valve job 2F 60FD, an untuned one refuses the rest
     class FakeDiag { constructor() { this.available = true; this.fns = {}; } async init() { return this; } on(e, f) { this.fns[e] = f; }
@@ -175,11 +176,12 @@ async function start() {
     const t = Date.now() / 1000;
     const snapshot = () => ({ tyres: { FL: { p: 2.42, t: 31, target: 2.34 }, FR: { p: 2.44, t: 33, target: 2.34 }, RL: { p: 2.58, t: 35, target: 2.41 }, RR: { p: 2.31, t: 36, target: 2.41 } },
       boostTarget: 0.08, boost: 0.05, hpfp: null, lpfp: 5.2, loadTarget: 34, loadActual: 33, gearbox: null, ambient: 15, rangeKm: 362, fuelL: 41, chargeBefore: 36, intake: 31,
-      coolant: 98, oil: 104, oilP: 3.9, afr: 14.7, timing: 18.5, rpm: 1900, speed: 70, gLat: 0.12, gLong: 0.05, peak: { gLat: 0.56, gLong: 0.78, boost: 1.22 }, demo: false });
+      coolant: 98, oil: 104, oilP: 3.9, afr: 14.7, timing: 18.5, rpm: 1900, speed: 70, gLat: 0.12, gLong: 0.05, peak: { gLat: 0.56, gLong: 0.78, boost: 1.22 }, demo: false,
+      held: window.HELD || {} });
     const rows = [{ name: 'Boost (actual)', ids: '4A2D · 580B · F487 · F40B · OBD 0B', answer: 'ok', age: 0.3, ok: true }, { name: 'Boost target', ids: '57DB', answer: 'ok', age: 0.3, ok: true },
       { name: 'Fuel rail', ids: 'F423 · F459 · OBD 23', answer: 'F423 NRC 31, F459 NRC 31, OBD 23 NO REPLY', age: null, ok: false }, { name: 'Low fuel', ids: 'F40A · F422 · OBD 0A · OBD 22', answer: 'ok', age: 1.8, ok: true },
       { name: 'Oil pressure', ids: '4436 · 586F', answer: 'not shown, not asked', age: null, ok: false }, { name: 'Tyres', ids: 'TPMS', answer: 'ok', age: 4.1, ok: true }];
-    const tel = { dataRows: () => rows, car: { data: () => ({ demo: false }) } };
+    const tel = { dataRows: () => rows, car: { data: () => ({ demo: false }), carPresent: () => true } };
     const setup = new Setup(ctx, tel, { kick: () => draw(), close: () => { mode = 'board'; draw(); }, openList: () => alert('BMW list') });
     ctx.clicks.BTN_SETTINGS = () => { mode = mode === 'setup' ? 'board' : 'setup'; draw(); };
     const unit = (k, y, n) => { const v = settings.get(k); return v === y ? true : v === n ? false : settings.get('units') !== 'metric'; };

@@ -13,7 +13,7 @@
  *
  * Pure: draw(cv, snap, opt) uses only the kit canvas calls (fillRect, roundRect, strokeRoundRect, gradientRect,
  * circle, text, textWidth), so tools/telemetry-preview/ runs this same file in a browser.
- *   snap: Telemetry.snapshot() (SI units)   opt: { us (mph, mi), tempF (°F), psi, tyreWarn (C), tyreHot (C), tyreLow / tyreOver /
+ *   snap: Telemetry.snapshot() (SI units; s.held: the values the car stopped sending, drawn with "!" after them)   opt: { us (mph, mi), tempF (°F), psi, tyreWarn (C), tyreHot (C), tyreLow / tyreOver /
  *         tyreOverRed (psi off the target), box ({ box, ink }: the box colour), slots ([5 SLOTS ids]), frame(cv, badges), target(cb),
  *         why(name): what the engine unit answered for config.dme[name], shown in a box without a value }
  */
@@ -70,6 +70,11 @@
 
     /* ---------- units ---------- */
     const fmt = (v, d) => (isNum(v) ? v.toFixed(d) : '--');
+    /** "!" after a held value (the car stopped sending it: Telemetry.snapshot() s.held), nothing after a dash */
+    const bang = (txt, held) => (held && txt !== '--' ? txt + '!' : txt);
+    // the snapshot value each small box shows (s.held)
+    const SLOT_SRC = { gearbox: 'gearbox', ambient: 'ambient', coolant: 'coolant', oil: 'oil', intake: 'intake', range: 'rangeKm', fuel: 'fuelL',
+        hpfp: 'hpfp', lpfp: 'lpfp', oilP: 'oilP', afr: 'afr', timing: 'timing', load: 'loadActual', boost: 'boost', rpm: 'rpm', speed: 'speed', gLat: 'gLat' };
     const temp = (c, us) => (isNum(c) ? (us ? c * 9 / 5 + 32 : c) : null);
     const U = {
         temp: (us) => (us ? '°F' : '°C'),
@@ -122,12 +127,12 @@
         const sc = tyreState(t.t, opt);
         // the temperature stripe on the side towards the car, only while it is warm or hot
         if (sc) cv.fillRect(right ? x + 2 : x + w - 10, y + HEAD, 8, h - HEAD - 2, sc);
-        const pv = isNum(t.p) ? (ps ? fmt(t.p * 14.5038, 1) : fmt(t.p, 2)) : '--';
+        const pv = bang(isNum(t.p) ? (ps ? fmt(t.p * 14.5038, 1) : fmt(t.p, 2)) : '--', t.heldP);
         const px = right ? x + w - 16 : x + w - 22;
         cv.text(pv, px, y + HEAD + 98, 96, pressState(t.p, t.target), Object.assign({ align: 'right' }, F));
         // temperature (left) and the difference to target (right)
         const tl = right ? x + 22 : x + 14;
-        cv.text(isNum(t.t) ? fmt(temp(t.t, tf), 0) + U.temp(tf) : '--', tl, y + h - 16, 44, sc || (isNum(t.t) ? C.text : C.dim), F);
+        cv.text(bang(isNum(t.t) ? fmt(temp(t.t, tf), 0) + U.temp(tf) : '--', t.heldT), tl, y + h - 16, 44, sc || (isNum(t.t) ? C.text : C.dim), F);
         const target = isNum(t.target) ? t.target : null;
         let delta = '', dc = C.dim;
         if (isNum(t.p) && target !== null) {
@@ -147,6 +152,7 @@
     /** a small box showing slot sensor `id` (SLOTS); its sub line says what the engine unit answered while it has no value */
     function slotBox(cv, x, y, w, h, id, s, u, why) {
         const sn = SLOTS[id] || SLOTS.gearbox, r = sn.get(s, u), none = r[0] === '--';
+        r[0] = bang(r[0], (s.held || {})[SLOT_SRC[id] || id]);
         const note = none && sn.dme ? why(null, sn.dme) : '';
         readout(cv, x, y, w, h, sn.head, r[1], r[0], r[2], note || r[3], note ? C.dim : r[4]);
     }
@@ -180,8 +186,9 @@
         const bad = off && now - boostOffSince >= LIM.boostHold;
         const dc = bad ? C.hot : on && isNum(dev) ? C.text : C.dim;
         const cw = (w - 28) / 3, R = Object.assign({ align: 'right' }, F);
-        [['ACTUAL', fmt(isNum(a) ? a * k : null, dp), C.text], ['TARGET', fmt(isNum(t) ? t * k : null, dp), C.mark],
-            ['DEVIATION', isNum(dev) ? (dev >= 0 ? '+' : '') + (dev * k).toFixed(dp) : '--', dc]].forEach(([l, v, c], i) => {
+        const hd = s.held || {};
+        [['ACTUAL', bang(fmt(isNum(a) ? a * k : null, dp), hd.boost), C.text], ['TARGET', bang(fmt(isNum(t) ? t * k : null, dp), hd.boostTarget), C.mark],
+            ['DEVIATION', bang(isNum(dev) ? (dev >= 0 ? '+' : '') + (dev * k).toFixed(dp) : '--', hd.boost || hd.boostTarget), dc]].forEach(([l, v, c], i) => {
             const cx = x + 14 + cw * (i + 1) - 8;
             cv.text(l, cx, y + HEAD + 26, 18, C.dim, R);
             cv.text(v, cx, y + HEAD + 92, us ? 64 : 54, c, R);     // bar has two decimals
@@ -204,7 +211,7 @@
             word = !bad ? 'ON TARGET' : dev > 0 ? 'OVERBOOST' : 'UNDERBOOST'; wc = bad ? C.hot : C.text;
         } else if (!isNum(t)) word = 'NO TARGET FROM THE ENGINE';
         cv.text(word, x + 16, y + h - 14, 26, wc, F);
-        if (isNum(s.loadActual)) cv.text('LOAD ' + fmt(s.loadActual, 0) + (isNum(s.loadTarget) ? '/' + fmt(s.loadTarget, 0) : '') + '%',
+        if (isNum(s.loadActual)) cv.text('LOAD ' + fmt(s.loadActual, 0) + (isNum(s.loadTarget) ? '/' + fmt(s.loadTarget, 0) : '') + '%' + (hd.loadActual ? '!' : ''),
             x + w * 0.53, y + h - 14, 20, C.dim, Object.assign({ align: 'center' }, F));
         if (s.peak && s.peak.boost > 0) cv.text('PEAK ' + fmt(s.peak.boost * k, dp), x + w - 16, y + h - 14, 26, C.dim, R);
     }
@@ -217,8 +224,9 @@
         const ac = [high(a, LIM.icAfter), high(soak, LIM.icSoak)].indexOf(C.hot) >= 0 ? C.hot
             : high(a, LIM.icAfter) || high(soak, LIM.icSoak) || cold(a, LIM.cold.icAfter);
         const k = us ? 1.8 : 1;
-        [['BEFORE', isNum(b) ? fmt(temp(b, us), 0) + '°' : '--', C.text], ['AFTER', isNum(a) ? fmt(temp(a, us), 0) + '°' : '--', ac || C.text],
-            ['DROP', isNum(drop) ? fmt(drop * k, 0) + '°' : '--', C.mark]].forEach(([l, v, c], i) => {
+        const hd = s.held || {};
+        [['BEFORE', bang(isNum(b) ? fmt(temp(b, us), 0) + '°' : '--', hd.chargeBefore), C.text], ['AFTER', bang(isNum(a) ? fmt(temp(a, us), 0) + '°' : '--', hd.intake), ac || C.text],
+            ['DROP', bang(isNum(drop) ? fmt(drop * k, 0) + '°' : '--', hd.chargeBefore || hd.intake), C.mark]].forEach(([l, v, c], i) => {
             const rx = x + 14 + cw * (i + 1) - 8;
             cv.text(l, rx, y + HEAD + 26, 18, C.dim, R);
             cv.text(v, rx, y + HEAD + 84, 60, c, R);
@@ -235,10 +243,11 @@
     function gBox(cv, x, y, w, h, s) {
         box(cv, x, y, w, h, 'G-FORCE', 'TAP TO RESET PEAKS');
         const R = Object.assign({ align: 'right' }, F), cw = (w - 28) / 2;
-        [['LATERAL', s.gLat, s.peak && s.peak.gLat], ['LONGITUDINAL', s.gLong, s.peak && s.peak.gLong]].forEach(([l, v, pk], i) => {
+        const hd = s.held || {};
+        [['LATERAL', s.gLat, s.peak && s.peak.gLat, hd.gLat], ['LONGITUDINAL', s.gLong, s.peak && s.peak.gLong, hd.gLong]].forEach(([l, v, pk, held], i) => {
             const rx = x + 14 + cw * (i + 1) - 8;
             cv.text(l, x + 22 + cw * i, y + HEAD + 26, 18, C.dim, F);
-            cv.text(isNum(v) ? Math.abs(v).toFixed(2) : '--', rx, y + HEAD + 86, 64, C.text, R);
+            cv.text(bang(isNum(v) ? Math.abs(v).toFixed(2) : '--', held), rx, y + HEAD + 86, 64, C.text, R);
             cv.text('PEAK ' + fmt(pk, 2), rx, y + h - 12, 20, C.dim, R);
         });
         cv.fillRect(x + w / 2, y + HEAD + 12, 1, h - HEAD - 24, C.faint);
@@ -253,7 +262,7 @@
         opt = Object.assign({}, opt, { tempF: tf, psi: ps });
         const why = (v, ...names) => (isNum(v) || !opt.why ? '' : names.map((n) => opt.why(n)).filter(Boolean).join(', '));
         cv.clear(C.bg);
-        if (opt.frame) opt.frame(cv, [s.demo ? { text: 'DEMO DATA', color: '#ffb020' } : null]);
+        if (opt.frame) opt.frame(cv, []);
         const rows = 3, gap = 11, rh = (BOTTOM - TOP - gap * (rows - 1)) / rows, bw = 210, g = 16;
         const ry = (i) => TOP + i * (rh + gap);
         const T = (c) => (isNum(c) ? fmt(temp(c, tf), 0) + '°' : '--');

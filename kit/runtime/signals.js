@@ -51,7 +51,7 @@ function loadConfig(iface) {
  * fields a car may not notify (BMW's x_call only ever reads TPMS, it never subscribes).
  */
 async function watch(iface, instance, handlers, log, opts) {
-    const res = { iface, available: false, proxy: null, error: null, shutdown: () => Promise.resolve() };
+    const res = { iface, available: false, proxy: null, error: null, polled: [], shutdown: () => Promise.resolve() };
     if (!someip) { res.error = 'someip native module not available'; return res; }
     try {
         const cfg = loadConfig(iface);
@@ -59,6 +59,8 @@ async function watch(iface, instance, handlers, log, opts) {
         res.proxy = p;
         res.shutdown = () => Promise.resolve().then(() => p.shutdown && p.shutdown()).catch(() => {});
         const fields = Object.keys(handlers || {});
+        // the fields a poll re-reads (they have a getter): a reply to it says the signal is still there
+        res.polled = fields.filter((f) => cfg.fields && cfg.fields[f] && cfg.fields[f].getter);
         const fetchAll = () => fields.forEach((f) => {
             if (cfg.fields && cfg.fields[f] && cfg.fields[f].getter) {
                 p.getValue(f, 3000).then((v) => handlers[f](v)).catch(() => {});

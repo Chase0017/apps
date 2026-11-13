@@ -21,7 +21,8 @@
  *
  * Our own safety rules on top: a map is switched only with the car stopped (live speed under 5 km/h) and the engine
  * running (over 500 rpm); Max Cooling goes on only with the engine running (off is always allowed). There is no
- * xDrive control in this app. With demo data (no car) nothing is sent: the page shows what would happen.
+ * xDrive control in this app. A held engine or road speed (no signal for 5 s, kit car.js) counts as none, so those
+ * checks fail safe. (Demo data, which the kit only shows with a demo setting this app no longer has, sends nothing.)
  *
  * Plain Node 8 (no Promise.finally).
  */
@@ -62,8 +63,10 @@ class Control {
     features() { return FEATURES[this.tuner]; }
     get demo() { return !!this.car.data().demo; }
     get busy() { return this._ops > 0; }
-    rpm() { const d = this.car.data(); return !d.demo && typeof d.rpm === 'number' && isFinite(d.rpm) ? d.rpm : null; }
-    kmh() { const d = this.car.data(); return !d.demo && typeof d.speed === 'number' && isFinite(d.speed) ? d.speed : null; }
+    // a held (stale) engine speed or road speed counts as none: the safety checks need live ones
+    fresh(k) { const d = this.car.data(), v = d[k]; return !d.demo && typeof v === 'number' && isFinite(v) && !(this.car.stale && this.car.stale(k)) ? v : null; }
+    rpm() { return this.fresh('rpm'); }
+    kmh() { return this.fresh('speed'); }
     running() { const r = this.rpm(); return r !== null && r > MIN_RPM; }
     stopped() { const s = this.kmh(); return s !== null && s < STOP_KMH; }
 
@@ -207,6 +210,8 @@ class Control {
         if (!this.features().map) return 'Pick MHD or BM3 in Settings, Tuning';
         if (this.demo) return null;
         if (!this.available) return 'Waiting for the diagnostic link';
+        const held = (k) => !!(this.car.stale && this.car.stale(k));
+        if (held('rpm') || held('speed')) return 'No live ' + (held('rpm') ? 'engine' : 'road') + ' speed from the car: maps wait for it';
         if (!this.running()) return 'Start the engine to switch maps';
         if (!this.stopped()) return 'Stop the car to switch maps';
         return null;
@@ -264,6 +269,7 @@ class Control {
     view() {
         return {
             tuner: this.tuner, features: this.features(), demo: this.demo, link: this.available, busy: this.busy, bm3Rom: this.bm3Rom,
+            live: !!(this.car.carPresent && this.car.carPresent()),
             rpm: this.rpm(), kmh: this.kmh(), running: this.running(), stopped: this.stopped(),
             valve: Object.assign({}, this.valve), map: Object.assign({}, this.map), cooling: Object.assign({}, this.cooling),
             mapBlock: this.mapBlock(), coolBlock: this.coolBlock(),

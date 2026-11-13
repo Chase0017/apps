@@ -294,6 +294,12 @@ const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v :
 const PROGRAMS = { S_MINUS_PROGRAMM: 'S', M_MINUS_PROGRAMM: 'M', 1: 'S', 2: 'M' };
 const MODE_NAME = { comfort: 'Comfort', sport: 'Sport', eco: 'Eco Pro' };
 const FRESH_MS = 3000;
+const STALE_MS = 5000;      // a value with no answer this long is held and shown with "!" (as kit car.js)
+// the value tokens that show a car or engine unit value -> the value they show (_stale); the rest (gauge labels,
+// signals for needles, headings) never get a "!"
+const STALE_TOKENS = { intake: 'intake', afr: 'afr', timing: 'timing', oilP: 'oilP', speed: 'speed', oil: 'oil', coolant: 'coolant', boost: 'boost',
+    range: 'range', torque: 'torque', hvSoc: 'hvSoc', fuelPct: 'fuel', ambientN: 'ambient', torquePct: 'torquePct', powerPct: 'powerPct',
+    gLat: 'gLat', gLong: 'gLong', gSide: 'gLat', gFwd: 'gLong', rpm: 'rpm', rpm10: 'rpm', ambient: 'ambient', power: 'torque' };
 const TZ_AUTO = -9999;           // the "timeZone" setting's Automatic: the head unit's own time zone
 // A plug-in hybrid's high-voltage battery charge: read-only UDS 22 DDBC from its battery unit (SME, 0x07), 0.1 %.
 // The read Redline 2.0 and eDrive use (cauliflowermossgrape/idrive7-apps, MIT; apps/redline/electrical.js).
@@ -445,6 +451,7 @@ class HudApp {
         this.carUnits = { press: null, temp: null, psiSeen: false };   // the car's display units, for the TPMS values
         this.program = null;             // 'S' / 'M' from the MDrive gearbox display, else null (D)
         this.fuelL = null; this.rangeKm = null; this.ambient = null;   // KombiIF tank / range, outside temperature
+        this.fuelLAt = this.rangeAt = this.ambientAt = 0; this.tyresAt = { p: 0, t: 0 };   // when each last came (held values)
         this.tyres = { p: {}, t: {} };                                  // TPMS pressure (bar) and temperature (C) per corner FL FR RL RR
         this.activeName = null;          // the layout shown now ('off' = nothing)
         this.pixelBytes = 0;             // what the layout's image layers and glyph atlases cost of cluster-render's pixel memory
@@ -627,16 +634,17 @@ class HudApp {
             'de.bmw.infotainment.KombiIF': {
                 statusRangeTankStatus: (v) => {
                     const f = v && v.fluidLevelFuelTank, r = v && v.range;
-                    this.fuelL = isNum(f) && f >= 0 && f < 255 ? f : null;
-                    this.rangeKm = isNum(r) && r >= 0 && r < 4095 ? r : null;
+                    // a value the car marks as none keeps the last one (held, shown with "!" once stale)
+                    if (isNum(f) && f >= 0 && f < 255) { this.fuelL = f; this.fuelLAt = Date.now(); }
+                    if (isNum(r) && r >= 0 && r < 4095) { this.rangeKm = r; this.rangeAt = Date.now(); }
                 },
             },
             // tyre pressure and temperature per corner, in the car's own display units (_tyreBar / _tyreC).
             // The car never notifies these (BMW's own x_call only ever reads them), so they are polled.
             'de.bmw.infotainment.vehicle.TPMS': {
                 $pollMs: 10000,
-                statusTyrePressure: (v) => TYRE_CORNERS.forEach((k) => { this.tyres.p[k] = this._tyreBar(v && v['actualValuePressureTyre' + k + 'H']); }),
-                statusTyreTemperature: (v) => TYRE_CORNERS.forEach((k) => { this.tyres.t[k] = this._tyreC(v && v['actualValueTemperatureTyre' + k + 'H']); }),
+                statusTyrePressure: (v) => TYRE_CORNERS.forEach((k) => { const x = this._tyreBar(v && v['actualValuePressureTyre' + k + 'H']); if (isNum(x)) { this.tyres.p[k] = x; this.tyresAt.p = Date.now(); } }),
+                statusTyreTemperature: (v) => TYRE_CORNERS.forEach((k) => { const x = this._tyreC(v && v['actualValueTemperatureTyre' + k + 'H']); if (isNum(x)) { this.tyres.t[k] = x; this.tyresAt.t = Date.now(); } }),
             },
             // the car's display units: the TPMS reports pressure as 0.1 x raw in the car's pressure unit and temperature
             // as the car's degrees + 40 (car_vitals, MIT; a car set to psi / F showed 32 psi as 464 psi until this was read)
@@ -656,7 +664,7 @@ class HudApp {
             'de.bmw.infrastructure.EnvironmentalInformation': {
                 ExteriorTemperature: (v) => {
                     const t = v && v.temperatureExterior;
-                    this.ambient = isNum(t) && t !== 255 ? t * 0.5 - 40 : null;
+                    if (isNum(t) && t !== 255) { this.ambient = t * 0.5 - 40; this.ambientAt = Date.now(); }
                 },
             },
             'de.bmw.infotainment.drivingexcitement.FES': {
@@ -1221,7 +1229,9 @@ class HudApp {
         const now = Date.now();
         if (isNum(this.boostDme) && now - this.boostDmeAt < FRESH_MS) return this.boostDme;      // manifold, after the throttle
         if (isNum(this.boostFes) && now - this.boostFesAt < FRESH_MS) return this.boostFes;
-        return null;
+        // neither fresh: the last one held (shown with "!", _stale)
+        if (isNum(this.boostDme) && (!isNum(this.boostFes) || this.boostDmeAt >= this.boostFesAt)) return this.boostDme;
+        return isNum(this.boostFes) ? this.boostFes : null;
     }
 
     /** A tyre's pressure ('p', bar) or temperature ('t', C) at corner FL FR RL RR; steady made-up values on the demo drive. */
@@ -1252,10 +1262,7 @@ class HudApp {
 
     _tyre(kind, corner) {
         const v = this.tyres[kind][corner];
-        if (isNum(v)) return v;
-        if (!this.car.data().demo) return null;
-        const rear = corner === 'RL' || corner === 'RR';
-        return kind === 'p' ? (rear ? 2.5 : 2.3) : (rear ? 27 : 24);
+        return isNum(v) ? v : null;
     }
 
     /** A dial's scale: { max, ticks } in display units (speed: DIAL_SPEED by the units setting; rpm: "max", 8000). */
@@ -1363,25 +1370,19 @@ class HudApp {
             const g = this.car.data()[name];
             return isNum(g) && Math.abs(g) <= G_BAD ? g : null;
         }
-        if (name === 'intake') {
-            if (isNum(this.intakeDme) && Date.now() - this.intakeDmeAt < 10000) return this.intakeDme;
-            return this.car.data().demo ? 31 : null;
-        }
-        if (name === 'afr') return isNum(this.afrDme) && Date.now() - this.afrDmeAt < 5000 ? this.afrDme : this.car.data().demo ? 14.7 : null;
-        if (name === 'timing') return isNum(this.timingDme) && Date.now() - this.timingDmeAt < 5000 ? this.timingDme : this.car.data().demo ? 18.5 : null;
-        if (name === 'oilP') return isNum(this.oilPDme) && Date.now() - this.oilPDmeAt < 10000 ? this.oilPDme : this.car.data().demo ? 4.1 : null;
+        // engine unit values: the last answer, held when it gets old (_stale says so); null until the first one
+        if (name === 'intake') return isNum(this.intakeDme) ? this.intakeDme : null;
+        if (name === 'afr') return isNum(this.afrDme) ? this.afrDme : null;
+        if (name === 'timing') return isNum(this.timingDme) ? this.timingDme : null;
+        if (name === 'oilP') return isNum(this.oilPDme) ? this.oilPDme : null;
         if (name === 'rpm' && isNum(this.rpmF)) return this.rpmF;
-        if (name === 'hvSoc') return isNum(this.hvSoc) && Date.now() - this.hvSocAt < HV_STALE_MS ? this.hvSoc : this.car.data().demo ? 64 : null;
-        if (name === 'fuel' || name === 'range' || name === 'ambient') {
-            // the kit's demo drive has none of these: made-up but steady values while it runs
-            const demo = this.car.data().demo;
-            if (name === 'fuel') {
-                if (isNum(this.fuelObd) && Date.now() - this.fuelObdAt < FUEL_STALE_MS) return this.fuelObd / 100;
-                return isNum(this.fuelL) ? Math.min(1, this.fuelL / this._tankLitres()) : demo ? 0.62 : null;
-            }
-            if (name === 'range') return isNum(this.rangeKm) ? this.rangeKm : demo ? 368 : null;
-            return isNum(this.ambient) ? this.ambient : demo ? 24 : null;
+        if (name === 'hvSoc') return isNum(this.hvSoc) ? this.hvSoc : null;
+        if (name === 'fuel') {
+            if (isNum(this.fuelObd) && (Date.now() - this.fuelObdAt < FUEL_STALE_MS || !isNum(this.fuelL))) return this.fuelObd / 100;
+            return isNum(this.fuelL) ? Math.min(1, this.fuelL / this._tankLitres()) : null;
         }
+        if (name === 'range') return isNum(this.rangeKm) ? this.rangeKm : null;
+        if (name === 'ambient') return isNum(this.ambient) ? this.ambient : null;
         if (name === 'torquePct' || name === 'powerPct') {
             // the car's own sport display % while it sends one, else from the crank torque and app.json
             // config.engine's peaks (an M40i makes 500 Nm, 285 kW)
@@ -1424,7 +1425,38 @@ class HudApp {
     }
 
     /** {{token}} -> display text. */
+    /** A value shown is held: no answer from its signal or the engine unit for a while (kit car.js STALE_MS). */
+    _stale(name) {
+        const now = Date.now(), car = this.car, old = (t, ms) => isNum(t) && t > 0 && now - t > ms;
+        const st = (k) => (car.stale ? car.stale(k) : false), at = (t, i, f) => (car.staleAt ? car.staleAt(t, i, f) : false);
+        switch (name) {
+            case 'boost': { const t = Math.max(this.boostDmeAt || 0, this.boostFesAt || 0); return t > 0 && now - t > STALE_MS; }
+            case 'intake': return old(this.intakeDmeAt, 10000);
+            case 'afr': return old(this.afrDmeAt, STALE_MS);
+            case 'timing': return old(this.timingDmeAt, STALE_MS);
+            case 'oilP': return old(this.oilPDmeAt, 10000);
+            case 'hvSoc': return old(this.hvSocAt, HV_STALE_MS);
+            case 'fuel':
+                if (isNum(this.fuelObd) && now - this.fuelObdAt < FUEL_STALE_MS) return false;
+                return this.fuelLAt ? at(this.fuelLAt, 'de.bmw.infotainment.KombiIF', 'statusRangeTankStatus') : old(this.fuelObdAt, FUEL_STALE_MS);
+            case 'range': return at(this.rangeAt, 'de.bmw.infotainment.KombiIF', 'statusRangeTankStatus');
+            case 'ambient': return at(this.ambientAt, 'de.bmw.infrastructure.EnvironmentalInformation', 'ExteriorTemperature');
+            case 'tyreP': return at(this.tyresAt.p, 'de.bmw.infotainment.vehicle.TPMS', 'statusTyrePressure');
+            case 'tyreT': return at(this.tyresAt.t, 'de.bmw.infotainment.vehicle.TPMS', 'statusTyreTemperature');
+            case 'torquePct': case 'powerPct': return now - (this.sportAt || 0) < FRESH_MS ? false : st('torque');
+            default: return st(name);
+        }
+    }
+
+    /** A token's text; a held value gets a "!" after it (the cluster and HUD fonts carry one since Nov 13 2026). */
     _token(tok) {
+        const s = this._tokenText(tok);
+        const src = STALE_TOKENS[tok] || (tok.indexOf('tyreP:') === 0 ? 'tyreP' : tok.indexOf('tyreT:') === 0 ? 'tyreT' : null);
+        if (!src || !s || /^-+$/.test(s)) return s;
+        return this._stale(src) ? s + '!' : s;
+    }
+
+    _tokenText(tok) {
         const us = this.setting('units') === 'us', sp = this.unitUs('speed'), tf = this.unitUs('temp'), ps = this.unitUs('press');   // us: torque, power
         const fix = (v, n) => (isNum(v) ? v.toFixed(n) : '--');
         if (tok.indexOf('slot') === 0 && tok.indexOf(':') > 0) {

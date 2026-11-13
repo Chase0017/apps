@@ -12,11 +12,19 @@
  * Scalings are BMW's own (M Laptimer TypeConverters); an app's app.json
  * "config.scaling" entries override them. The app's app.json "signals" must
  * list the interfaces (see SIGNALS below for the exact entries).
- * Demo: setting "demo" = auto (until the car answers) / on / off.
+ * Demo: only with a "demo" setting in the app's schema set to "on" (chase0017-apps' apps have none since Nov 13 2026:
+ * no made-up data on the car; a value the car hasn't sent is missing, so it shows as a dash).
+ * Held values (chase0017-apps, Nov 13 2026): every watched signal is re-read every POLL_MS; car.stale(key) is true when
+ * a value's signal hasn't answered for STALE_MS (or its provider went away). The value stays in data() (held), and
+ * the apps draw it with a "!" next to it. Signals without a getter (notified only) count as stale only when their
+ * provider goes away, since a steady value is never sent again.
  * data().stage = the selector position 'P' / 'R' / 'N' / 'D' (gearbox signal), else undefined.
  * data().condition = BMW's vehicle state number ('condition' group; 10 = drive-ready), else undefined.
  */
 const Sim = require('./sim');
+
+const POLL_MS = 2000;      // every watched signal re-read this often (a reply keeps its values fresh)
+const STALE_MS = 5000;     // no reply this long: the value is held (car.stale)
 
 const SCALE = {
     rpm: { factor: 0.25, offset: 0, invalid: 65535 },
@@ -107,6 +115,7 @@ class Car {
         const over = (ctx.spec.config && ctx.spec.config.scaling) || {};
         this.S = Object.assign({}, SCALE, over);
         this.live = {}; this.lastCar = 0; this.listeners = [];
+        this.at = {}; this.src = {}; this._cur = null;     // per value: when it last came, and which iface.field sent it
         this.sim = new Sim(); this.simData = this.sim.sample();
         this.demoActive = false; this.guess = new GearGuess();
         const sc = (k, raw) => {
@@ -116,14 +125,18 @@ class Car {
         };
         const put = (k, v, tick) => {
             if (v === null || v === undefined || (typeof v === 'number' && !isFinite(v))) return;
-            this.live[k] = v; this.lastCar = Date.now();
+            this.live[k] = v; this.lastCar = this.at[k] = Date.now();
+            if (this._cur) this.src[k] = this._cur;
             // learned gear while driving; nothing at a standstill - the guess can't tell P, N or D
             // there, and "N" shown in park or in D was wrong
             if (k === 'rpm' || k === 'speed') { const g = this.guess.feed(this.live.rpm, this.live.speed); if (g !== null || this.live.speed < 3) this.guessed = this.live.speed < 3 ? undefined : g; }
             if (tick && !this.demoActive) this._emit(this.live, this.lastCar);
         };
         const watches = {};
-        const add = (iface, field, fn) => { (watches[iface] = watches[iface] || {})[field] = fn; };
+        // each handler runs with _cur set, so put() knows which iface.field a value came from (car.stale)
+        const add = (iface, field, fn) => {
+            (watches[iface] = watches[iface] || {})[field] = (v) => { this._cur = [iface, field]; try { fn(v); } finally { this._cur = null; } };
+        };
         if (groups.includes('rpm')) add('de.bmw.infotainment.vehicle.CDS', 'statusEngineSpeed2', (v) => put('rpm', sc('rpm', v.actualValueRPMEngineCrankshaft), true));
         if (groups.includes('temps')) add('de.bmw.infotainment.vehicle.CDS', 'statusEngineTemperature', (v) => { put('coolant', sc('temp', v.temperatureEngineDrive)); put('oil', sc('temp', v.temperatureEngineOilDrive)); });
         if (groups.includes('speed')) add('de.bmw.infotainment.vehicle.Vehicle2', 'statusCarSpeed2', (v) => put('speed', sc('speed', v.speedVehicleCentreOfGravity), true));
@@ -157,7 +170,7 @@ class Car {
         // a while" doesn't mean "no car": once a signal's provider is there, stay on live data
         this.subs = [];
         this.t0 = Date.now();
-        Object.keys(watches).forEach((iface) => ctx.signals.watch(iface, '1', watches[iface], this.log, pollMs[iface] ? { pollMs: pollMs[iface] } : undefined)
+        Object.keys(watches).forEach((iface) => ctx.signals.watch(iface, '1', watches[iface], this.log, { pollMs: Math.min(pollMs[iface] || POLL_MS, POLL_MS) })
             .then((s) => { this.subs.push(s); this.log.info('signal ' + iface.split('.').pop() + (s.error ? ' error: ' + s.error : ' subscribed')); }));
 
         // demo feed (20 Hz) - also keeps the sim warm so switching is seamless. On a busy or
@@ -181,8 +194,21 @@ class Car {
     carPresent() { return this.lastCar > 0 || this.subs.some((s) => s.available); }
 
     _wantDemo() {
-        const m = this.ctx.settings.get('demo');
-        return m === 'on' || (m !== 'off' && !this.carPresent() && Date.now() - this.t0 > 5000);
+        const st = this.ctx.settings, m = st.get('demo');
+        if (st.item && !st.item('demo')) return false;      // no demo setting in the app: never (an old settings.json may still say on)
+        return m === 'on' || (m === 'auto' && !this.carPresent() && Date.now() - this.t0 > 5000);
+    }
+
+    /** The value is held: its signal hasn't answered for STALE_MS, or its provider went away. False without a value. */
+    stale(k) { const src = this.src[k]; return !!src && this.staleAt(this.at[k], src[0], src[1]); }
+    /** The same for a value an app keeps itself (an extra field): at = when it last came, from iface.field. */
+    staleAt(at, iface, field) {
+        if (this.demoActive || !at) return false;
+        const sub = this.subs.find((x) => x.iface === iface);
+        if (!sub) return false;                                   // not subscribed yet
+        if (sub.proxy && !sub.available) return true;             // the provider went away
+        if ((sub.polled || []).indexOf(field) < 0) return false;  // notified only: a steady value is never sent again
+        return Date.now() - at > STALE_MS;
     }
 
     data() {
@@ -204,6 +230,8 @@ class Car {
 }
 
 Car.SIGNALS = SIGNALS;
+Car.STALE_MS = STALE_MS;
+Car.POLL_MS = POLL_MS;
 Car.GearGuess = GearGuess;
 Car.selectionOf = selectionOf;
 Car.conditionOf = conditionOf;

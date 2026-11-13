@@ -9,7 +9,8 @@
  *   bm3_*.js     BM3's map slot (from Engine Config, after ezl0l's BM3 Live)
  *
  * Opening the app sends nothing (with BM3 picked it reads the ROM and the active map). A command leaves on a press,
- * and the valve's "at every start" setting once per start. Demo data (no car) sends nothing.
+ * and the valve's "at every start" setting once per start. No demo data: a value the car never sent is a dash, one
+ * it stopped sending stays with a "!" (kit car.js).
  *
  * Plain Node 8 (the car's 8.16.2).
  */
@@ -54,13 +55,13 @@ mgu.run({
             const v = ctl.view(), u = units(), P = gt3.palette(settings.get('boxColour')), d = car.data();
             const cv = ctx.canvas(W, H), bottom = G.pageBottom(cv);
             if (confirm !== null && (v.mapBlock || v.busy)) confirm = null;          // the car moved off meanwhile
-            const badges = [v.demo ? { text: 'DEMO · NOTHING SENT', color: '#ffb020' } : !v.link ? { text: 'NO DIAGNOSTIC LINK', color: '#ffb020' } : null];
+            const badges = [!v.link ? { text: 'NO DIAGNOSTIC LINK', color: '#ffb020' } : null];
             if (mode === 'settings') {
                 setup.draw(cv, bottom, v, u);
             } else {
                 D.draw(cv, bottom, v, {
                     P, tempF: u.tf, coolant: d.coolant, oil: d.oil, hold: settings.get('hold') !== 'off', closeLimit: Number(settings.get('closeLimit')) || null, locked: confirm !== null,
-                    demoRpm: v.demo && typeof d.rpm === 'number' ? String(Math.round(d.rpm / 10) * 10) : null,
+                    rpm: d.rpm, held: { coolant: car.stale('coolant'), oil: car.stale('oil'), rpm: car.stale('rpm') },
                     names: [1, 2, 3, 4].map((i) => settings.display('map' + i)),
                 }, act);
                 if (confirm !== null) {

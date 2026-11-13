@@ -23,6 +23,13 @@ const PRESS_UNITS = { 1: 'BAR', 2: 'KPA', 3: 'PSI' }, TEMP_UNITS = { 1: 'C', 2: 
 const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
 const unitName = (map, v) => map[v] || (Object.values(map).indexOf(v) >= 0 ? v : null);
 const FRESH = { dme: 6000, fes: 1500 };
+// a value with no new answer this long is held: still shown, with "!" after it (car signals: kit car.js)
+const HELD_MS = { boostTarget: 5000, boostActual: 5000, boostFes: 5000, hpfp: 5000, lpfp: 6000, loadTarget: 5000, loadActual: 5000,
+    chargeBefore: 6000, intake: 6000, gearboxEgs: 15000, oilP: 5000, afr: 5000, timing: 5000 };
+// values from car signals the app keeps itself: [iface, field] (kit car.js staleAt)
+const HELD_SIG = { ambient: ['de.bmw.infrastructure.EnvironmentalInformation', 'ExteriorTemperature'], fuelL: ['de.bmw.infotainment.KombiIF', 'statusRangeTankStatus'],
+    rangeKm: ['de.bmw.infotainment.KombiIF', 'statusRangeTankStatus'], gearboxBds: ['de.bmw.infrastructure.analytics.BasicDataSet', 'basicDataSet'] };
+const TPMS = 'de.bmw.infotainment.vehicle.TPMS';
 // the DME values read in turn while the page shows: [names in config.dme (read back to back), ms between reads]
 // [names, ms, optional]: an optional group is only read while a small box shows it (setNeeds)
 const DME_READS = [[['boostTarget', 'boostActual'], 250], [['hpfp'], 1000, 1], [['lpfp'], 2000, 1], [['loadTarget', 'loadActual'], 1500],
@@ -39,7 +46,7 @@ class Telemetry {
         this.ctx = ctx; this.log = ctx.log;
         this.cfg = (ctx.spec && ctx.spec.config) || {};
         this.units = { press: null, temp: null, psiSeen: false };
-        this.tyres = { p: {}, t: {}, target: {}, at: 0 };
+        this.tyres = { p: {}, t: {}, target: {}, at: 0, tAt: 0 };
         this.v = {};                // name -> { v, at } for the values not in car.data()
         this.peak = { gLat: 0, gLong: 0, boost: 0 };
         this.wantAt = 0;            // last time the page was drawn: the engine unit is asked only while it shows
@@ -49,9 +56,10 @@ class Telemetry {
         this.car = new Car(ctx, ['rpm', 'speed', 'accel', 'temps', 'gear'], {
             'de.bmw.infotainment.vehicle.TPMS': {
                 $pollMs: 5000,
-                statusTyrePressure: (v) => { CORNERS.forEach((k) => { self.tyres.p[k] = self._bar(v && v['actualValuePressureTyre' + k + 'H']); }); self.tyres.at = Date.now(); },
-                statusTyreTemperature: (v) => CORNERS.forEach((k) => { self.tyres.t[k] = self._degC(v && v['actualValueTemperatureTyre' + k + 'H']); }),
-                statusTargetTyrePressure: (v) => CORNERS.forEach((k) => { self.tyres.target[k] = self._bar(v && v['targetPressureTyre' + k + 'H']); }),
+                // a corner the car sends no value for keeps its last one (held: shown with "!" once stale)
+                statusTyrePressure: (v) => { CORNERS.forEach((k) => { const x = self._bar(v && v['actualValuePressureTyre' + k + 'H']); if (isNum(x)) { self.tyres.p[k] = x; self.tyres.at = Date.now(); } }); },
+                statusTyreTemperature: (v) => CORNERS.forEach((k) => { const x = self._degC(v && v['actualValueTemperatureTyre' + k + 'H']); if (isNum(x)) { self.tyres.t[k] = x; self.tyres.tAt = Date.now(); } }),
+                statusTargetTyrePressure: (v) => CORNERS.forEach((k) => { const x = self._bar(v && v['targetPressureTyre' + k + 'H']); if (isNum(x)) self.tyres.target[k] = x; }),
             },
             'de.bmw.infotainment.vehicle.Vehicle': {
                 statusNewCurrentUnitsStatusExt: (v) => {
@@ -192,6 +200,15 @@ class Telemetry {
     }
 
     _fresh(k, ms) { const x = this.v[k]; return x && Date.now() - x.at < ms ? x.v : null; }
+    /** The last value of k (held: no time limit), null before the first one. */
+    _last(k) { const x = this.v[k]; return x ? x.v : null; }
+    /** k's value is held: no new answer for a while (engine unit: HELD_MS; car signals: the kit's rule). */
+    _held(k) {
+        const x = this.v[k];
+        if (!x) return false;
+        if (HELD_SIG[k]) return !!(this.car.staleAt && this.car.staleAt(x.at, HELD_SIG[k][0], HELD_SIG[k][1]));
+        return Date.now() - x.at > (HELD_MS[k] || 5000);
+    }
 
     /** What the engine unit answered for config.dme[name], per candidate ('F423 NRC 31, OBD 23 NO REPLY'), for a box
      *  that has no value; '' while it has one or before it was asked. */
@@ -212,41 +229,36 @@ class Telemetry {
 
     /** Everything the page shows, SI units, null = no value. */
     snapshot() {
-        const d = this.car.data(), demo = !!d.demo, f = (k, ms) => this._fresh(k, ms || FRESH.dme);
+        // no made-up data: a value never sent is null (a dash), one that stopped coming is held and listed in s.held
+        const d = this.car.data(), L = (k) => this._last(k), H = (k) => this._held(k);
         const tyre = (kind, k) => { const v = this.tyres[kind][k]; return isNum(v) ? v : null; };
-        let s;
-        if (demo) {
-            const t = Date.now() / 1000, w = (a, p) => a * Math.sin(t / p);
-            const tgt = Math.max(0, d.rpm > 2200 ? Math.min(1.25, (d.rpm - 2200) / 3000 * 1.25) : 0);
-            s = {
-                tyres: {
-                    FL: { p: 2.42 + w(0.02, 7), t: 38 + w(2, 9), target: 2.4 }, FR: { p: 2.44, t: 41 + w(2, 11), target: 2.4 },
-                    RL: { p: 2.58, t: 44 + w(2, 8), target: 2.6 }, RR: { p: 2.39, t: 47 + w(3, 10), target: 2.6 },
-                },
-                boostTarget: tgt, boost: Math.max(0, tgt + w(0.08, 1.3)), hpfp: 60 + tgt * 220, lpfp: 5.2 + w(0.2, 5),
-                loadTarget: 30 + tgt * 100, loadActual: 28 + tgt * 100, gearbox: 86, ambient: 22, rangeKm: 512,
-                chargeBefore: 38 + tgt * 70, intake: 33 + tgt * 12, coolant: 96, oil: 108 + w(3, 13), oilP: 3.4 + tgt * 1.5,
-                afr: 14.7 - tgt * 2.4, timing: 22 - tgt * 12, fuelL: 41,
-            };
-        } else {
-            const bt = f('boostTarget', 3000), ba = f('boostActual', 3000), fes = f('boostFes', FRESH.fes);
-            s = {
-                tyres: {},
-                boostTarget: bt, boost: ba !== null ? ba : fes,
-                hpfp: f('hpfp'), lpfp: f('lpfp'), loadTarget: f('loadTarget'), loadActual: f('loadActual'),
-                chargeBefore: f('chargeBefore'), intake: f('intake'),
-                gearbox: f('gearboxBds', 60000) !== null ? f('gearboxBds', 60000) : f('gearboxEgs', 20000),
-                ambient: f('ambient', 600000), rangeKm: f('rangeKm', 600000), fuelL: f('fuelL', 600000),
-                coolant: isNum(d.coolant) ? d.coolant : null, oil: isNum(d.oil) ? d.oil : null,
-                oilP: f('oilP'), afr: f('afr'), timing: f('timing'),
-            };
-            CORNERS.forEach((k) => { s.tyres[k] = { p: tyre('p', k), t: tyre('t', k), target: tyre('target', k) }; });
-        }
-        if (isNum(s.boost) && !demo) this.peak.boost = Math.max(this.peak.boost, s.boost);
+        const cs = (k) => !!(this.car.stale && this.car.stale(k));
+        // boost: the engine unit's manifold pressure while fresh, else the sport display's, else the newer one held
+        const ba = this.v.boostActual, fes = this.v.boostFes, useFes = !this._fresh('boostActual', 3000) && fes && (this._fresh('boostFes', FRESH.fes) !== null || !ba || fes.at > ba.at);
+        const gbBds = this._fresh('gearboxBds', 60000) !== null || !this.v.gearboxEgs ? 'gearboxBds' : 'gearboxEgs';
+        const s = {
+            tyres: {},
+            boostTarget: L('boostTarget'), boost: useFes ? fes.v : L('boostActual'),
+            hpfp: L('hpfp'), lpfp: L('lpfp'), loadTarget: L('loadTarget'), loadActual: L('loadActual'),
+            chargeBefore: L('chargeBefore'), intake: L('intake'), gearbox: L(gbBds),
+            ambient: L('ambient'), rangeKm: L('rangeKm'), fuelL: L('fuelL'),
+            coolant: isNum(d.coolant) ? d.coolant : null, oil: isNum(d.oil) ? d.oil : null,
+            oilP: L('oilP'), afr: L('afr'), timing: L('timing'),
+        };
+        s.held = {
+            boostTarget: H('boostTarget'), boost: useFes ? H('boostFes') : H('boostActual'), hpfp: H('hpfp'), lpfp: H('lpfp'),
+            loadTarget: H('loadTarget'), loadActual: H('loadActual'), chargeBefore: H('chargeBefore'), intake: H('intake'), gearbox: H(gbBds),
+            ambient: H('ambient'), rangeKm: H('rangeKm'), fuelL: H('fuelL'), oilP: H('oilP'), afr: H('afr'), timing: H('timing'),
+            coolant: cs('coolant'), oil: cs('oil'), speed: cs('speed'), rpm: cs('rpm'), gLat: cs('gLat'), gLong: cs('gLong'),
+        };
+        const tp = !!(this.car.staleAt && this.car.staleAt(this.tyres.at, TPMS, 'statusTyrePressure'));
+        const tt = !!(this.car.staleAt && this.car.staleAt(this.tyres.tAt, TPMS, 'statusTyreTemperature'));
+        CORNERS.forEach((k) => { s.tyres[k] = { p: tyre('p', k), t: tyre('t', k), target: tyre('target', k), heldP: tp, heldT: tt }; });
+        if (isNum(s.boost) && !s.held.boost) this.peak.boost = Math.max(this.peak.boost, s.boost);
         s.speed = isNum(d.speed) ? d.speed : null; s.rpm = isNum(d.rpm) ? d.rpm : null;
         s.gLat = isNum(d.gLat) ? d.gLat : null; s.gLong = isNum(d.gLong) ? d.gLong : null;
-        s.peak = demo ? { gLat: 0.94, gLong: 0.81, boost: 1.21 } : Object.assign({}, this.peak);
-        s.tyresAt = this.tyres.at; s.demo = demo;
+        s.peak = Object.assign({}, this.peak);
+        s.tyresAt = this.tyres.at; s.demo = false;
         return s;
     }
 }

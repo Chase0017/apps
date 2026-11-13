@@ -10,8 +10,8 @@ Cooling. No xDrive control, on purpose. Design: `design/dme-controls-v1/`.
 | Max cooling | ON / OFF, with coolant, oil and engine speed under it | MHD, engine running (over 500 rpm) to turn it on |
 
 Opening the app sends nothing (with BM3 picked it reads the ROM and the active map). A command leaves only on a press,
-and the "Valve at every start" setting once per start. With demo data (no car) nothing is sent: the page shows what
-would happen and says so in the header.
+and the "Valve at every start" setting once per start. No made-up data: a value the car hasn't sent shows as a dash; one it stops sending (no answer for 5 s) stays on screen with a "!" after it until the car answers again. A held engine or road speed counts as none,
+so the map switch and Max Cooling wait for live ones.
 
 ## Commands
 
@@ -37,4 +37,4 @@ page says so. BM3 needs its ROM in `bm3_profiles.js`; an unknown ROM is refused 
 ## Settings (the header's Settings tab)
 
 Tuning (software, confirm map switch), Maps (a name per map), Units (US / Metric, temperature and speed each), Valve
-& cooling (valve at every start, hold, close limit), System (box colour, demo data, about, BMW's plain list).
+& cooling (valve at every start, hold, close limit), System (box colour, about, BMW's plain list).
