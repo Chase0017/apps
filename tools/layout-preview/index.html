@@ -31,7 +31,6 @@
   <label>Colours <select id="colours"><option>gt3</option><option>f1</option><option>red</option><option>blue</option></select></label>
   <label>First light <select id="from"><option>2000</option><option>2500</option><option selected>3000</option><option>3500</option><option>4000</option><option>4500</option><option>5000</option><option>5500</option><option>6000</option></select></label>
   <label><input id="held" type="checkbox"> Held values (readouts)</label>
-  <label>Cruise <select id="cruise"><option value="0">Off (N/A)</option><option value="1">On</option><option value="">No answer</option></select></label>
   <label><input id="cold" type="checkbox"> Cold engine (oil 122, coolant 131)</label>
   <button id="sweep">Rev sweep</button>
 </div>
@@ -153,7 +152,6 @@ function token(t, st, slots) {
       const v = s[3] === null ? String(Math.round(st.rpm / 50) * 50) : s[3];
       return { slot: v, slotHead: s[0], slotUnit: s[1], slotSuffix: s[2], slotHeadU: s[0] + (s[2] ? '' : (s[1] ? ' ' + s[1] : '')) }[kind];
     }
-    if (k === 'cruise') { const c = $('cruise').value; return c === '' ? '--' : c === '1' ? 'CRUISE' : 'N/A'; }
     return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
       speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: $('cold').checked ? COLD_F.oil : '221', coolant: $('cold').checked ? COLD_F.coolant : '199',
       'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT' }[k] ?? '{{' + k + '}}';
@@ -296,7 +294,6 @@ async function load() {
   if (q.get('colours')) $('colours').value = q.get('colours');
   if (q.get('held') === '1') $('held').checked = true;
   if (q.get('cold') === '1') $('cold').checked = true;
-  if (q.get('cruise') !== null) $('cruise').value = q.get('cruise');
   $('sweep').onclick = () => { const t0 = performance.now(); const tick = () => { const k = (performance.now() - t0) / 4000;
     $('rpm').value = k < 0.75 ? 900 + k / 0.75 * 6000 : 6900; if (k < 1.2) requestAnimationFrame(tick); }; tick(); };
   let busy = false;

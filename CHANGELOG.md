@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 14 2026
 
+- **Apex Cluster 0.30.0:** removed the **CRUISE CONTROL** box (Chase). On the car it always read N/A: DME 4A6A is the engine unit's own cruise flag, and these cars run cruise in another unit, so it stays 0. No other unit has a live cruise read (searched the DSC, cluster, driver assistance and FAS lists), so the box and its once-a-second read are gone; the gap between intake and oil pressure is back as before 0.26.0. The `{{cruise}}` token and `hotText` stay in the kit.
 - **Apex Cluster 0.29.0:** on cars without the driver camera BMW draws its turn arrows higher and closer in (x 756-814 / 1116-1175, y 19-73, from a photo on a friend's car), right over the No camera shift lights. Moved them down under the arrows: Bar to y 90 (was 30), Row to y 88 (was 20); both still clear the rev bar. The layout check (`shared/visible.js` `ARROWS_NOCAM`) now knows where those arrows sit, and `tools/layout-preview/` draws them with Placement No camera. Camera placements unchanged.
 
 ## Nov 13 2026
