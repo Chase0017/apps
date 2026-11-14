@@ -165,7 +165,8 @@
  * "off" the alpha of an unlit light (0.14).
  * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself). Coolant also has a yellow
  * caution level under the warning ("cautionCoolant"), steady in the "caution" role. Text "offRed": true: shift red
- * while the engine is off.
+ * while the engine is off. An oil / coolant readout is blue until up to temp (oil 80 C, coolant 70 C; WARM_TEMP);
+ * "coldBlue": false keeps its own colour.
  * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
  * "nearColor" (fg) while scale label i is the one nearest the value (BMW lights up the label by the needle).
  *
@@ -269,6 +270,8 @@ const WARN = { oil: 'warnOil', coolant: 'warnCoolant', boost: 'warnBoost' };
 /** a first, yellow level under the warning: steady in the theme's "caution" colour (C) */
 const CAUTION = { coolant: 'cautionCoolant' };
 const WARN_FLASH_MS = 300;
+/** up to temp (C): an oil / coolant readout under this is blue (oil matches the cold guard's 80 C) */
+const WARM_TEMP = { oil: 80, coolant: 70 };
 // a tile's bar (the Dyno theme's "tiles") per sensor (sensors.js id): the raw reading (hud _raw) between min and
 // max, "z" for a zoned bar (blue, dark blue, red past u_at); a sensor not here has no bar. rpm runs to the bar max.
 const TILE_BAR = {
@@ -1180,6 +1183,11 @@ class HudApp {
         if (!CAUTION[id]) return false;
         const lim = this.setting(CAUTION[id]), v = this._raw(id);
         return isNum(lim) && lim > 0 && isNum(v) && v > lim;
+    }
+    /** An oil / coolant readout under its warm-up temperature (WARM_TEMP C): shown blue until the engine is up to temp. */
+    _underTemp(w) {
+        const id = this._sensorOf(w), lim = WARM_TEMP[id], v = lim ? this._raw(id) : null;
+        return isNum(v) && v < lim;
     }
     /** The engine isn't running (the car reports under 200 rpm). Not on demo data, nor before the car has sent any. */
     _engineOff() {
@@ -2185,6 +2193,8 @@ class HudApp {
             if (w.colorBy === 'verdict' && this.score.last) role = VERDICT[this.score.last.verdict] || role;
             if (w.hotText && s === w.hotText) role = 'hot';          // "hotText": shift red while it reads exactly that (CRUISE)
             if (w.near && this._nearMark(w.near[0]) === w.near[1]) role = w.nearColor || 'fg';
+            // oil / coolant not up to temp yet: blue ("coldBlue": false to keep its own colour)
+            if (w.coldBlue !== false && this._underTemp(w)) role = VERDICT.COLD;
             // a readout slot goes red / blue at the shift point only while it shows engine speed or the shift point
             const shiftish = !w.slot || ['rpm', 'shiftAt'].indexOf((this.slotSensor(this.activeName, w.slot, this.layoutSlots) || {}).id) >= 0;
             if ((w.hotWhen || w.coldWhen) && shiftish) {

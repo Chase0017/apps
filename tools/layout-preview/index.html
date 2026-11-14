@@ -32,6 +32,7 @@
   <label>First light <select id="from"><option>2000</option><option>2500</option><option selected>3000</option><option>3500</option><option>4000</option><option>4500</option><option>5000</option><option>5500</option><option>6000</option></select></label>
   <label><input id="held" type="checkbox"> Held values (readouts)</label>
   <label>Cruise <select id="cruise"><option value="0">Off (N/A)</option><option value="1">On</option><option value="">No answer</option></select></label>
+  <label><input id="cold" type="checkbox"> Cold engine (oil 122, coolant 131)</label>
   <button id="sweep">Rev sweep</button>
 </div>
 <canvas id="out" width="1920" height="720"></canvas>
@@ -130,6 +131,14 @@ function text(x, y, w, h, s, f, col, align, xoff, held) {
 const SLOT = { speed: ['SPEED', 'MPH', '', '47'], rpm: ['RPM', '', '', null], fuel: ['FUEL', '%', '', '62'],
   boost: ['BOOST', 'PSI', '', '14.2'], coolant: ['COOLANT', '°F', '°', '199'], oil: ['OIL', '°F', '°', '221'],
   oilP: ['OIL PRESS', 'PSI', '', '58'], afr: ['AFR', '', '', '14.7'], intake: ['INTAKE', '°F', '°', '97'], torque: ['TORQUE', 'LB-FT', '', '312'], timing: ['TIMING', 'BTDC', '°', '18.5'] };
+const COLD_F = { oil: '122', coolant: '131' };   // 50 C / 55 C, under hud.js WARM_TEMP (oil 80, coolant 70)
+/** as hud.js _underTemp: the text shows oil / coolant ({{oil}}, {{coolant}} or a slot set to them) and "Cold engine" is on */
+function underTemp(w, slots) {
+  if (!$('cold').checked || w.coldBlue === false) return false;
+  const t = String(w.text || ''), m = t.match(/\{\{slot:([^}]+)\}\}/);
+  const id = m ? (slots.find((x) => x.id === m[1]) || {}).default : /\{\{oil\}\}/.test(t) ? 'oil' : /\{\{coolant\}\}/.test(t) ? 'coolant' : null;
+  return !!COLD_F[id];
+}
 function state() {
   const rpm = Number($('rpm').value);
   return { rpm, now: rpm >= SHIFT_AT, gear: $('gear').value, mode: $('mode').value };
@@ -139,12 +148,14 @@ function token(t, st, slots) {
   return t.replace(/\{\{([^}]+)\}\}/g, (_, k) => {
     const [kind, id] = k.split(':');
     if (id !== undefined && kind.indexOf('slot') === 0) {
-      const s = sl(id), v = s[3] === null ? String(Math.round(st.rpm / 50) * 50) : s[3];
+      let s = sl(id); const cid = (slots.find((x) => x.id === id) || {}).default;
+      if ($('cold').checked && COLD_F[cid]) s = s.slice(0, 3).concat(COLD_F[cid]);
+      const v = s[3] === null ? String(Math.round(st.rpm / 50) * 50) : s[3];
       return { slot: v, slotHead: s[0], slotUnit: s[1], slotSuffix: s[2], slotHeadU: s[0] + (s[2] ? '' : (s[1] ? ' ' + s[1] : '')) }[kind];
     }
     if (k === 'cruise') { const c = $('cruise').value; return c === '' ? '--' : c === '1' ? 'CRUISE' : 'N/A'; }
     return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
-      speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: '221',
+      speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: $('cold').checked ? COLD_F.oil : '221', coolant: $('cold').checked ? COLD_F.coolant : '199',
       'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT' }[k] ?? '{{' + k + '}}';
   });
 }
@@ -210,7 +221,8 @@ async function draw() {
         text(w.x, w.y, w.w, w.h, s, f, (w.redFrom && i * 1000 >= REDLINE ? theme.hot : theme[w.color || 'dim']), 'left', left); }
     } else if (w.type === 'text') {
       const s = token(w.text, st, layout.slots || []);
-      const col = (w.hotWhen === 'now' && phase(lay) === 1) || (w.hotText && s === w.hotText) ? theme.hot : (theme[w.color || 'fg'] || theme.fg);
+      const col = (w.hotWhen === 'now' && phase(lay) === 1) || (w.hotText && s === w.hotText) ? theme.hot
+        : underTemp(w, layout.slots || []) ? [61, 139, 255, 255] : (theme[w.color || 'fg'] || theme.fg);
       // "fit" as hud.js: a smaller font on the same baseline when the text is too wide or has a missing glyph
       let f = await font(w.font), dy = 0;
       const held = $('held').checked && /\{\{slot:/.test(w.text) && !/^-+$/.test(s);
@@ -283,6 +295,7 @@ async function load() {
   if (q.get('lights')) { $('lights').value = q.get('lights'); await load(); }
   if (q.get('colours')) $('colours').value = q.get('colours');
   if (q.get('held') === '1') $('held').checked = true;
+  if (q.get('cold') === '1') $('cold').checked = true;
   if (q.get('cruise') !== null) $('cruise').value = q.get('cruise');
   $('sweep').onclick = () => { const t0 = performance.now(); const tick = () => { const k = (performance.now() - t0) / 4000;
     $('rpm').value = k < 0.75 ? 900 + k / 0.75 * 6000 : 6900; if (k < 1.2) requestAnimationFrame(tick); }; tick(); };
