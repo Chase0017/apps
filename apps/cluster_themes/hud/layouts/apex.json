@@ -179,6 +179,15 @@
           "radius": 4
         },
         {
+          "id": "cruise_box",
+          "x": 338,
+          "y": 352,
+          "w": 286,
+          "h": 64,
+          "head": 24,
+          "radius": 4
+        },
+        {
           "id": "m7_box",
           "x": 338,
           "y": 428,
@@ -769,6 +778,31 @@
       "fit": [
         "small"
       ]
+    },
+    {
+      "id": "cruise_head",
+      "type": "text",
+      "z": 5,
+      "x": 354,
+      "y": 351,
+      "w": 258,
+      "h": 27,
+      "text": "CRUISE CONTROL",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "cruise",
+      "type": "text",
+      "z": 5,
+      "x": 346,
+      "y": 377,
+      "w": 270,
+      "h": 37,
+      "text": "{{cruise}}",
+      "font": "unit",
+      "align": "center",
+      "hotText": "CRUISE"
     },
     {
       "id": "m10_head",

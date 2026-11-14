@@ -13,6 +13,8 @@ to the LCI cluster.
   (across the middle); **Type** Row (round lights) / Bar (slanted lights on a dark trapezoid, yellow until both ends
   meet at the shift point, then the colour pattern's red) / Off; **Colours** GT3, F1 (green, red, blue), all
   red or all blue; **First light** 2,000 to 6,000 rpm (default 3,000).
+- **Cruise control** box between intake and oil pressure: CRUISE in red while cruise control is on, N/A while
+  off (engine unit DME 4A6A, not yet checked on the car). No limiter yet: no source for it found.
 - **Held values:** a value the car stops sending stays on screen, dimmed, with a small amber dot after it (in the
   corner just above the digits where the box has no room) until the car answers again.
 - **Rev bar** across the top with its scale, under the camera and BMW's turn arrows.

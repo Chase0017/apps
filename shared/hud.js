@@ -187,7 +187,7 @@
  * Units: "units" (us = mph, °F, psi; metric = km/h, °C, bar) sets them all; "unitSpeed" (speed, distance), "unitTemp" and
  * "unitPress" each override theirs (unitUs()). Torque and power follow "units".
  * {{afr}} (air-fuel ratio, lambda x 14.7, config.dme.afr) {{oilP}} (oil pressure above outside air, config.dme.oilPressure) {{timing}} (ignition timing, degrees before TDC, config.dme.timing: OBD PID 0x0E as M Vitals reads it)
- * {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
+ * {{cruise}} (CRUISE while cruise control is on, N/A while off: config.dme.cruise, DME 4A6A) {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
  * 0-60 run started) {{avgSpeed}} (average moving speed this drive, from its first minute) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
  * {{runLabel}} (0-60 MPH, 0-100 KM/H): runs.js. {{warm}}: WARMING UP while the oil is under 80 C, then ENGINE WARM.
  * {{badge}}: the model picked on the Badge tab (badges.js), "BMW X3 M40i" with the lettering on, '' for none.
@@ -302,7 +302,7 @@ const STALE_MS = 5000;      // a value with no answer this long is held: dimmed 
 const HELD_DIM = 0.45, HELD_DOT = [255, 176, 0, 255];
 // the value tokens that show a car or engine unit value -> the value they show (_stale); the rest (gauge labels,
 // signals for needles, headings) are never shown as held
-const STALE_TOKENS = { intake: 'intake', afr: 'afr', timing: 'timing', oilP: 'oilP', speed: 'speed', oil: 'oil', coolant: 'coolant', boost: 'boost',
+const STALE_TOKENS = { cruise: 'cruise', intake: 'intake', afr: 'afr', timing: 'timing', oilP: 'oilP', speed: 'speed', oil: 'oil', coolant: 'coolant', boost: 'boost',
     range: 'range', torque: 'torque', hvSoc: 'hvSoc', fuelPct: 'fuel', ambientN: 'ambient', torquePct: 'torquePct', powerPct: 'powerPct',
     gLat: 'gLat', gLong: 'gLong', gSide: 'gLat', gFwd: 'gLong', rpm: 'rpm', rpm10: 'rpm', ambient: 'ambient', power: 'torque' };
 const TZ_AUTO = -9999;           // the "timeZone" setting's Automatic: the head unit's own time zone
@@ -437,6 +437,7 @@ class HudApp {
         this.afrDme = null; this.afrDmeAt = 0;        // air-fuel ratio (lambda x 14.7) from the engine unit (config.dme.afr)
         this.oilPDme = null; this.oilPDmeAt = 0;      // bar, oil pressure from the engine unit (config.dme.oilPressure)
         this.timingDme = null; this.timingDmeAt = 0;  // degrees before TDC, ignition timing (config.dme.timing, as M Vitals reads it)
+        this.cruiseDme = null; this.cruiseDmeAt = 0;  // 1 while cruise control is on, 0 off (config.dme.cruise: DME 4A6A, Nov 13 2026)
         this.needsIntake = false;        // a shown widget uses the intake temperature
         this.hvSoc = null; this.hvSocAt = 0;  // %, a plug-in hybrid's battery charge (HV_SOC)
         this.needsHv = false;            // a shown widget uses it
@@ -541,6 +542,7 @@ class HudApp {
         this.needsAfr = /afr/.test(j);
         this.needsOilP = /oilP/.test(j);
         this.needsTiming = /timing/.test(j);
+        this.needsCruise = /cruise/.test(j);
         this.needsHv = /hvSoc/.test(j);
         this.needsFuel = /fuel/i.test(j);
     }
@@ -803,7 +805,8 @@ class HudApp {
         const hasAfr = !!(dme && Array.isArray(dme.afr) && dme.afr.length);
         const hasOilP = !!(dme && Array.isArray(dme.oilPressure) && dme.oilPressure.length);
         const hasTiming = !!(dme && Array.isArray(dme.timing) && dme.timing.length);
-        let afrAsk = 0, oilPAsk = 0, timingAsk = 0;
+        const hasCruise = !!(dme && Array.isArray(dme.cruise) && dme.cruise.length);
+        let afrAsk = 0, oilPAsk = 0, timingAsk = 0, cruiseAsk = 0;
         let rd = null, busy = false, baro = 101.3, baroAt = 0, intakeAsk = 0, hvAsk = 0, hvMiss = 0, fuelAsk = 0, fuelMiss = 0;
         try {
             // the kit's read-only link: anything but a read (22 / OBD 01) is refused before it leaves the head unit.
@@ -825,7 +828,8 @@ class HudApp {
             const wantAfr = hasAfr && this.needsAfr && now - afrAsk >= 400;          // mixture moves fast: as often as the loop runs
             const wantOilP = hasOilP && this.needsOilP && now - oilPAsk >= 1000;
             const wantTiming = hasTiming && this.needsTiming && now - timingAsk >= 400;   // moves with load: as often as the loop runs
-            if (busy || this.car.data().demo || (!wantBoost && !wantIntake && !wantHv && !wantFuel && !wantAfr && !wantOilP && !wantTiming)) return;
+            const wantCruise = hasCruise && this.needsCruise && now - cruiseAsk >= 1000;   // an on / off: once a second
+            if (busy || this.car.data().demo || (!wantBoost && !wantIntake && !wantHv && !wantFuel && !wantAfr && !wantOilP && !wantTiming && !wantCruise)) return;
             busy = true;
             (async () => {
                 if (wantFuel) {
@@ -862,6 +866,11 @@ class HudApp {
                     timingAsk = now;
                     const v = await rd.value('timing', dme.timing);
                     if (isNum(v)) { this.timingDme = v; this.timingDmeAt = Date.now(); }
+                }
+                if (wantCruise) {
+                    cruiseAsk = now;
+                    const v = await rd.value('cruise', dme.cruise);
+                    if (isNum(v)) { this.cruiseDme = v; this.cruiseDmeAt = Date.now(); }
                 }
                 // the outside air pressure (kPa), for boost and oil pressure: both read absolute
                 if ((wantBoost || wantOilP) && now - baroAt > 60000 && Array.isArray(dme.baro)) {
@@ -1379,6 +1388,7 @@ class HudApp {
         if (name === 'intake') return isNum(this.intakeDme) ? this.intakeDme : null;
         if (name === 'afr') return isNum(this.afrDme) ? this.afrDme : null;
         if (name === 'timing') return isNum(this.timingDme) ? this.timingDme : null;
+        if (name === 'cruise') return isNum(this.cruiseDme) ? this.cruiseDme : null;
         if (name === 'oilP') return isNum(this.oilPDme) ? this.oilPDme : null;
         if (name === 'rpm' && isNum(this.rpmF)) return this.rpmF;
         if (name === 'hvSoc') return isNum(this.hvSoc) ? this.hvSoc : null;
@@ -1439,6 +1449,7 @@ class HudApp {
             case 'intake': return old(this.intakeDmeAt, 10000);
             case 'afr': return old(this.afrDmeAt, STALE_MS);
             case 'timing': return old(this.timingDmeAt, STALE_MS);
+            case 'cruise': return old(this.cruiseDmeAt, STALE_MS);
             case 'oilP': return old(this.oilPDmeAt, 10000);
             case 'hvSoc': return old(this.hvSocAt, HV_STALE_MS);
             case 'fuel':
@@ -1486,6 +1497,8 @@ class HudApp {
             case 'intake': { const v = this._raw('intake'); return fix(isNum(v) ? (tf ? v * 9 / 5 + 32 : v) : v, 0); }
             case 'afr': return fix(this._raw('afr'), 1);
             case 'timing': return fix(this._raw('timing'), 1);
+            // cruise control (DME 4A6A): CRUISE while on, N/A while off, -- before the engine unit answers
+            case 'cruise': { const c = this._raw('cruise'); return c === null ? '--' : c >= 1 ? 'CRUISE' : 'N/A'; }
             case 'oilP': { const v = this._raw('oilP'); return ps ? fix(isNum(v) ? v * 14.5038 : v, 0) : fix(v, 1); }
             case 'boostPeak': { const v = this.boostPeak; return ps ? fix(isNum(v) ? v * 14.5038 : v, 1) : fix(v, 2); }
             case 'run': { const v = this.runs.shown(Date.now()); return isNum(v) ? v.toFixed(this.runs.state === 'run' ? 1 : 2) : '0.00'; }
@@ -2170,6 +2183,7 @@ class HudApp {
             this._heldHit = false;
             let role = w.color || 'fg';
             if (w.colorBy === 'verdict' && this.score.last) role = VERDICT[this.score.last.verdict] || role;
+            if (w.hotText && s === w.hotText) role = 'hot';          // "hotText": shift red while it reads exactly that (CRUISE)
             if (w.near && this._nearMark(w.near[0]) === w.near[1]) role = w.nearColor || 'fg';
             // a readout slot goes red / blue at the shift point only while it shows engine speed or the shift point
             const shiftish = !w.slot || ['rpm', 'shiftAt'].indexOf((this.slotSensor(this.activeName, w.slot, this.layoutSlots) || {}).id) >= 0;
