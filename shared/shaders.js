@@ -223,6 +223,9 @@ const LIGHTS = `// Shift lights for a cluster-render "effect" layer (GLSL ES 1.0
 //   u_off (alpha when off), u_mirror 0/1 (fill from the right end; the right bank of a split pair).
 //   u_strobe 2 = the dark half of a blink at the shift point (all red at u_off). u_rise px: the row ramps up
 //   as it fills (the first light u_rise lower than the last; each light is u_size.y - u_rise tall).
+//   Bar style (Nov 13 2026, Apex Cluster "Bar"): u_slant px: the lights lean outward at the top, most at the outer
+//   end and upright at the inner end (a fan), so a mirrored pair makes one trapezoid; u_back rgba: a backing under
+//   the lights, its outer edge following the slant; u_pad px: room round the lights inside it. All 0: as before.
 precision mediump float;
 varying vec2 v_uv;
 uniform vec2 u_size;
@@ -238,29 +241,35 @@ uniform vec3 u_yellow;
 uniform vec3 u_red;
 uniform vec3 u_blue;
 uniform float u_off;
+uniform float u_slant;
+uniform vec4 u_back;
+uniform float u_pad;
 
 void main() {
     float gapPx = 6.0;
-    float slot = (u_size.x + gapPx) / u_n;
     float px = v_uv.x * u_size.x;
     float py = v_uv.y * u_size.y;
-    float idx = floor(px / slot);
-    float inSeg = px - idx * slot;
+    // q: px from the end the row fills from (u_mirror 1: the right end); the slant fans it out at the top
+    float q = u_mirror > 0.5 ? u_size.x - px : px;
+    q += u_slant * (0.5 - py / u_size.y) * (1.0 - q / u_size.x);
+    vec4 back = q >= 0.0 ? u_back : vec4(0.0);
+    float rowW = u_size.x - u_pad;
+    float slot = (rowW + gapPx) / u_n;
+    float qq = q - u_pad;
+    float li = floor(qq / slot);
+    float inSeg = qq - li * slot;
     float segW = slot - gapPx;
-    if (inSeg > segW || idx >= u_n) { gl_FragColor = vec4(0.0); return; }
-    // u_mirror 1: the row fills from the right end leftward (the right bank of a split pair)
-    float li = u_mirror > 0.5 ? u_n - 1.0 - idx : idx;
+    py -= u_pad;
     // u_rise px: the row climbs as it fills: the first light sits u_rise lower than the last (0 = a flat row)
-    float segH = u_size.y - u_rise;
+    float segH = u_size.y - u_rise - 2.0 * u_pad;
     py -= u_rise * (1.0 - li / max(1.0, u_n - 1.0));
-    if (py < -1.0 || py > segH + 1.0) { gl_FragColor = vec4(0.0); return; }
+    if (qq < 0.0 || inSeg > segW || li >= u_n || py < -1.0 || py > segH + 1.0) { gl_FragColor = back; return; }
     vec2 hs = vec2(segW, segH) * 0.5;
-    vec2 p = vec2(inSeg, py) - hs;
     float r = u_round > 0.5 ? min(hs.x, hs.y) : min(4.0, hs.y);
     if (u_round > 0.5) hs = vec2(r);
-    p = vec2(inSeg, py) - vec2(segW, segH) * 0.5;
-    vec2 q = abs(p) - (hs - vec2(r));
-    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+    vec2 p = vec2(inSeg, py) - vec2(segW, segH) * 0.5;
+    vec2 q2 = abs(p) - (hs - vec2(r));
+    float d = length(max(q2, 0.0)) + min(max(q2.x, q2.y), 0.0) - r;
     float cover = clamp(0.5 - d, 0.0, 1.0);
     float nMain = max(1.0, u_n - u_tail);
     float f = li / max(1.0, nMain - 1.0);
@@ -268,7 +277,8 @@ void main() {
     bool on = li < u_lit;
     if (u_strobe > 1.5) { col = u_red; on = false; }        // blink, dark half
     else if (u_strobe > 0.5) { col = u_red; on = true; }
-    gl_FragColor = vec4(col, cover * (on ? 1.0 : u_off));
+    float a = cover * (on ? 1.0 : u_off), ba = back.a * (1.0 - a), oa = a + ba;
+    gl_FragColor = oa > 0.0 ? vec4((col * a + back.rgb * ba) / oa, oa) : vec4(0.0);
 }
 `;
 

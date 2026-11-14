@@ -2024,6 +2024,10 @@ class HudApp {
             c.uniform(ref, 'u_red', rgb(LIGHTS[pat[2]]));
             c.uniform(ref, 'u_blue', rgb(LIGHTS[pat[3]]));
             c.uniform(ref, 'u_off', [w.off === undefined ? 0.14 : w.off]);
+            // the bar style (Apex Cluster's "Bar"): "slant" px, "back" [r, g, b, a] backing, "pad" px round the lights
+            c.uniform(ref, 'u_slant', [isNum(w.slant) ? w.slant : 0]);
+            c.uniform(ref, 'u_back', rgba(Array.isArray(w.back) ? w.back : [0, 0, 0, 0]));
+            c.uniform(ref, 'u_pad', [isNum(w.pad) ? w.pad : 0]);
         } else if (w.type === 'fill') {
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_color', rgba(color(t, w.color || 'bg')));

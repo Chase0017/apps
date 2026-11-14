@@ -498,8 +498,8 @@ class Page {
         y += rh;
         if (own) {
             const cam = this.get('shiftLights');
-            cy = gt3.row(cv, P, x, y, w, rh, 'Lights', cam === 'row' ? 'One row across the top' : cam === 'off' ? 'No shift lights' : 'Split round the driver camera');
-            gt3.seg(cv, P, x + w - 14, cy, [['camera', 'Camera'], ['row', 'No camera'], ['off', 'Off']], cam, (v) => this.set('shiftLights', v), 'set:shiftLights', 17);
+            cy = gt3.row(cv, P, x, y, w, rh, 'Lights', { row: 'No camera: banks meet in the middle', bar: 'No camera: one slanted bar', off: 'No shift lights' }[cam] || 'Split round the driver camera');
+            gt3.seg(cv, P, x + w - 14, cy, [['camera', 'Camera'], ['row', 'Row'], ['bar', 'Bar'], ['off', 'Off']], cam, (v) => this.set('shiftLights', v), 'set:shiftLights', 17);
             y += rh;
             cy = gt3.row(cv, P, x, y, w, rh, 'Colours');
             gt3.seg(cv, P, x + w - 14, cy, [['gt3', 'GT3'], ['f1', 'F1'], ['red', 'Red'], ['blue', 'Blue']], this.get('shiftColours'), (v) => this.set('shiftColours', v), 'set:shiftColours', 17);

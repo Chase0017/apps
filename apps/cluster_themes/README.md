@@ -9,8 +9,9 @@ to the LCI cluster.
 
 - **Shift lights:** two banks of six either side of the driver camera, ramping up towards it, filling from the
   outside in (green, yellow, red, blue). At the shift point every light, the whole rev bar, the gear and the rpm flash
-  red together. Settings (Shift & alerts): **Lights** Camera (split round the driver attention camera) / No camera
-  (the two banks meet in the middle, for cars without the camera) / Off; **Colours** GT3, F1 (green, red, blue), all
+  red together. Settings (Shift & alerts): **Lights** Camera (split round the driver attention camera) / Row (the two
+  banks meet in the middle) / Bar (one slanted bar on a dark trapezoid across the top) / Off, Row and Bar for cars
+  without the camera; **Colours** GT3, F1 (green, red, blue), all
   red or all blue; **First light** 2,000 to 6,000 rpm (default 3,000).
 - **Held values:** a value the car stops sending stays on screen, dimmed, with a small amber dot after it (in the
   corner just above the digits where the box has no room) until the car answers again.

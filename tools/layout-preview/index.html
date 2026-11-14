@@ -26,7 +26,7 @@
   <label>Gear <select id="gear"><option>P</option><option>R</option><option>N</option><option selected>D3</option><option>S3</option><option>M3</option><option>S5</option></select></label>
   <label>Mode <select id="mode"><option>COMFORT</option><option selected>SPORT</option><option>SPORT PLUS</option><option>ECO PRO</option><option>SPORT INDIVIDUAL</option></select></label>
   <label><input id="car" type="checkbox" checked> Car view (camera, arrows, hood)</label>
-  <label>Shift lights <select id="lights"><option value="camera">Camera</option><option value="row">No camera</option><option value="off">Off</option></select></label>
+  <label>Shift lights <select id="lights"><option value="camera">Camera</option><option value="row">Row (no camera)</option><option value="bar">Bar (no camera)</option><option value="off">Off</option></select></label>
   <label>Colours <select id="colours"><option>gt3</option><option>f1</option><option>red</option><option>blue</option></select></label>
   <label>First light <select id="from"><option>2000</option><option>2500</option><option selected>3000</option><option>3500</option><option>4000</option><option>4500</option><option>5000</option><option>5500</option><option>6000</option></select></label>
   <label><input id="held" type="checkbox"> Held values (readouts)</label>
@@ -171,7 +171,7 @@ async function draw() {
       const strobe = phase(w.blink === true ? 100 : (w.blink > 0 ? w.blink : lay));
       effect(w, 'lights', { u_size: [w.w, w.h], u_n: [n], u_tail: [w.tail || 0], u_round: [w.round ? 1 : 0], u_mirror: [w.mirror ? 1 : 0], u_rise: [w.rise > 0 ? Math.min(w.h - 4, w.rise) : 0],
         u_green: rgb(TH.LIGHTS[pat[0]]), u_yellow: rgb(TH.LIGHTS[pat[1]]), u_red: rgb(TH.LIGHTS[pat[2]]), u_blue: rgb(TH.LIGHTS[pat[3]]),
-        u_off: [w.off ?? 0.14], u_lit: [lit], u_strobe: [strobe] });
+        u_off: [w.off ?? 0.14], u_lit: [lit], u_strobe: [strobe], u_slant: [w.slant || 0], u_back: rgba(w.back || [0, 0, 0, 0]), u_pad: [w.pad || 0] });
     } else if (w.type === 'shiftbar') {
       const segs = w.segments || 40, v = Math.min(1, st.rpm / max);
       const ph = w.shiftFlash ? phase(lay) : 0;
@@ -230,7 +230,7 @@ function carView() {
   VIS.HOOD.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(1920, 0); ctx.closePath(); ctx.fill();
   // the camera pod (a trapezoid, wider at the top)
   const [c0, , c1, cy] = VIS.CAMERA;
-  if ($('lights').value !== 'row') {
+  if (['row', 'bar'].indexOf($('lights').value) < 0) {
   ctx.fillStyle = '#0b0b0c'; ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.beginPath();
   ctx.moveTo(c0, 0); ctx.lineTo(c1, 0); ctx.lineTo(c1 - 45, cy); ctx.lineTo(c0 + 45, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
   }

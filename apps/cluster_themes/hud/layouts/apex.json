@@ -276,6 +276,55 @@
       "noCamera": true
     },
     {
+      "id": "lights_barl",
+      "x": 470,
+      "type": "lights",
+      "z": 2,
+      "y": 30,
+      "w": 490,
+      "h": 66,
+      "count": 10,
+      "tail": 1,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 40,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 8,
+      "noCamera": true,
+      "toggle": "shiftLights=bar"
+    },
+    {
+      "id": "lights_barr",
+      "x": 960,
+      "mirror": true,
+      "type": "lights",
+      "z": 2,
+      "y": 30,
+      "w": 490,
+      "h": 66,
+      "count": 10,
+      "tail": 1,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 40,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 8,
+      "noCamera": true,
+      "toggle": "shiftLights=bar"
+    },
+    {
       "id": "revs",
       "type": "shiftbar",
       "z": 2,
