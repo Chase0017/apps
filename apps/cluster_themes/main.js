@@ -42,7 +42,7 @@ mgu.run({
             title: ctx.spec.title, what: 'cluster',
             look: { name: 'Layouts', style: 'hero', tags: { apex: 'GT3 race dash' } },
             tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'],
-            display: ['showBoost', 'stripClear', 'tankLitres'],
+            display: ['tankLitres'],
         }).start();
     },
 });

@@ -129,8 +129,7 @@
           "w": 204,
           "h": 210,
           "head": 36,
-          "radius": 4,
-          "toggle": "showBoost"
+          "radius": 4
         },
         {
           "id": "water_box",
@@ -592,8 +591,7 @@
       "h": 27,
       "text": "{{slotHead:4}} {{slotUnit:4}}",
       "font": "head",
-      "color": "ink",
-      "toggle": "showBoost"
+      "color": "ink"
     },
     {
       "id": "boost",
@@ -606,7 +604,6 @@
       "text": "{{slot:4}}",
       "font": "big",
       "align": "right",
-      "toggle": "showBoost",
       "slot": "4",
       "fit": [
         "value",

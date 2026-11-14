@@ -210,7 +210,7 @@ async function start() {
       sensorUnit(sn) { return sn.unit ? sn.unit(this.unitUs(sn.dim || 'units')) : ''; }, shiftTesting: () => false, testShift: () => true,
       unitUs(dim) { const v = settings.get({ speed: 'unitSpeed', temp: 'unitTemp', press: 'unitPress' }[dim]); if (v === 'mph' || v === 'f' || v === 'psi') return true; if (v === 'kmh' || v === 'c' || v === 'bar') return false; return settings.get('units') === 'us'; } };
     const Page = req('./page');
-    const cfg = hud ? { title: spec.title, what: 'cluster', look: { name: 'Layouts', style: 'hero', tags: { apex: 'GT3 race dash' } }, tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'], display: ['showBoost', 'stripClear', 'tankLitres'] }
+    const cfg = hud ? { title: spec.title, what: 'cluster', look: { name: 'Layouts', style: 'hero', tags: { apex: 'GT3 race dash' } }, tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'], display: ['tankLitres'] }
       : { title: spec.title, what: 'HUD', look: { name: 'Layouts', style: 'cards', tags: {} }, tabs: ['look', 'readouts', 'position', 'units', 'shift', 'system'], display: ['showClock', 'showOil', 'showCoolant', 'showBoost', 'clock', 'tankLitres'] };
     page = new Page(ctx, stub, cfg);
     page.tab = window.__tab || 'units';
