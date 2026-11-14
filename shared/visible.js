@@ -26,6 +26,10 @@ const BELT = [587, 663, 626, 700];
 const CAMERA = [750, 0, 1190, 132];
 /** BMW's green turn-signal arrows, drawn over us either side of the camera: [x0, y0, x1, y1] each (same photos). */
 const ARROWS = [[695, 100, 775, 168], [1160, 100, 1235, 168]];
+/** The same arrows on a car without the camera: higher up and closer in (measured from a photo of Apex on a
+ *  camera-less car, Nov 14 2026, arrows at x 756-814 / 1116-1175, y 19-73, plus about 8 px). noCamera widgets are
+ *  checked against these only; every other widget against both. */
+const ARROWS_NOCAM = [[748, 11, 822, 81], [1108, 11, 1183, 81]];
 /** BMW's red PARK (parking brake) light, drawn over us top right (same photos, rough): [x0, y0, x1, y1]. */
 const PARK = [1830, 185, 1910, 252];
 /** More of BMW's warning lights drawn over us (2023 X3 M40i photo with them lit, Nov 12 2026; about +-20 px):
@@ -132,7 +136,8 @@ function check(widgets, target) {
             if (!w.noCamera && overlaps(w, CAMERA)) {   // noCamera: only shown for a car without the driver camera
                 out.push(id + ': under the driver camera x' + CAMERA[0] + '-' + CAMERA[2] + ' y' + CAMERA[1] + '-' + CAMERA[3]);
             }
-            ARROWS.forEach((a, i) => {
+            (w.noCamera ? ARROWS_NOCAM : ARROWS.concat(ARROWS_NOCAM)).forEach((a, i) => {
+                i %= 2;
                 if (overlaps(w, a)) out.push(id + ': under BMW\'s ' + (i ? 'right' : 'left') + ' turn arrow x' + a[0] + '-' + a[2] + ' y' + a[1] + '-' + a[3]);
             });
             WARNINGS.forEach((wn) => {
@@ -161,4 +166,4 @@ function check(widgets, target) {
     return out;
 }
 
-module.exports = { HOOD, BLACK_BOX, BELT, CAMERA, ARROWS, PARK, WARNINGS, HUD_WINDOW, HUD_BMW, hoodY, check };
+module.exports = { HOOD, BLACK_BOX, BELT, CAMERA, ARROWS, ARROWS_NOCAM, PARK, WARNINGS, HUD_WINDOW, HUD_BMW, hoodY, check };

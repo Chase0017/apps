@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 14 2026
+
+- **Apex Cluster 0.29.0:** on cars without the driver camera BMW draws its turn arrows higher and closer in (x 756-814 / 1116-1175, y 19-73, from a photo on a friend's car), right over the No camera shift lights. Moved them down under the arrows: Bar to y 90 (was 30), Row to y 88 (was 20); both still clear the rev bar. The layout check (`shared/visible.js` `ARROWS_NOCAM`) now knows where those arrows sit, and `tools/layout-preview/` draws them with Placement No camera. Camera placements unchanged.
+
 ## Nov 13 2026
 
 - **Apex Cluster 0.28.0:** removed **Show boost** and **Leave BMW's bottom strip clear** from System > Display (and from All settings). Boost is always shown and the dash always uses the full height, whatever was saved before. System > Display now holds Box colour and Fuel tank size. The HUD keeps its own Show boost.

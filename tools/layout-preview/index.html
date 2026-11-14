@@ -250,7 +250,7 @@ function carView() {
   ctx.moveTo(c0, 0); ctx.lineTo(c1, 0); ctx.lineTo(c1 - 45, cy); ctx.lineTo(c0 + 45, cy); ctx.closePath(); ctx.fill(); ctx.stroke();
   }
   // BMW's turn arrows, black box, belt light, PARK
-  ctx.fillStyle = '#5f5'; VIS.ARROWS.forEach(([x0, y0, x1, y1], i) => { const m = (y0 + y1) / 2, tip = i ? x1 : x0, back = i ? x0 : x1;
+  ctx.fillStyle = '#5f5'; ($('place').value === 'camera' ? VIS.ARROWS : VIS.ARROWS_NOCAM).forEach(([x0, y0, x1, y1], i) => { const m = (y0 + y1) / 2, tip = i ? x1 : x0, back = i ? x0 : x1;
     ctx.beginPath(); ctx.moveTo(tip, m); ctx.lineTo((x0 + x1) / 2, y0 + 8); ctx.lineTo((x0 + x1) / 2, m - 12); ctx.lineTo(back, m - 12);
     ctx.lineTo(back, m + 12); ctx.lineTo((x0 + x1) / 2, m + 12); ctx.lineTo((x0 + x1) / 2, y1 - 8); ctx.closePath(); ctx.fill(); });
   // BMW's solid black gear box (the 2023 X3 draws it too)
