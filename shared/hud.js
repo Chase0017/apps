@@ -1807,8 +1807,9 @@ class HudApp {
         if (c) this._blit(x, [c.rect], c.px);
     }
 
-    /** "key" is on while that bool setting is on; "!key" while it is off. */
+    /** "key" is on while that bool setting is on; "!key" while it is off; "key=value" while it is that; a & b: both. */
     _toggleOn(t) {
+        if (t.indexOf('&') >= 0) return t.split('&').every((p) => this._toggleOn(p));
         const not = t.charAt(0) === '!';
         const k = not ? t.slice(1) : t, eq = k.indexOf('=');
         const on = eq > 0 ? String(this.setting(k.slice(0, eq))) === k.slice(eq + 1) : this.setting(k) !== false;
@@ -2019,10 +2020,13 @@ class HudApp {
             c.uniform(ref, 'u_rise', [isNum(w.rise) ? Math.max(0, Math.min(w.h - 4, w.rise)) : 0]);
             // the colour pattern (Apex Cluster's "shiftColours"; an app without the setting keeps GT3)
             const pat = SHIFT_PATTERNS[this.setting('shiftColours')] || SHIFT_PATTERNS.gt3;
-            c.uniform(ref, 'u_green', rgb(LIGHTS[pat[0]]));
-            c.uniform(ref, 'u_yellow', rgb(LIGHTS[pat[1]]));
-            c.uniform(ref, 'u_red', rgb(LIGHTS[pat[2]]));
-            c.uniform(ref, 'u_blue', rgb(LIGHTS[pat[3]]));
+            // "barFill" (Apex Cluster's Bar type): every light that colour while it fills, the pattern's red once full
+            const fill = w.barFill && LIGHTS[w.barFill] ? w.barFill : null;
+            c.uniform(ref, 'u_green', rgb(LIGHTS[fill || pat[0]]));
+            c.uniform(ref, 'u_yellow', rgb(LIGHTS[fill || pat[1]]));
+            c.uniform(ref, 'u_red', rgb(LIGHTS[fill || pat[2]]));
+            c.uniform(ref, 'u_blue', rgb(LIGHTS[fill || pat[3]]));
+            c.uniform(ref, 'u_flash', fill ? rgb(LIGHTS[pat[2]]) : [0, 0, 0]);
             c.uniform(ref, 'u_off', [w.off === undefined ? 0.14 : w.off]);
             // the bar style (Apex Cluster's "Bar"): "slant" px, "back" [r, g, b, a] backing, "pad" px round the lights
             c.uniform(ref, 'u_slant', [isNum(w.slant) ? w.slant : 0]);

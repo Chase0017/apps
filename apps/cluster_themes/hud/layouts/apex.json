@@ -221,7 +221,7 @@
       "off": 0.12,
       "from": 3000,
       "rise": 30,
-      "toggle": "shiftLights=camera"
+      "toggle": "shiftPlace=camera&shiftLights=row"
     },
     {
       "id": "lights_r",
@@ -238,7 +238,7 @@
       "from": 3000,
       "mirror": true,
       "rise": 30,
-      "toggle": "shiftLights=camera"
+      "toggle": "shiftPlace=camera&shiftLights=row"
     },
     {
       "id": "lights_rowl",
@@ -254,7 +254,7 @@
       "from": 3000,
       "rise": 30,
       "x": 630,
-      "toggle": "shiftLights=row",
+      "toggle": "shiftPlace=nocam&shiftLights=row",
       "noCamera": true
     },
     {
@@ -272,7 +272,7 @@
       "rise": 30,
       "x": 990,
       "mirror": true,
-      "toggle": "shiftLights=row",
+      "toggle": "shiftPlace=nocam&shiftLights=row",
       "noCamera": true
     },
     {
@@ -284,7 +284,7 @@
       "w": 490,
       "h": 66,
       "count": 10,
-      "tail": 1,
+      "tail": 0,
       "round": false,
       "off": 0.14,
       "from": 3000,
@@ -297,7 +297,8 @@
       ],
       "pad": 8,
       "noCamera": true,
-      "toggle": "shiftLights=bar"
+      "toggle": "shiftPlace=nocam&shiftLights=bar",
+      "barFill": "yellow"
     },
     {
       "id": "lights_barr",
@@ -309,7 +310,7 @@
       "w": 490,
       "h": 66,
       "count": 10,
-      "tail": 1,
+      "tail": 0,
       "round": false,
       "off": 0.14,
       "from": 3000,
@@ -322,7 +323,57 @@
       ],
       "pad": 8,
       "noCamera": true,
-      "toggle": "shiftLights=bar"
+      "toggle": "shiftPlace=nocam&shiftLights=bar",
+      "barFill": "yellow"
+    },
+    {
+      "id": "lights_cbarl",
+      "x": 440,
+      "type": "lights",
+      "z": 2,
+      "y": 38,
+      "w": 300,
+      "h": 58,
+      "count": 6,
+      "tail": 0,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 36,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 7,
+      "barFill": "yellow",
+      "toggle": "shiftPlace=camera&shiftLights=bar"
+    },
+    {
+      "id": "lights_cbarr",
+      "x": 1200,
+      "mirror": true,
+      "type": "lights",
+      "z": 2,
+      "y": 38,
+      "w": 300,
+      "h": 58,
+      "count": 6,
+      "tail": 0,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 36,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 7,
+      "barFill": "yellow",
+      "toggle": "shiftPlace=camera&shiftLights=bar"
     },
     {
       "id": "revs",

@@ -487,9 +487,9 @@ class Page {
         const P = this.P, w = (CW - 16) / 2, x = CX, us = (d) => this.hud.unitUs(d);
         const at = this.get('redline') - (this.get('shiftBefore') || 0);
         // Apex Cluster's own light settings (Nov 13 2026): placement, colours, start rpm; tighter rows to make room
-        const own = !!(this.item('shiftLights') && this.item('shiftColours') && this.item('shiftFrom'));
-        const rh = own ? 54 : 64, th = 84, off = own && this.get('shiftLights') === 'off';
-        let y = gt3.section(cv, P, x, 50, w, 30 + (own ? 6 : 3) * rh + th, 'Shift lights', off ? 'off' : fmtInt(at) + ' rpm');
+        const own = !!(this.item('shiftPlace') && this.item('shiftLights') && this.item('shiftColours') && this.item('shiftFrom'));
+        const rh = own ? 48 : 64, th = own ? 80 : 84, off = own && this.get('shiftLights') === 'off', bar = own && this.get('shiftLights') === 'bar';
+        let y = gt3.section(cv, P, x, 50, w, 30 + (own ? 7 : 3) * rh + th, 'Shift lights', off ? 'off' : fmtInt(at) + ' rpm');
         let cy = gt3.row(cv, P, x, y, w, rh, 'Redline', null, true);
         gt3.stepSetting(cv, P, x + w - 14, cy, this.item('redline'), this.get('redline'), (v) => this.set('redline', v), (v) => fmtInt(v) + ' rpm');
         y += rh;
@@ -497,11 +497,14 @@ class Page {
         gt3.stepSetting(cv, P, x + w - 14, cy, this.item('shiftBefore'), this.get('shiftBefore'), (v) => this.set('shiftBefore', v), (v) => (v ? fmtInt(v) + ' before' : 'At redline'));
         y += rh;
         if (own) {
-            const cam = this.get('shiftLights');
-            cy = gt3.row(cv, P, x, y, w, rh, 'Lights', { row: 'No camera: banks meet in the middle', bar: 'No camera: one slanted bar', off: 'No shift lights' }[cam] || 'Split round the driver camera');
-            gt3.seg(cv, P, x + w - 14, cy, [['camera', 'Camera'], ['row', 'Row'], ['bar', 'Bar'], ['off', 'Off']], cam, (v) => this.set('shiftLights', v), 'set:shiftLights', 17);
+            const place = this.get('shiftPlace'), type = this.get('shiftLights');
+            cy = gt3.row(cv, P, x, y, w, rh, 'Placement', place === 'nocam' ? 'Across the middle (no driver camera)' : 'Either side of the driver camera');
+            gt3.seg(cv, P, x + w - 14, cy, [['camera', 'Camera'], ['nocam', 'No camera']], place, (v) => this.set('shiftPlace', v), 'set:shiftPlace', 17);
             y += rh;
-            cy = gt3.row(cv, P, x, y, w, rh, 'Colours');
+            cy = gt3.row(cv, P, x, y, w, rh, 'Type', { bar: 'Slanted bar, yellow until both ends meet', off: 'No shift lights' }[type] || 'Round lights');
+            gt3.seg(cv, P, x + w - 14, cy, [['row', 'Row'], ['bar', 'Bar'], ['off', 'Off']], type, (v) => this.set('shiftLights', v), 'set:shiftLights', 17);
+            y += rh;
+            cy = gt3.row(cv, P, x, y, w, rh, 'Colours', bar ? 'Bar: its colour once full' : null);
             gt3.seg(cv, P, x + w - 14, cy, [['gt3', 'GT3'], ['f1', 'F1'], ['red', 'Red'], ['blue', 'Blue']], this.get('shiftColours'), (v) => this.set('shiftColours', v), 'set:shiftColours', 17);
             y += rh;
             cy = gt3.row(cv, P, x, y, w, rh, 'First light', 'Lights fill from here to the shift point');
@@ -516,9 +519,12 @@ class Page {
         const testing = this.hud.shiftTesting && this.hud.shiftTesting();
         const d = this.hud.car && this.hud.car.data(), moving = d && !d.demo && d.speed > 3;
         cy = gt3.row(cv, P, x, y, w, th, 'Test', testing ? 'Running: watch the cluster' : moving ? 'Only while the car stands' : 'Revs to the shift point for 4 s');
-        const pal = SHIFT_DOTS[own ? this.get('shiftColours') : 'gt3'] || SHIFT_DOTS.gt3;
-        pal.forEach((c, i) => cv.circle(x + 26 + i * 26, cy + 30, 9, off ? P.off : c));
+        let pal = SHIFT_DOTS[own ? this.get('shiftColours') : 'gt3'] || SHIFT_DOTS.gt3;
+        if (bar) pal = ['#ffc21a', '#ffc21a', '#ffc21a', '#ffc21a', '#ffc21a', pal[3]];     // the Bar: yellow, then the pattern's red when full
         const bt = testing ? 'Running' : 'Run test';
+        // the six dots: under the name, or (tighter Apex Cluster rows) left of the button
+        const dx = own ? x + w - 14 - gt3.tw(cv, gt3.up(bt), 19) - 36 - 16 - 6 * 26 + 13 : x + 26, dy = own ? cy : cy + 30;
+        pal.forEach((c, i) => cv.circle(dx + i * 26, dy, 9, off ? P.off : c));
         gt3.button(cv, P, x + w - 14 - gt3.tw(cv, gt3.up(bt), 19) - 36, cy - 19, bt, testing || moving ? null : () => {
             if (this.hud.testShift()) { this.kick(); setTimeout(() => this.kick(), 4000); }
         }, 'test:shift');

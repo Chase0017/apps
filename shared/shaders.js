@@ -226,6 +226,7 @@ const LIGHTS = `// Shift lights for a cluster-render "effect" layer (GLSL ES 1.0
 //   Bar style (Nov 13 2026, Apex Cluster "Bar"): u_slant px: the lights lean outward at the top, most at the outer
 //   end and upright at the inner end (a fan), so a mirrored pair makes one trapezoid; u_back rgba: a backing under
 //   the lights, its outer edge following the slant; u_pad px: room round the lights inside it. All 0: as before.
+//   u_flash rgb: the colour at the shift point instead of u_red (0: u_red).
 precision mediump float;
 varying vec2 v_uv;
 uniform vec2 u_size;
@@ -244,6 +245,7 @@ uniform float u_off;
 uniform float u_slant;
 uniform vec4 u_back;
 uniform float u_pad;
+uniform vec3 u_flash;      // the colour at the shift point (all 0: u_red); the Bar type fills in one colour, flashes this
 
 void main() {
     float gapPx = 6.0;
@@ -275,8 +277,9 @@ void main() {
     float f = li / max(1.0, nMain - 1.0);
     vec3 col = li >= nMain ? u_blue : (f < 0.42 ? u_green : (f < 0.75 ? u_yellow : u_red));
     bool on = li < u_lit;
-    if (u_strobe > 1.5) { col = u_red; on = false; }        // blink, dark half
-    else if (u_strobe > 0.5) { col = u_red; on = true; }
+    vec3 flash = u_flash.r + u_flash.g + u_flash.b > 0.0 ? u_flash : u_red;
+    if (u_strobe > 1.5) { col = flash; on = false; }        // blink, dark half
+    else if (u_strobe > 0.5) { col = flash; on = true; }
     float a = cover * (on ? 1.0 : u_off), ba = back.a * (1.0 - a), oa = a + ba;
     gl_FragColor = oa > 0.0 ? vec4((col * a + back.rgb * ba) / oa, oa) : vec4(0.0);
 }
