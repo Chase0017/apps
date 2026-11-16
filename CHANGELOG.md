@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 16 2026
+
+- **Store updates only for the apps that changed** (no app versions change). The Store's updater offers an update when a commit changes an app's content, and without `build.shared` in `mgu-repo.json` that content was the whole repo except the other apps' folders, so a push that only touched this changelog, `tools/` or one app showed an update for every app (mgu-store `native/mgu-updater/README.md`, "Repo trees"). `mgu-repo.json` now lists `build.shared: ["kit", "shared"]`, everything `kit/tools/build.py` reads besides the app's own folder. An app now updates when its folder, `kit/` or `shared/` changes; a change in `shared/` still updates every app that ships it. Installs also download only those files instead of the whole repo (the Store falls back to the whole repo if a build fails with them). This commit changes `mgu-repo.json` itself, so every app shows one last update.
+
 ## Nov 15 2026
 
 - **Apex Cluster 0.37.0:** **Apex Map reworked** on Chase's car photo. The **rev bar moves to the bottom** (between the side columns, just above BMW's bottom strip) and the **map window opens up to just under the driver camera** (x 666-1254, y 136-575: 439 px tall, was 335), so more road shows ahead of the arrow; BMW's turn arrows show over its top corners as on BMW's own screen. The window is narrowed to the map between BMW's digital speed and its gear display, and both are covered: a **TYRES** box on the left (all four, TPMS pressure over temperature) with **TRACTION** under it, and a big **GEAR** on the right where BMW's own gear display sits. **Drive mode** takes rpm's place in the left column (the rev bar shows the revs); readout slots 1 and 3-6 stay. The thin line round the map is gone (one layer less). **Every rev bar:** at the shift point only its lit part flashes (red, then its own colours); the unlit part stays dark, so the end of the fill still shows the rpm (Chase: the whole bar flashing hid it). Preview checked over the car photos (flash: lit part alternates, the unlit end stays dark); not yet on the car.

@@ -8,7 +8,8 @@
       "python": "kit/tools/build.py",
       "args": ["{id}"],
       "sdk": "oap-sdk",
-      "output": "dist/{id}@{version}.tgz"
+      "output": "dist/{id}@{version}.tgz",
+      "shared": ["kit", "shared"]
     }
   }
 }
