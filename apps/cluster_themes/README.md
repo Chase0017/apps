@@ -5,7 +5,8 @@ as **Apex**, a GT3-style race dash. Built on bimmer-lab's Cluster Themes (MIT), 
 windshield; this fork keeps one theme and fits it
 to the LCI cluster.
 
-Layouts: **Apex** (below) and **Apex Map**, Apex with BMW's own map showing through a window in the middle (see below).
+Layouts: **Apex** (below), **Apex Map** (Apex with BMW's own map showing through a window in the middle) and **Stock+**
+(BMW's own cluster with shift lights, fuel % and temperatures added).
 
 ## Apex
 
@@ -42,6 +43,16 @@ bottom. `shared/visible.js` holds those areas and warns about any widget under o
 - Drive mode, gear and traction in a row under the map. No intake, oil pressure, timing or AFR boxes.
 - BMW's digital speed and its P / gear box show through the window too. The window shows whatever BMW's cluster draws
   in the middle, so set BMW's cluster to show the map there.
+
+
+## Stock+
+
+- BMW's own cluster left as it is, with a few additions on top (no background).
+- Shift lights in a strip under the driver camera, between BMW's turn arrows (or Apex's No camera row or bar). Same
+  Shift & alerts settings as Apex.
+- Four small boxes in the lower inside of BMW's dials: fuel %, coolant, oil (degrees, blue until warm) and boost.
+  Any of them can show another sensor (Readouts tab).
+- Placed from a photo of the stock cluster in SPORT+; BMW moves things in other drive modes.
 
 ## Data
 

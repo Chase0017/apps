@@ -32,6 +32,7 @@
   <label>First light <select id="from"><option>2000</option><option>2500</option><option selected>3000</option><option>3500</option><option>4000</option><option>4500</option><option>5000</option><option>5500</option><option>6000</option></select></label>
   <label><input id="held" type="checkbox"> Held values (readouts)</label>
   <label><input id="cold" type="checkbox"> Cold engine (oil 122, coolant 131)</label>
+  <label><input id="backdrop" type="checkbox"> Backdrop (backdrop-local.png, a photo of BMW's own cluster; not in git)</label>
   <button id="sweep">Rev sweep</button>
 </div>
 <canvas id="out" width="1920" height="720"></canvas>
@@ -163,7 +164,8 @@ async function draw() {
   const st = state(), t = performance.now();
   $('rpmv').textContent = st.rpm + (st.now ? '  SHIFT' : '');
   ctx.clearRect(0, 0, 1920, 720);
-  layout.widgets.forEach((w) => { if (w.holeWhen === true && w.hole) fakeMap(w.hole); });
+  if ($('backdrop').checked && BACKDROP.complete && BACKDROP.naturalWidth) drawBackdrop();
+  if (!$('backdrop').checked) layout.widgets.forEach((w) => { if (w.holeWhen === true && w.hole) fakeMap(w.hole); });
   const max = Math.ceil(REDLINE / 1000) * 1000;
   const lay = layout.shiftBlink > 0 ? layout.shiftBlink : 0;
   const phase = (half) => !st.now ? 0 : (half && Math.floor(t / half) % 2 === 1 ? 2 : 1);   // as hud.js _shiftPhase
@@ -261,6 +263,16 @@ function carView() {
   ctx.restore();
 }
 
+/** an optional photo of BMW's own cluster under the theme (tools/layout-preview/backdrop-local.png, git-ignored), mapped
+ *  onto the panel as measured from the Nov 15 2026 SPORT+ photo (in px of the photo scaled to 2000 wide): panel x = 960 + (px - 985) / 0.8, y = 690 + (py - 742) / 0.77 */
+const BACKDROP = new Image(); BACKDROP.src = 'backdrop-local.png';
+const BD = { x0: 985, y0: 742, kx: 0.8, ky: 0.77 };
+function drawBackdrop() {
+  ctx.save(); ctx.globalAlpha = 0.85;
+  const k = 2000 / BACKDROP.naturalWidth;   // the measurements are in px of the photo shown 2000 wide
+  ctx.drawImage(BACKDROP, 960 - BD.x0 / BD.kx, 690 - BD.y0 / BD.ky, BACKDROP.naturalWidth * k / BD.kx, BACKDROP.naturalHeight * k / BD.ky);
+  ctx.restore();
+}
 /** the hole as hud.js _hole: inset "holeInset" (6) a side, in layer px; only "holeWhen": true is cut here (no Waze) */
 function hole(w) {
   if (w.holeWhen !== true || !w.hole) return [0, 0, 0, 0];
@@ -312,6 +324,7 @@ async function load() {
   if (q.get('colours')) $('colours').value = q.get('colours');
   if (q.get('held') === '1') $('held').checked = true;
   if (q.get('cold') === '1') $('cold').checked = true;
+  if (q.get('backdrop') === '1') $('backdrop').checked = true;
   $('sweep').onclick = () => { const t0 = performance.now(); const tick = () => { const k = (performance.now() - t0) / 4000;
     $('rpm').value = k < 0.75 ? 900 + k / 0.75 * 6000 : 6900; if (k < 1.2) requestAnimationFrame(tick); }; tick(); };
   let busy = false;
