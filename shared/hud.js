@@ -2054,6 +2054,7 @@ class HudApp {
             c.uniform(ref, 'u_slant', [isNum(w.slant) ? w.slant : 0]);
             c.uniform(ref, 'u_back', rgba(Array.isArray(w.back) ? w.back : [0, 0, 0, 0]));
             c.uniform(ref, 'u_pad', [isNum(w.pad) ? w.pad : 0]);
+            c.uniform(ref, 'u_join', [w.join ? 1 : 0]);   // "join": the innermost light meets its mirror as one piece
         } else if (w.type === 'fill') {
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_color', rgba(color(t, w.color || 'bg')));

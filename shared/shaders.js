@@ -225,9 +225,12 @@ const LIGHTS = `// Shift lights for a cluster-render "effect" layer (GLSL ES 1.0
 //   u_off (alpha when off), u_mirror 0/1 (fill from the right end; the right bank of a split pair).
 //   u_strobe 2 = the dark half of a blink at the shift point (all red at u_off). u_rise px: the row ramps up
 //   as it fills (the first light u_rise lower than the last; each light is u_size.y - u_rise tall).
-//   Bar style (Nov 13 2026, Apex Cluster "Bar"): u_slant px: the lights lean outward at the top, most at the outer
-//   end and upright at the inner end (a fan), so a mirrored pair makes one trapezoid; u_back rgba: a backing under
-//   the lights, its outer edge following the slant; u_pad px: room round the lights inside it. All 0: as before.
+//   Bar style (Nov 13 2026, Apex Cluster "Bar"): u_slant px: the lights lean outward at the bottom (since Nov 16 2026,
+//   was the top: the outer ends now follow the screen's edge, which runs down and out), most at the outer end and
+//   upright at the inner end (a fan), so a mirrored pair makes one trapezoid; u_back rgba: a backing under the
+//   lights, its outer edge following the slant; u_pad px: room round the lights inside it. All 0: as before.
+//   u_join 1: the innermost light is square at its inner end and runs to the layer's edge, so a mirrored pair that
+//   meets there shows its two middle lights as one piece.
 //   u_flash rgb: the colour at the shift point instead of u_red (0: u_red).
 precision mediump float;
 varying vec2 v_uv;
@@ -247,6 +250,7 @@ uniform float u_off;
 uniform float u_slant;
 uniform vec4 u_back;
 uniform float u_pad;
+uniform float u_join;
 uniform vec3 u_flash;      // the colour at the shift point (all 0: u_red); the Bar type fills in one colour, flashes this
 
 void main() {
@@ -255,7 +259,7 @@ void main() {
     float py = v_uv.y * u_size.y;
     // q: px from the end the row fills from (u_mirror 1: the right end); the slant fans it out at the top
     float q = u_mirror > 0.5 ? u_size.x - px : px;
-    q += u_slant * (0.5 - py / u_size.y) * (1.0 - q / u_size.x);
+    q += u_slant * (py / u_size.y - 0.5) * (1.0 - q / u_size.x);   // leaning out at the bottom
     vec4 back = q >= 0.0 ? u_back : vec4(0.0);
     float rowW = u_size.x - u_pad;
     float slot = (rowW + gapPx) / u_n;
@@ -272,6 +276,8 @@ void main() {
     float r = u_round > 0.5 ? min(hs.x, hs.y) : min(4.0, hs.y);
     if (u_round > 0.5) hs = vec2(r);
     vec2 p = vec2(inSeg, py) - vec2(segW, segH) * 0.5;
+    // u_join: the innermost light runs on past its inner end (cut square by the layer's edge), meeting its mirror
+    if (u_join > 0.5 && li >= u_n - 1.0 && u_round < 0.5) { p.x -= r + gapPx; hs.x += r + gapPx; }
     vec2 q2 = abs(p) - (hs - vec2(r));
     float d = length(max(q2, 0.0)) + min(max(q2.x, q2.y), 0.0) - r;
     float cover = clamp(0.5 - d, 0.0, 1.0);

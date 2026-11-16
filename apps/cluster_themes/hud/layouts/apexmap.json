@@ -30,7 +30,7 @@
       "default": "oil"
     }
   ],
-  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). Reworked on Chase's car photo (Nov 15 2026): the map window (x 666-1254, y 136-575) is narrowed to the map between BMW's digital speed (left) and its gear display (right) and runs up to just under the driver camera, BMW's turn arrows over its top corners; the four tyres (TPMS pressure over temperature) with traction under them cover BMW's digital speed on the left, and the gear, big, covers BMW's own gear display on the right. Left column speed, drive mode (where rpm was: the rev bar shows the revs), fuel; right column boost, water, oil (readout slots 1, 3-6). The rev bar sits at the bottom (scale y 586, bar y 614, above BMW's bottom strip) so the window starts higher and shows more road ahead; everything else moved up 70 px. The window is BMW's own drawing, so the map has no lag; it shows whatever BMW draws there. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720) is left uncovered (frame hole2): BMW draws its black box while a theme covers it (bimmer-lab/apps issue 5).",
+  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). Reworked on Chase's car photo (Nov 15 2026): the map window (x 740-1210, narrowed Nov 16 2026: BMW's digital speed underline reached x ~694 inside it on a G20 330i, y 136-575) is narrowed to the map between BMW's digital speed (left) and its gear display (right) and runs up to just under the driver camera, BMW's turn arrows over its top corners; the four tyres (TPMS pressure over temperature) with traction under them cover BMW's digital speed on the left, and the gear, big, covers BMW's own gear display on the right. Left column speed, drive mode (where rpm was: the rev bar shows the revs), fuel; right column boost, water, oil (readout slots 1, 3-6). The rev bar sits at the bottom (scale y 586, bar y 614, above BMW's bottom strip) so the window starts higher and shows more road ahead; everything else moved up 70 px. The window is BMW's own drawing, so the map has no lag; it shows whatever BMW draws there. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720) is left uncovered (frame hole2): BMW draws its black box while a theme covers it (bimmer-lab/apps issue 5). On cars without the camera the shift lights sit between BMW's turn arrows (y 11-81) and the map's top (y 136): Row a flat row of 46 px dots (y 86-132, no ramp), Bar 48 px tall (y 86-134); Apex's taller ramped versions cut into the map.",
   "widgets": [
     {
       "id": "frame",
@@ -126,9 +126,9 @@
         }
       ],
       "hole": [
-        666,
+        740,
         136,
-        588,
+        470,
         439
       ],
       "holeWhen": true,
@@ -179,15 +179,15 @@
       "id": "lights_rowl",
       "type": "lights",
       "z": 2,
-      "y": 88,
+      "y": 86,
       "w": 320,
-      "h": 78,
+      "h": 46,
       "count": 6,
       "tail": 1,
       "round": true,
       "off": 0.12,
       "from": 3000,
-      "rise": 30,
+      "rise": 0,
       "x": 630,
       "toggle": "shiftPlace=nocam&shiftLights=row",
       "noCamera": true
@@ -196,15 +196,15 @@
       "id": "lights_rowr",
       "type": "lights",
       "z": 2,
-      "y": 88,
+      "y": 86,
       "w": 320,
-      "h": 78,
+      "h": 46,
       "count": 6,
       "tail": 1,
       "round": true,
       "off": 0.12,
       "from": 3000,
-      "rise": 30,
+      "rise": 0,
       "x": 990,
       "mirror": true,
       "toggle": "shiftPlace=nocam&shiftLights=row",
@@ -215,15 +215,15 @@
       "x": 470,
       "type": "lights",
       "z": 2,
-      "y": 90,
+      "y": 86,
       "w": 490,
-      "h": 66,
+      "h": 48,
       "count": 10,
       "tail": 0,
       "round": false,
       "off": 0.14,
       "from": 3000,
-      "slant": 40,
+      "slant": 32,
       "back": [
         12,
         12,
@@ -233,7 +233,8 @@
       "pad": 8,
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
-      "barFill": "yellow"
+      "barFill": "yellow",
+      "join": true
     },
     {
       "id": "lights_barr",
@@ -241,15 +242,15 @@
       "mirror": true,
       "type": "lights",
       "z": 2,
-      "y": 90,
+      "y": 86,
       "w": 490,
-      "h": 66,
+      "h": 48,
       "count": 10,
       "tail": 0,
       "round": false,
       "off": 0.14,
       "from": 3000,
-      "slant": 40,
+      "slant": 32,
       "back": [
         12,
         12,
@@ -259,7 +260,8 @@
       "pad": 8,
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
-      "barFill": "yellow"
+      "barFill": "yellow",
+      "join": true
     },
     {
       "id": "lights_cbarl",

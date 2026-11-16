@@ -531,7 +531,8 @@
       "pad": 8,
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
-      "barFill": "yellow"
+      "barFill": "yellow",
+      "join": true
     },
     {
       "id": "lights_barr",
@@ -557,7 +558,8 @@
       "pad": 8,
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
-      "barFill": "yellow"
+      "barFill": "yellow",
+      "join": true
     },
     {
       "id": "lights_cbarl",

@@ -187,7 +187,7 @@ async function draw() {
       const strobe = phase(w.blink === true ? 100 : (w.blink > 0 ? w.blink : lay));
       effect(w, 'lights', { u_size: [w.w, w.h], u_n: [n], u_tail: [w.tail || 0], u_round: [w.round ? 1 : 0], u_mirror: [w.mirror ? 1 : 0], u_rise: [w.rise > 0 ? Math.min(w.h - 4, w.rise) : 0],
         u_green: rgb(TH.LIGHTS[w.barFill || pat[0]]), u_yellow: rgb(TH.LIGHTS[w.barFill || pat[1]]), u_red: rgb(TH.LIGHTS[w.barFill || pat[2]]), u_blue: rgb(TH.LIGHTS[w.barFill || pat[3]]),
-        u_flash: w.barFill ? rgb(TH.LIGHTS[pat[2]]) : [0, 0, 0], u_off: [w.off ?? 0.14], u_lit: [lit], u_strobe: [strobe], u_slant: [w.slant || 0], u_back: rgba(w.back || [0, 0, 0, 0]), u_pad: [w.pad || 0] });
+        u_flash: w.barFill ? rgb(TH.LIGHTS[pat[2]]) : [0, 0, 0], u_off: [w.off ?? 0.14], u_lit: [lit], u_strobe: [strobe], u_slant: [w.slant || 0], u_back: rgba(w.back || [0, 0, 0, 0]), u_pad: [w.pad || 0], u_join: [w.join ? 1 : 0] });
     } else if (w.type === 'shiftbar') {
       const segs = w.segments || 40, v = Math.min(1, st.rpm / max);
       const ph = w.shiftFlash ? phase(lay) : 0;
