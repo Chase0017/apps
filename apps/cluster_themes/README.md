@@ -7,6 +7,8 @@ to the LCI cluster.
 
 Layouts: **Apex** (below), **Apex Map** (Apex with BMW's own map showing through a window in the middle) **Stock+**
 (BMW's own cluster with shift lights, fuel % and temperatures added) and **Analog** (a big central tachometer).
+Apex, Apex Map and Analog leave a small window over BMW's gear letter at the bottom right: covering it makes BMW draw
+a black box over its gear slot.
 
 ## Apex
 

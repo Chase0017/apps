@@ -337,7 +337,8 @@ void main() {
 
 const BOXES = `// The GT3 race dash's frame in one cluster-render "effect" layer (GLSL ES 1.00): the background u_bg over the
 // whole layer, a see-through rounded hole for BMW's map (u_hole x, y, w, h in layer px, already inset; w 0 = none;
-// corner radius u_holeR) and up to 12 framed readout boxes from the layout: each a rounded frame in u_line, filled
+// corner radius u_holeR), a second, square-cornered see-through hole u_hole2 (x, y, w, h; w 0 = none: BMW's gear letter
+// window, always cut) and up to 12 framed readout boxes from the layout: each a rounded frame in u_line, filled
 // u_fill, with a header strip across its top in u_head (or u_accent). Array uniforms (sent with type vec4):
 //   u_box[i]       x, y, w, h in layer px
 //   u_boxStyle[i]  header height px, border px, corner radius px, header kind (0 u_head, 1 u_accent)
@@ -350,6 +351,7 @@ uniform vec2 u_size;
 uniform vec4 u_bg;
 uniform vec4 u_hole;
 uniform float u_holeR;
+uniform vec4 u_hole2;
 uniform float u_n;
 uniform vec4 u_box[12];
 uniform vec4 u_boxStyle[12];
@@ -374,6 +376,7 @@ void main() {
     vec2 p = v_uv * u_size;
     vec4 c = u_bg;
     if (u_hole.z > 0.0) c.a *= clamp(sdBox(p, u_hole, u_holeR) + 0.5, 0.0, 1.0);
+    if (u_hole2.z > 0.0) c.a *= clamp(sdBox(p, u_hole2, 0.0) + 0.5, 0.0, 1.0);
     for (int i = 0; i < 12; i++) {
         if (float(i) >= u_n) break;
         vec4 b = u_box[i];

@@ -143,7 +143,8 @@
  *   that goes 123 -> 124 sends its last digit, not the widget.
  *   boxes     effect layer; the GT3 dash's frame in ONE layer (shaders.js boxes; the car draws only a few effect
  *             layers): the background (role "color", default "bg") with the optional map "hole" as fill, and up to
- *             12 framed boxes "boxes": [{ id, x, y, w, h (target px), head (header strip px), border (2), radius
+ *             12 framed boxes "boxes" ("hole2" [x, y, w, h]: a second, square, always-cut hole, the gear letter window):
+ *             [{ id, x, y, w, h (target px), head (header strip px), border (2), radius
  *             (0), headColor "accent" (else the "head" role), toggle }]. Roles "fill" (panel), "line", "head",
  *             "accent" for all of them; the labels are text widgets on top. Sent as array uniforms (vec4 x 12).
  * Any widget: "toggle": "<bool setting>" hides it when that setting is off, "!<setting>" when it is on,
@@ -2084,6 +2085,7 @@ class HudApp {
             c.uniform(ref, 'u_bg', rgba(color(t, w.color || 'bg')));
             c.uniform(ref, 'u_hole', this._hole(w));
             c.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
+            c.uniform(ref, 'u_hole2', this._hole2(w));
             c.uniform(ref, 'u_n', [list.length]);
             c.uniform(ref, 'u_box', rects, { type: 'vec4' });
             c.uniform(ref, 'u_boxStyle', styles, { type: 'vec4' });
@@ -2132,6 +2134,14 @@ class HudApp {
     }
 
     _holeRadius(w) { return isNum(w.holeRadius) ? w.holeRadius : 28; }
+
+    /** A boxes layer's second hole "hole2" [x, y, w, h] in target px, always cut, square corners: the window over BMW's
+     *  gear letter in its bottom strip. BMW draws its black box over the gear slot while a theme covers that letter and
+     *  until the next gear change (bimmer-lab/apps issue 5); the map "hole" stays free for the map. */
+    _hole2(w) {
+        const h = w.hole2;
+        return Array.isArray(h) && h.length === 4 ? [h[0] - w.x, h[1] - w.y, h[2], h[3]] : [0, 0, 0, 0];
+    }
 
     _tick() {
         const now = Date.now();

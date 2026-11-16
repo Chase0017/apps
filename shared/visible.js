@@ -109,7 +109,7 @@ function check(widgets, target) {
         if (Array.isArray(sub)) sub.forEach((b) => { if (b) all.push(Object.assign({ overBlackBox: w.overBlackBox }, b, { id: w.id + '.' + b.id })); });
         else if (w && w.type === 'lights' && w.rise > 0) lightRects(w).forEach((b) => all.push(b));
         else if (w && (w.type === 'dial' || w.type === 'arc')) roundRects(w).forEach((b) => all.push(b));
-        else if (w && w.type === 'fill' && !w.hole && w.x <= 0 && w.y <= 0 && w.w >= 1920 && w.h >= 720) return;   // the background: black under BMW's own
+        else if (w && w.type === 'fill' && (!w.hole || w.holeWhen === true) && w.x <= 0 && w.y <= 0 && w.w >= 1920 && w.h >= 720) return;   // the background (black under BMW's own; an always-cut hole is BMW's gear letter window)
         else all.push(w);
     });
     all.forEach((w) => {

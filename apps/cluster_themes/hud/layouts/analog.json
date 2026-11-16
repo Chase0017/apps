@@ -25,7 +25,7 @@
       "default": "oil"
     }
   ],
-  "_about": "A big round tachometer in the middle, the way Porsche and Ferrari do it (Chase, Nov 15 2026): shaders.js dial (Roadster colours: black face, chrome ring, orange needle), 0..8 x1000 rpm with the red band from the redline and the ring in the shift red at the shift point, 7 and 8 in red. The gear above the hub, the speed in figures below it. Either side two smaller arc gauges that follow their readout slot (TILE_BAR ranges): fuel and boost on the left, coolant and oil on the right (slots 1-4), the value in the middle and the name in the open bottom. The right gauges sit above and below BMW's black box (x 1406-1597, y 342-419). Shift lights and their settings as Apex. Dial centre (960, 410), r 260: clear of the camera (y 132) and BMW's turn arrows. The arcs' \"signal\"/\"min\"/\"max\" are only fallbacks: \"slot\" decides.",
+  "_about": "A big round tachometer in the middle, the way Porsche and Ferrari do it (Chase, Nov 15 2026): shaders.js dial (Roadster colours: black face, chrome ring, orange needle), 0..8 x1000 rpm with the red band from the redline and the ring in the shift red at the shift point, 7 and 8 in red. The gear above the hub, the speed in figures below it. Either side two smaller arc gauges that follow their readout slot (TILE_BAR ranges): fuel and boost on the left, coolant and oil on the right (slots 1-4), the value in the middle and the name in the open bottom. The right gauges sit above and below BMW's black box (x 1406-1597, y 342-419). Shift lights and their settings as Apex. Dial centre (960, 410), r 260: clear of the camera (y 132) and BMW's turn arrows. The arcs' \"signal\"/\"min\"/\"max\" are only fallbacks: \"slot\" decides. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720, as bimmer-lab's themes) is left uncovered: BMW draws its black box over the gear slot while a theme covers that letter (bimmer-lab/apps issue 5).",
   "widgets": [
     {
       "id": "bg",
@@ -36,7 +36,16 @@
       "y": 0,
       "w": 1920,
       "h": 720,
-      "color": "bg"
+      "color": "bg",
+      "hole": [
+        1380,
+        660,
+        80,
+        60
+      ],
+      "holeWhen": true,
+      "holeInset": 0,
+      "holeRadius": 0
     },
     {
       "id": "tacho",

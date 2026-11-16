@@ -35,7 +35,7 @@
       "default": "oil"
     }
   ],
-  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). The centre of the dash is a see-through window (x 338-1582, y 245-580) onto BMW's cluster, so the map BMW draws there shows with no lag: it is BMW's own drawing, not ours. BMW shows the map in the middle while its cluster is set to show it (the photo of Nov 15 2026, SPORT+); otherwise the window shows whatever BMW draws there. BMW's digital speed (left) and gear box (P, right) sit inside the window and show through too. Shift lights, rev bar, and the left (speed, rpm, fuel) and right (boost, water, oil) columns as Apex; drive mode, gear and traction along the bottom under the map, between BMW's seat-belt light (x 587-626) and its gear letter (x 1395-1440) as on Apex; the bottom corners beside them stay plain. map_frame is only a line round the window, so it is marked overBlackBox: BMW's gear box drawn over its right end is expected. Window measured off the photo: the map runs about x 430-1530, y 115-635 on the panel; the rev bar covers its top.",
+  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). The centre of the dash is a see-through window (x 338-1582, y 245-580) onto BMW's cluster, so the map BMW draws there shows with no lag: it is BMW's own drawing, not ours. BMW shows the map in the middle while its cluster is set to show it (the photo of Nov 15 2026, SPORT+); otherwise the window shows whatever BMW draws there. BMW's digital speed (left) and gear box (P, right) sit inside the window and show through too. Shift lights, rev bar, and the left (speed, rpm, fuel) and right (boost, water, oil) columns as Apex; drive mode, gear and traction along the bottom under the map, between BMW's seat-belt light (x 587-626) and its gear letter (x 1395-1440) as on Apex; the bottom corners beside them stay plain. map_frame is only a line round the window, so it is marked overBlackBox: BMW's gear box drawn over its right end is expected. Window measured off the photo: the map runs about x 430-1530, y 115-635 on the panel; the rev bar covers its top. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720, as bimmer-lab's themes) is left uncovered: BMW draws its black box over the gear slot while a theme covers that letter (bimmer-lab/apps issue 5).",
   "widgets": [
     {
       "id": "frame",
@@ -138,7 +138,13 @@
       ],
       "holeWhen": true,
       "holeInset": 2,
-      "holeRadius": 4
+      "holeRadius": 4,
+      "hole2": [
+        1380,
+        660,
+        80,
+        60
+      ]
     },
     {
       "id": "map_frame",

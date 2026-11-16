@@ -55,7 +55,7 @@
       "default": "timing"
     }
   ],
-  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear number (P R N, else just the number: BMW shows D / S / M itself, bottom right) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; intake (short, top) and oil pressure in the left gap, ignition timing (short, top) and AFR in the right gap. Mirrored about the panel's middle (x 960) with a 16 px gap between all boxes: the right column starts at x 1598, just clear of BMW's black box (x 1406-1597, y 342-419, which this 2022+ cluster draws: it cut AFR off on the car, Nov 12 2026), so both outer columns are 204 wide; the short top boxes (a slimmer 24 px header, the top row starts at y 245 for them) end above the black box, AFR starts below it. The gap boxes' frames are a second see-through boxes layer on connection 1 since one boxes layer holds 12.",
+  "_about": "GT race dash for 2022+ (LCI) cars with the driver attention camera in the cluster hood. Two banks of shift lights either side of the camera fill from the outside in, ramping up toward the camera, and flash red at the shift point together with the whole rev bar, the gear and the rpm (\"shiftBlink\"); the rev bar runs under the camera and BMW's turn arrows. Gear number (P R N, else just the number: BMW shows D / S / M itself, bottom right) in the middle with the drive mode and traction control under it; speed, rpm and fuel left; boost, water and oil right; intake (short, top) and oil pressure in the left gap, ignition timing (short, top) and AFR in the right gap. Mirrored about the panel's middle (x 960) with a 16 px gap between all boxes: the right column starts at x 1598, just clear of BMW's black box (x 1406-1597, y 342-419, which this 2022+ cluster draws: it cut AFR off on the car, Nov 12 2026), so both outer columns are 204 wide; the short top boxes (a slimmer 24 px header, the top row starts at y 245 for them) end above the black box, AFR starts below it. The gap boxes' frames are a second see-through boxes layer on connection 1 since one boxes layer holds 12. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720, as bimmer-lab's themes) is left uncovered: BMW draws its black box over the gear slot while a theme covers that letter (bimmer-lab/apps issue 5).",
   "widgets": [
     {
       "id": "frame",
@@ -149,6 +149,12 @@
           "head": 36,
           "radius": 4
         }
+      ],
+      "hole2": [
+        1380,
+        660,
+        80,
+        60
       ]
     },
     {
