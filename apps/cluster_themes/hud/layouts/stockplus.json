@@ -6,36 +6,40 @@
   "slots": [
     {
       "id": "1",
-      "where": "left dial, inner left",
-      "default": "fuel"
+      "where": "left dial, outer",
+      "default": "fuel",
+      "toggle": "spGauge1"
     },
     {
       "id": "2",
-      "where": "left dial, inner right",
-      "default": "coolant"
+      "where": "left dial, inner",
+      "default": "coolant",
+      "toggle": "spGauge2"
     },
     {
       "id": "3",
-      "where": "right dial, inner left",
-      "default": "oil"
+      "where": "right dial, inner",
+      "default": "oil",
+      "toggle": "spGauge3"
     },
     {
       "id": "4",
-      "where": "right dial, inner right",
-      "default": "boost"
+      "where": "right dial, outer",
+      "default": "boost",
+      "toggle": "spGauge4"
     }
   ],
-  "_about": "BMW's own cluster with a few additions on top (Chase, Nov 15 2026): no background, so BMW's gauges, map and lights all show. Shift lights under the driver camera between BMW's turn arrows (x 790-1150, y 138-166, on a dark strip that covers BMW's model badge); on cars without the camera, Apex's No camera row and bar. Four small GT3 boxes in the lower inside of BMW's two dials, under its digital speed (left) and gear (right): fuel %, coolant, oil and boost by default (readout slots 1-4). Placed off a photo of the stock cluster in SPORT+ (Nov 15 2026; photo to panel x = 960 + (px - 985) / 0.8, y = 690 + (py - 742) / 0.77), so expect a nudge once seen on the car; BMW lays its dials out differently in other modes.",
+  "_about": "BMW's own cluster with a few additions on top (Chase, Nov 15 2026): no background, so BMW's gauges, map and lights all show. Shift lights under the driver camera between BMW's turn arrows (x 790-1150, y 172-200; moved down from y 138 and made clear until lit, Chase on the car photo Nov 15 2026: unlit lights are not drawn at all, \"off\" 0, no backing); on cars without the camera, Apex's No camera row and bar. Four round gauges (a black disc, an arc that follows its readout slot, the value in the middle, the name in the open bottom; r 64, centre y 492) in the lower inside of BMW's two dials: fuel %, coolant, oil and boost by default (slots 1-4), each switched on or off on its own (settings spGauge1-4, the Readouts tab's switches). A GEAR box (x 1236-1386, y 322-428) just left of BMW's gear slot: while any theme is up BMW leaves its own gear slot black or empty (the car photo, Nov 15 2026), so Stock+ shows the gear itself. Placed off photos of the stock cluster in SPORT+ and of Stock+ 0.32.0 in SPORT (Nov 15 2026); the outer right gauge ends just above BMW's 1/min x1000 label (x 1418-1505, y 538+).",
   "widgets": [
     {
       "id": "frame",
       "type": "boxes",
       "class": "content",
       "z": 1,
-      "x": 400,
-      "y": 460,
-      "w": 1120,
-      "h": 106,
+      "x": 486,
+      "y": 322,
+      "w": 948,
+      "h": 234,
       "color": [
         0,
         0,
@@ -44,40 +48,53 @@
       ],
       "boxes": [
         {
-          "id": "s1_box",
-          "x": 400,
-          "y": 460,
-          "w": 142,
+          "id": "gear_box",
+          "x": 1236,
+          "y": 322,
+          "w": 150,
           "h": 106,
           "head": 30,
           "radius": 4
         },
         {
-          "id": "s2_box",
-          "x": 558,
-          "y": 460,
-          "w": 142,
-          "h": 106,
-          "head": 30,
-          "radius": 4
+          "id": "g1_disc",
+          "x": 486,
+          "y": 428,
+          "w": 128,
+          "h": 128,
+          "head": 0,
+          "radius": 64,
+          "toggle": "spGauge1"
         },
         {
-          "id": "s3_box",
-          "x": 1220,
-          "y": 460,
-          "w": 142,
-          "h": 106,
-          "head": 30,
-          "radius": 4
+          "id": "g2_disc",
+          "x": 618,
+          "y": 428,
+          "w": 128,
+          "h": 128,
+          "head": 0,
+          "radius": 64,
+          "toggle": "spGauge2"
         },
         {
-          "id": "s4_box",
-          "x": 1378,
-          "y": 460,
-          "w": 142,
-          "h": 106,
-          "head": 30,
-          "radius": 4
+          "id": "g3_disc",
+          "x": 1174,
+          "y": 428,
+          "w": 128,
+          "h": 128,
+          "head": 0,
+          "radius": 64,
+          "toggle": "spGauge3"
+        },
+        {
+          "id": "g4_disc",
+          "x": 1306,
+          "y": 428,
+          "w": 128,
+          "h": 128,
+          "head": 0,
+          "radius": 64,
+          "toggle": "spGauge4"
         }
       ]
     },
@@ -86,21 +103,14 @@
       "type": "lights",
       "z": 2,
       "x": 790,
-      "y": 138,
+      "y": 172,
       "w": 175,
       "h": 28,
       "count": 6,
       "tail": 1,
       "round": true,
-      "off": 0.12,
+      "off": 0,
       "from": 3000,
-      "back": [
-        12,
-        12,
-        14,
-        255
-      ],
-      "pad": 4,
       "toggle": "shiftPlace=camera&shiftLights=row"
     },
     {
@@ -108,21 +118,14 @@
       "type": "lights",
       "z": 2,
       "x": 975,
-      "y": 138,
+      "y": 172,
       "w": 175,
       "h": 28,
       "count": 6,
       "tail": 1,
       "round": true,
-      "off": 0.12,
+      "off": 0,
       "from": 3000,
-      "back": [
-        12,
-        12,
-        14,
-        255
-      ],
-      "pad": 4,
       "toggle": "shiftPlace=camera&shiftLights=row",
       "mirror": true
     },
@@ -131,21 +134,14 @@
       "type": "lights",
       "z": 2,
       "x": 790,
-      "y": 138,
+      "y": 172,
       "w": 175,
       "h": 28,
       "count": 6,
       "tail": 0,
       "round": false,
-      "off": 0.14,
+      "off": 0,
       "from": 3000,
-      "back": [
-        12,
-        12,
-        14,
-        255
-      ],
-      "pad": 4,
       "toggle": "shiftPlace=camera&shiftLights=bar",
       "slant": 10,
       "barFill": "yellow"
@@ -155,21 +151,14 @@
       "type": "lights",
       "z": 2,
       "x": 975,
-      "y": 138,
+      "y": 172,
       "w": 175,
       "h": 28,
       "count": 6,
       "tail": 0,
       "round": false,
-      "off": 0.14,
+      "off": 0,
       "from": 3000,
-      "back": [
-        12,
-        12,
-        14,
-        255
-      ],
-      "pad": 4,
       "toggle": "shiftPlace=camera&shiftLights=bar",
       "mirror": true,
       "slant": 10,
@@ -185,7 +174,7 @@
       "count": 6,
       "tail": 1,
       "round": true,
-      "off": 0.12,
+      "off": 0,
       "from": 3000,
       "rise": 30,
       "x": 630,
@@ -202,7 +191,7 @@
       "count": 6,
       "tail": 1,
       "round": true,
-      "off": 0.12,
+      "off": 0,
       "from": 3000,
       "rise": 30,
       "x": 990,
@@ -221,16 +210,9 @@
       "count": 10,
       "tail": 0,
       "round": false,
-      "off": 0.14,
+      "off": 0,
       "from": 3000,
       "slant": 40,
-      "back": [
-        12,
-        12,
-        14,
-        255
-      ],
-      "pad": 8,
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
       "barFill": "yellow"
@@ -247,39 +229,38 @@
       "count": 10,
       "tail": 0,
       "round": false,
-      "off": 0.14,
+      "off": 0,
       "from": 3000,
       "slant": 40,
-      "back": [
-        12,
-        12,
-        14,
-        255
-      ],
-      "pad": 8,
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
       "barFill": "yellow"
     },
     {
-      "id": "s1_head",
-      "type": "text",
-      "z": 5,
-      "x": 410,
-      "y": 462,
-      "w": 122,
-      "h": 27,
-      "text": "{{slotHeadU:1}}",
-      "font": "head",
-      "color": "ink"
+      "id": "g1",
+      "type": "arc",
+      "z": 2,
+      "x": 492,
+      "y": 434,
+      "w": 116,
+      "h": 116,
+      "slot": "1",
+      "signal": "fuel",
+      "min": 0,
+      "max": 1,
+      "width": 7,
+      "color": "arc",
+      "start": 225,
+      "sweep": 270,
+      "toggle": "spGauge1"
     },
     {
-      "id": "s1",
+      "id": "g1_val",
       "type": "text",
       "z": 5,
-      "x": 406,
-      "y": 506,
-      "w": 130,
+      "x": 500,
+      "y": 462,
+      "w": 100,
       "h": 45,
       "text": "{{slot:1}}{{slotSuffix:1}}",
       "font": "small",
@@ -287,27 +268,48 @@
       "slot": "1",
       "fit": [
         "head"
-      ]
+      ],
+      "toggle": "spGauge1"
     },
     {
-      "id": "s2_head",
+      "id": "g1_head",
       "type": "text",
       "z": 5,
-      "x": 568,
-      "y": 462,
-      "w": 122,
+      "x": 504,
+      "y": 516,
+      "w": 92,
       "h": 27,
-      "text": "{{slotHeadU:2}}",
+      "text": "{{slotHeadU:1}}",
       "font": "head",
-      "color": "ink"
+      "color": "dim",
+      "align": "center",
+      "toggle": "spGauge1"
     },
     {
-      "id": "s2",
+      "id": "g2",
+      "type": "arc",
+      "z": 2,
+      "x": 624,
+      "y": 434,
+      "w": 116,
+      "h": 116,
+      "slot": "2",
+      "signal": "fuel",
+      "min": 0,
+      "max": 1,
+      "width": 7,
+      "color": "arc",
+      "start": 225,
+      "sweep": 270,
+      "toggle": "spGauge2"
+    },
+    {
+      "id": "g2_val",
       "type": "text",
       "z": 5,
-      "x": 564,
-      "y": 506,
-      "w": 130,
+      "x": 632,
+      "y": 462,
+      "w": 100,
       "h": 45,
       "text": "{{slot:2}}{{slotSuffix:2}}",
       "font": "small",
@@ -315,27 +317,48 @@
       "slot": "2",
       "fit": [
         "head"
-      ]
+      ],
+      "toggle": "spGauge2"
     },
     {
-      "id": "s3_head",
+      "id": "g2_head",
       "type": "text",
       "z": 5,
-      "x": 1230,
-      "y": 462,
-      "w": 122,
+      "x": 636,
+      "y": 516,
+      "w": 92,
       "h": 27,
-      "text": "{{slotHeadU:3}}",
+      "text": "{{slotHeadU:2}}",
       "font": "head",
-      "color": "ink"
+      "color": "dim",
+      "align": "center",
+      "toggle": "spGauge2"
     },
     {
-      "id": "s3",
+      "id": "g3",
+      "type": "arc",
+      "z": 2,
+      "x": 1180,
+      "y": 434,
+      "w": 116,
+      "h": 116,
+      "slot": "3",
+      "signal": "fuel",
+      "min": 0,
+      "max": 1,
+      "width": 7,
+      "color": "arc",
+      "start": 225,
+      "sweep": 270,
+      "toggle": "spGauge3"
+    },
+    {
+      "id": "g3_val",
       "type": "text",
       "z": 5,
-      "x": 1226,
-      "y": 506,
-      "w": 130,
+      "x": 1188,
+      "y": 462,
+      "w": 100,
       "h": 45,
       "text": "{{slot:3}}{{slotSuffix:3}}",
       "font": "small",
@@ -343,27 +366,48 @@
       "slot": "3",
       "fit": [
         "head"
-      ]
+      ],
+      "toggle": "spGauge3"
     },
     {
-      "id": "s4_head",
+      "id": "g3_head",
       "type": "text",
       "z": 5,
-      "x": 1388,
-      "y": 462,
-      "w": 122,
+      "x": 1192,
+      "y": 516,
+      "w": 92,
       "h": 27,
-      "text": "{{slotHeadU:4}}",
+      "text": "{{slotHeadU:3}}",
       "font": "head",
-      "color": "ink"
+      "color": "dim",
+      "align": "center",
+      "toggle": "spGauge3"
     },
     {
-      "id": "s4",
+      "id": "g4",
+      "type": "arc",
+      "z": 2,
+      "x": 1312,
+      "y": 434,
+      "w": 116,
+      "h": 116,
+      "slot": "4",
+      "signal": "fuel",
+      "min": 0,
+      "max": 1,
+      "width": 7,
+      "color": "arc",
+      "start": 225,
+      "sweep": 270,
+      "toggle": "spGauge4"
+    },
+    {
+      "id": "g4_val",
       "type": "text",
       "z": 5,
-      "x": 1384,
-      "y": 506,
-      "w": 130,
+      "x": 1320,
+      "y": 462,
+      "w": 100,
       "h": 45,
       "text": "{{slot:4}}{{slotSuffix:4}}",
       "font": "small",
@@ -371,6 +415,51 @@
       "slot": "4",
       "fit": [
         "head"
+      ],
+      "toggle": "spGauge4"
+    },
+    {
+      "id": "g4_head",
+      "type": "text",
+      "z": 5,
+      "x": 1324,
+      "y": 516,
+      "w": 92,
+      "h": 27,
+      "text": "{{slotHeadU:4}}",
+      "font": "head",
+      "color": "dim",
+      "align": "center",
+      "toggle": "spGauge4"
+    },
+    {
+      "id": "gear_head",
+      "type": "text",
+      "z": 5,
+      "x": 1246,
+      "y": 324,
+      "w": 130,
+      "h": 27,
+      "text": "GEAR",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1242,
+      "y": 356,
+      "w": 138,
+      "h": 70,
+      "text": "{{gear}}",
+      "font": "value",
+      "align": "center",
+      "hotWhen": "now",
+      "rate": 50,
+      "offRed": true,
+      "fit": [
+        "small"
       ]
     }
   ]

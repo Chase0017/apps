@@ -309,9 +309,9 @@ class Page {
         const slots = this.hud.slotsOf(lay);
         if (!slots.some((x) => x.id === this.slot)) this.slot = slots[0].id;
         // which layout: chips; Reset on the right
-        label(cv, CX, 70, this.layoutName(lay) + ' · readout slots');
+        label(cv, CX, 70, this.layoutName(lay).replace(/ \(.*\)$/, '') + ' · readout slots');
         let cx = CX;
-        this.slotLayouts().forEach((v) => { cx += chip(cv, cx, 82, this.layoutName(v), v === lay, () => { this.slotLayout = v; this.kick(); }, 'slots:' + v) + 8; });
+        this.slotLayouts().forEach((v) => { cx += chip(cv, cx, 82, this.layoutName(v).replace(/ \(.*\)$/, ''), v === lay, () => { this.slotLayout = v; this.kick(); }, 'slots:' + v) + 8; });
         const rw = cv.textWidth('Reset slots', 16, { font: 'bold', literal: true }) + 30;
         chip(cv, CX + 700 - rw, 82, 'Reset slots', false, () => { slots.forEach((x) => this.hud.setSlot(lay, x.id, null)); this.kick(); }, 'slots:reset');
         // the slots
@@ -321,6 +321,9 @@ class Page {
         slots.forEach((sl, i) => {
             const x = CX + (two && i >= per ? sw + 8 : 0), y = 130 + (i % per) * (rh + 6);
             const sel = sl.id === this.slot, sn = this.hud.slotSensor(lay, sl.id, slots);
+            // a slot with its own on / off setting (layout slot "toggle", Stock+'s gauges): a switch at the row's end
+            const tk = !two && sl.toggle && this.item(sl.toggle) ? sl.toggle : null, on = tk ? this.get(tk) !== false : true;
+            const vr = tk ? x + sw - 96 : x + sw - 40;            // where the value ends (left of the switch)
             glass(cv, x, y, sw, rh, sel);
             cv.circle(x + 26, y + rh / 2, 14, sel ? C.blue : A(C.blue, 0.75));
             cv.text(String(i + 1), x + 26, y + rh / 2 + 6, 15, C.ink, { align: 'center', font: 'bold', literal: true });
@@ -331,10 +334,11 @@ class Page {
             } else {
                 cv.text(sn ? sn.name : '--', x + 60, y + rh / 2 - 1, 19, '#ffffff', { font: 'bold', literal: true });
                 cv.text(sl.where || '', x + 60, y + rh / 2 + 18, 14, C.dim, { literal: true });
-                cv.text(this.sensorText(sn), x + sw - 40, y + rh / 2 + 7, 20, C.live, { align: 'right', font: 'bold', literal: true });
+                cv.text(on ? this.sensorText(sn) : 'Off', vr, y + rh / 2 + 7, 20, on ? C.live : C.dim, { align: 'right', font: 'bold', literal: true });
             }
-            chevron(cv, x + sw - 18, y + rh / 2, C.dim);
-            cv.target(x, y, sw, rh, () => { this.slot = sl.id; if (sn) this.cat = sn.cat; this.kick(); }, 'slot:' + sl.id, 14);
+            if (tk) gt3.toggle(cv, this.P, x + sw - 14, y + rh / 2, on, () => this.set(tk, !on), 'set:' + tk);
+            else chevron(cv, x + sw - 18, y + rh / 2, C.dim);
+            cv.target(x, y, tk ? sw - 96 : sw, rh, () => { this.slot = sl.id; if (sn) this.cat = sn.cat; this.kick(); }, 'slot:' + sl.id, 14);
         });
         // the sensors for the picked slot
         const px = CX + lw + 24, pw = CR - px, py = 82, ph = bottom - py - 4;

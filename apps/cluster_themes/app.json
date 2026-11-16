@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Apex Cluster",
   "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -386,6 +386,30 @@
         810,
         840
       ]
+    },
+    {
+      "key": "spGauge1",
+      "label": "Stock+ gauge 1 (left outer)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "spGauge2",
+      "label": "Stock+ gauge 2 (left inner)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "spGauge3",
+      "label": "Stock+ gauge 3 (right inner)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "spGauge4",
+      "label": "Stock+ gauge 4 (right outer)",
+      "type": "bool",
+      "default": true
     },
     {
       "key": "tankLitres",

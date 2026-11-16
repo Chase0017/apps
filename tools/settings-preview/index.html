@@ -203,9 +203,11 @@ async function start() {
     const hud = app === 'cluster_themes';
     const slots = hud ? [{ id: '1', default: 'speed' }, { id: '2', default: 'rpm' }, { id: '3', default: 'fuel' }, { id: '4', default: 'boost' }, { id: '5', default: 'coolant' }]
       : [{ id: '1', default: 'speed' }, { id: '2', default: 'oil' }, { id: '3', default: 'coolant' }, { id: '4', default: 'boost' }];
+    // the cluster's other layouts: their real slot lists (Stock+'s carry on / off switches)
+    const laySlots = (n) => { const x = new XMLHttpRequest(); x.open('GET', '/apps/cluster_themes/hud/layouts/' + n + '.json?' + Date.now(), false); x.send(); try { return JSON.parse(x.responseText).slots || []; } catch (e) { return []; } };
     const VAL = { speed: '47', rpm: '1900', fuel: '62', boost: '14.2', coolant: '199', oil: '221', range: '318' };
     const stub = { activeName: hud ? 'apex' : 'redline', driveMode: 'sport', screen: null, lastStatus: 'drawing Apex · 9 layers · 3.1 MB · cluster-render 2.4 · oil pressure 4436 ok', car: { data: () => ({ demo: false, speed: 0 }) },
-      setting: (k) => settings.get(k), _layoutName: () => (hud ? 'apex' : 'redline'), onStatus() {}, slotsOf: () => slots, placeInfo: () => ({ x: 0, y: 0, scale: 1, box: { x: 200, y: 120, w: 400, h: 200 } }),
+      setting: (k) => settings.get(k), _layoutName: () => (hud ? 'apex' : 'redline'), onStatus() {}, slotsOf: (l) => (hud && l && l !== 'apex' ? laySlots(l) : slots), placeInfo: () => ({ x: 0, y: 0, scale: 1, box: { x: 200, y: 120, w: 400, h: 200 } }),
       slotSensor: (l, id, sl) => sensors.get((sl || slots).find((x) => x.id === id).default), setSlot() {}, sensorValue: (sn) => VAL[sn.id] || '--',
       sensorUnit(sn) { return sn.unit ? sn.unit(this.unitUs(sn.dim || 'units')) : ''; }, shiftTesting: () => false, testShift: () => true,
       unitUs(dim) { const v = settings.get({ speed: 'unitSpeed', temp: 'unitTemp', press: 'unitPress' }[dim]); if (v === 'mph' || v === 'f' || v === 'psi') return true; if (v === 'kmh' || v === 'c' || v === 'bar') return false; return settings.get('units') === 'us'; } };

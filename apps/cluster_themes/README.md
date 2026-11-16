@@ -48,12 +48,12 @@ bottom. `shared/visible.js` holds those areas and warns about any widget under o
 ## Stock+
 
 - BMW's own cluster left as it is, with a few additions on top (no background).
-- Shift lights in a strip under the driver camera, between BMW's turn arrows (or Apex's No camera row or bar). Same
-  Shift & alerts settings as Apex.
-- Four small boxes in the lower inside of BMW's dials: fuel %, coolant, oil (degrees, blue until warm) and boost.
-  Any of them can show another sensor (Readouts tab).
-- Placed from a photo of the stock cluster in SPORT+; BMW moves things in other drive modes.
-
+- Shift lights in a strip under the driver camera, between BMW's turn arrows (or Apex's No camera row or bar), clear
+  until they light. Same Shift & alerts settings as Apex.
+- Four round gauges in the lower inside of BMW's dials: fuel %, coolant, oil (degrees, blue until warm) and boost.
+  Each can show another sensor and has its own on / off switch (Readouts tab).
+- The gear in a GEAR box beside BMW's gear slot (BMW blanks its own while a theme is up).
+- Placed from photos of the stock cluster; BMW moves things in other drive modes.
 
 ## Analog
 
