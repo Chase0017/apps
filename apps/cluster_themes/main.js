@@ -40,7 +40,7 @@ mgu.run({
         if (!hud) return;
         new Page(ctx, hud, {
             title: ctx.spec.title, what: 'cluster',
-            look: { name: 'Layouts', style: 'hero', tags: { apex: 'GT3 race dash', apexmap: 'GT3 + BMW map', stockplus: 'BMW + extras' } },
+            look: { name: 'Layouts', style: 'hero', tags: { apex: 'GT3 race dash', apexmap: 'GT3 + BMW map', stockplus: 'BMW + extras', analog: 'central tach' } },
             tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'],
             display: ['tankLitres'],
         }).start();

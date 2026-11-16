@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Apex Cluster",
   "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -118,6 +118,10 @@
           "Stock+ (BMW's own with shift lights and temps)"
         ],
         [
+          "analog",
+          "Analog (central tachometer)"
+        ],
+        [
           "off",
           "Off (BMW's own cluster)"
         ]
@@ -149,6 +153,10 @@
           "Stock+ (BMW's own with shift lights and temps)"
         ],
         [
+          "analog",
+          "Analog (central tachometer)"
+        ],
+        [
           "off",
           "Off (BMW's own cluster)"
         ]
@@ -174,6 +182,10 @@
           "Stock+ (BMW's own with shift lights and temps)"
         ],
         [
+          "analog",
+          "Analog (central tachometer)"
+        ],
+        [
           "off",
           "Off (BMW's own cluster)"
         ]
@@ -197,6 +209,10 @@
         [
           "stockplus",
           "Stock+ (BMW's own with shift lights and temps)"
+        ],
+        [
+          "analog",
+          "Analog (central tachometer)"
         ],
         [
           "off",
