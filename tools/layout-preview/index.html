@@ -18,7 +18,7 @@
   GLSL shaders (shared/shaders.js) and baked fonts (hud/fonts), fed with demo values, and runs the same
   visibility check as the app (shared/visible.js). Serve the repo root and open
   http://localhost:8099/tools/layout-preview/?layout=apex
-  Not drawn: BMW's own gauges under the theme, night colours, text "fit" fallbacks.
+  Not drawn: BMW's own gauges under the theme (a see-through map window shows a stand-in map), night colours, text "fit" fallbacks.
 -->
 <div class="row">
   <label>Layout <input id="layout" value="apex" size="10"></label>
@@ -163,6 +163,7 @@ async function draw() {
   const st = state(), t = performance.now();
   $('rpmv').textContent = st.rpm + (st.now ? '  SHIFT' : '');
   ctx.clearRect(0, 0, 1920, 720);
+  layout.widgets.forEach((w) => { if (w.holeWhen === true && w.hole) fakeMap(w.hole); });
   const max = Math.ceil(REDLINE / 1000) * 1000;
   const lay = layout.shiftBlink > 0 ? layout.shiftBlink : 0;
   const phase = (half) => !st.now ? 0 : (half && Math.floor(t / half) % 2 === 1 ? 2 : 1);   // as hud.js _shiftPhase
@@ -174,8 +175,8 @@ async function draw() {
       for (let i = 0; i < 12; i++) { const b = w.boxes[i];
         rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
         styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.headColor === 'accent' ? 1 : 0); }
-      effect(w, 'boxes', { u_size: [w.w, w.h], u_bg: rgba(Array.isArray(w.color) ? w.color : theme[w.color || 'bg']), u_hole: [0, 0, 0, 0], u_holeR: [0], u_n: [Math.min(12, w.boxes.length)],
-        u_box: rects, u_boxStyle: styles, u_fill: rgba(theme.panel), u_line: rgba(theme.line), u_head: rgba(theme.head), u_accent: rgba(theme.accent) });
+      effect(w, 'boxes', { u_size: [w.w, w.h], u_bg: rgba(Array.isArray(w.color) ? w.color : theme[w.color || 'bg']), u_hole: hole(w), u_holeR: [w.holeRadius >= 0 ? w.holeRadius : 28], u_n: [Math.min(12, w.boxes.length)],
+        u_box: rects, u_boxStyle: styles, u_fill: rgba(role(w.fill, 'panel')), u_line: rgba(role(w.line, 'line')), u_head: rgba(role(w.head, 'head')), u_accent: rgba(role(w.accent, 'accent')) });
     } else if (w.type === 'lights') {
       const n = w.count || 12, from = Math.min(Number($('from').value), SHIFT_AT - 500);
       const pat = { gt3: ['green', 'yellow', 'red', 'blue'], f1: ['green', 'red', 'red', 'blue'], red: ['red', 'red', 'red', 'red'], blue: ['blue', 'blue', 'blue', 'blue'] }[$('colours').value];
@@ -257,6 +258,23 @@ function carView() {
   ctx.strokeStyle = '#fa3'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
   (VIS.WARNINGS || []).forEach(([, [x0, y0, x1, y1]]) => ctx.strokeRect(x0, y0, x1 - x0, y1 - y0)); ctx.setLineDash([]);
   if (VIS.PARK) { ctx.font = 'bold 28px sans-serif'; ctx.fillText('PARK', VIS.PARK[0] + 4, VIS.PARK[3] - 14); }
+  ctx.restore();
+}
+
+/** the hole as hud.js _hole: inset "holeInset" (6) a side, in layer px; only "holeWhen": true is cut here (no Waze) */
+function hole(w) {
+  if (w.holeWhen !== true || !w.hole) return [0, 0, 0, 0];
+  const h = w.hole, i = w.holeInset >= 0 ? w.holeInset : 6;
+  return [h[0] + i - w.x, h[1] + i - w.y, Math.max(0, h[2] - 2 * i), Math.max(0, h[3] - 2 * i)];
+}
+/** a stand-in for BMW's own map under a see-through window: dark ground, grey streets, the orange arrow */
+function fakeMap([x, y, w, h]) {
+  ctx.save(); ctx.fillStyle = '#10141a'; ctx.fillRect(x, y, w, h);
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.strokeStyle = '#8a9099'; ctx.lineWidth = 5;
+  for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(x + 60 + i * 140, y); ctx.lineTo(x + 20 + i * 150, y + h); ctx.stroke(); }
+  for (let j = 0; j < 4; j++) { ctx.beginPath(); ctx.moveTo(x, y + 50 + j * 85); ctx.lineTo(x + w, y + 30 + j * 90); ctx.stroke(); }
+  ctx.fillStyle = '#ff6a1a'; const ax = 960, ay = 525; ctx.beginPath(); ctx.moveTo(ax, ay - 22); ctx.lineTo(ax + 18, ay + 16); ctx.lineTo(ax, ay + 6); ctx.lineTo(ax - 18, ay + 16); ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 

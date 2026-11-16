@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Apex Cluster",
   "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -110,6 +110,10 @@
           "Apex (GT3 race dash)"
         ],
         [
+          "apexmap",
+          "Apex Map (GT3, BMW's map in the middle)"
+        ],
+        [
           "off",
           "Off (BMW's own cluster)"
         ]
@@ -133,6 +137,10 @@
           "Apex (GT3 race dash)"
         ],
         [
+          "apexmap",
+          "Apex Map (GT3, BMW's map in the middle)"
+        ],
+        [
           "off",
           "Off (BMW's own cluster)"
         ]
@@ -150,6 +158,10 @@
           "Apex (GT3 race dash)"
         ],
         [
+          "apexmap",
+          "Apex Map (GT3, BMW's map in the middle)"
+        ],
+        [
           "off",
           "Off (BMW's own cluster)"
         ]
@@ -165,6 +177,10 @@
         [
           "apex",
           "Apex (GT3 race dash)"
+        ],
+        [
+          "apexmap",
+          "Apex Map (GT3, BMW's map in the middle)"
         ],
         [
           "off",

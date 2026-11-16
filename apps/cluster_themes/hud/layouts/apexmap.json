@@ -1,0 +1,636 @@
+{
+  "schemaVersion": 2,
+  "name": "Apex Map",
+  "theme": "gt3",
+  "shiftBlink": 200,
+  "slots": [
+    {
+      "id": "1",
+      "where": "left box, top",
+      "default": "speed"
+    },
+    {
+      "id": "2",
+      "where": "left box, middle",
+      "default": "rpm"
+    },
+    {
+      "id": "3",
+      "where": "left box, bottom",
+      "default": "fuel"
+    },
+    {
+      "id": "4",
+      "where": "right box, top",
+      "default": "boost"
+    },
+    {
+      "id": "5",
+      "where": "right box, middle",
+      "default": "coolant"
+    },
+    {
+      "id": "6",
+      "where": "right box, bottom",
+      "default": "oil"
+    }
+  ],
+  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). The centre of the dash is a see-through window (x 338-1582, y 245-580) onto BMW's cluster, so the map BMW draws there shows with no lag: it is BMW's own drawing, not ours. BMW shows the map in the middle while its cluster is set to show it (the photo of Nov 15 2026, SPORT+); otherwise the window shows whatever BMW draws there. BMW's digital speed (left) and gear box (P, right) sit inside the window and show through too. Shift lights, rev bar, and the left (speed, rpm, fuel) and right (boost, water, oil) columns as Apex; drive mode, gear and traction along the bottom under the map, between BMW's seat-belt light (x 587-626) and its gear letter (x 1395-1440) as on Apex; the bottom corners beside them stay plain. map_frame is only a line round the window, so it is marked overBlackBox: BMW's gear box drawn over its right end is expected. Window measured off the photo: the map runs about x 430-1530, y 115-635 on the panel; the rev bar covers its top.",
+  "widgets": [
+    {
+      "id": "frame",
+      "type": "boxes",
+      "class": "content",
+      "z": 1,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "color": "bg",
+      "boxes": [
+        {
+          "id": "speed_box",
+          "x": 118,
+          "y": 245,
+          "w": 204,
+          "h": 210,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "rpm_box",
+          "x": 118,
+          "y": 470,
+          "w": 204,
+          "h": 110,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "fuel_box",
+          "x": 118,
+          "y": 595,
+          "w": 204,
+          "h": 107,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "boost_box",
+          "x": 1598,
+          "y": 245,
+          "w": 204,
+          "h": 210,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "water_box",
+          "x": 1598,
+          "y": 470,
+          "w": 204,
+          "h": 110,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "oil_box",
+          "x": 1598,
+          "y": 595,
+          "w": 204,
+          "h": 107,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "mode_box",
+          "x": 640,
+          "y": 595,
+          "w": 220,
+          "h": 107,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "gear_box",
+          "x": 876,
+          "y": 595,
+          "w": 168,
+          "h": 107,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "dsc_box",
+          "x": 1060,
+          "y": 595,
+          "w": 220,
+          "h": 107,
+          "head": 36,
+          "radius": 4
+        }
+      ],
+      "hole": [
+        338,
+        245,
+        1244,
+        335
+      ],
+      "holeWhen": true,
+      "holeInset": 2,
+      "holeRadius": 4
+    },
+    {
+      "id": "map_frame",
+      "type": "boxes",
+      "class": "content",
+      "z": 1,
+      "conn": 1,
+      "x": 338,
+      "y": 245,
+      "w": 1244,
+      "h": 335,
+      "color": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fill": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "boxes": [
+        {
+          "id": "map_box",
+          "x": 338,
+          "y": 245,
+          "w": 1244,
+          "h": 335,
+          "head": 0,
+          "radius": 4
+        }
+      ],
+      "overBlackBox": true
+    },
+    {
+      "id": "lights_l",
+      "type": "lights",
+      "z": 2,
+      "x": 420,
+      "y": 20,
+      "w": 320,
+      "h": 78,
+      "count": 6,
+      "tail": 1,
+      "round": true,
+      "off": 0.12,
+      "from": 3000,
+      "rise": 30,
+      "toggle": "shiftPlace=camera&shiftLights=row"
+    },
+    {
+      "id": "lights_r",
+      "type": "lights",
+      "z": 2,
+      "x": 1200,
+      "y": 20,
+      "w": 320,
+      "h": 78,
+      "count": 6,
+      "tail": 1,
+      "round": true,
+      "off": 0.12,
+      "from": 3000,
+      "mirror": true,
+      "rise": 30,
+      "toggle": "shiftPlace=camera&shiftLights=row"
+    },
+    {
+      "id": "lights_rowl",
+      "type": "lights",
+      "z": 2,
+      "y": 88,
+      "w": 320,
+      "h": 78,
+      "count": 6,
+      "tail": 1,
+      "round": true,
+      "off": 0.12,
+      "from": 3000,
+      "rise": 30,
+      "x": 630,
+      "toggle": "shiftPlace=nocam&shiftLights=row",
+      "noCamera": true
+    },
+    {
+      "id": "lights_rowr",
+      "type": "lights",
+      "z": 2,
+      "y": 88,
+      "w": 320,
+      "h": 78,
+      "count": 6,
+      "tail": 1,
+      "round": true,
+      "off": 0.12,
+      "from": 3000,
+      "rise": 30,
+      "x": 990,
+      "mirror": true,
+      "toggle": "shiftPlace=nocam&shiftLights=row",
+      "noCamera": true
+    },
+    {
+      "id": "lights_barl",
+      "x": 470,
+      "type": "lights",
+      "z": 2,
+      "y": 90,
+      "w": 490,
+      "h": 66,
+      "count": 10,
+      "tail": 0,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 40,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 8,
+      "noCamera": true,
+      "toggle": "shiftPlace=nocam&shiftLights=bar",
+      "barFill": "yellow"
+    },
+    {
+      "id": "lights_barr",
+      "x": 960,
+      "mirror": true,
+      "type": "lights",
+      "z": 2,
+      "y": 90,
+      "w": 490,
+      "h": 66,
+      "count": 10,
+      "tail": 0,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 40,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 8,
+      "noCamera": true,
+      "toggle": "shiftPlace=nocam&shiftLights=bar",
+      "barFill": "yellow"
+    },
+    {
+      "id": "lights_cbarl",
+      "x": 440,
+      "type": "lights",
+      "z": 2,
+      "y": 38,
+      "w": 300,
+      "h": 58,
+      "count": 6,
+      "tail": 0,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 36,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 7,
+      "barFill": "yellow",
+      "toggle": "shiftPlace=camera&shiftLights=bar"
+    },
+    {
+      "id": "lights_cbarr",
+      "x": 1200,
+      "mirror": true,
+      "type": "lights",
+      "z": 2,
+      "y": 38,
+      "w": 300,
+      "h": 58,
+      "count": 6,
+      "tail": 0,
+      "round": false,
+      "off": 0.14,
+      "from": 3000,
+      "slant": 36,
+      "back": [
+        12,
+        12,
+        14,
+        255
+      ],
+      "pad": 7,
+      "barFill": "yellow",
+      "toggle": "shiftPlace=camera&shiftLights=bar"
+    },
+    {
+      "id": "revs",
+      "type": "shiftbar",
+      "z": 2,
+      "x": 200,
+      "y": 178,
+      "w": 1520,
+      "h": 34,
+      "segments": 60,
+      "shiftFlash": true
+    },
+    {
+      "id": "revs_scale",
+      "type": "scale",
+      "z": 2,
+      "x": 200,
+      "y": 216,
+      "w": 1520,
+      "h": 26,
+      "font": "scale",
+      "color": "dim",
+      "redFrom": true
+    },
+    {
+      "id": "badge",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 134,
+      "w": 270,
+      "h": 34,
+      "text": "{{badge}}",
+      "font": "badge",
+      "color": "dim"
+    },
+    {
+      "id": "speed_head",
+      "type": "text",
+      "z": 5,
+      "x": 134,
+      "y": 250,
+      "w": 176,
+      "h": 27,
+      "text": "{{slotHead:1}} {{slotUnit:1}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 126,
+      "y": 318,
+      "w": 188,
+      "h": 93,
+      "text": "{{slot:1}}",
+      "font": "big",
+      "align": "right",
+      "slot": "1",
+      "fit": [
+        "value",
+        "small"
+      ]
+    },
+    {
+      "id": "rpm_head",
+      "type": "text",
+      "z": 5,
+      "x": 134,
+      "y": 475,
+      "w": 176,
+      "h": 27,
+      "text": "{{slotHead:2}} {{slotUnit:2}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "rpm",
+      "type": "text",
+      "z": 5,
+      "x": 130,
+      "y": 506,
+      "w": 180,
+      "h": 70,
+      "text": "{{slot:2}}",
+      "font": "value",
+      "align": "right",
+      "hotWhen": "now",
+      "slot": "2",
+      "fit": [
+        "small"
+      ],
+      "rate": 50,
+      "offRed": true
+    },
+    {
+      "id": "fuel_head",
+      "type": "text",
+      "z": 5,
+      "x": 134,
+      "y": 600,
+      "w": 176,
+      "h": 27,
+      "text": "{{slotHeadU:3}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "fuel",
+      "type": "text",
+      "z": 5,
+      "x": 130,
+      "y": 628,
+      "w": 180,
+      "h": 70,
+      "text": "{{slot:3}}{{slotSuffix:3}}",
+      "font": "value",
+      "align": "right",
+      "slot": "3",
+      "fit": [
+        "small"
+      ]
+    },
+    {
+      "id": "boost_head",
+      "type": "text",
+      "z": 5,
+      "x": 1614,
+      "y": 250,
+      "w": 176,
+      "h": 27,
+      "text": "{{slotHead:4}} {{slotUnit:4}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "boost",
+      "type": "text",
+      "z": 5,
+      "x": 1606,
+      "y": 318,
+      "w": 188,
+      "h": 93,
+      "text": "{{slot:4}}",
+      "font": "big",
+      "align": "right",
+      "slot": "4",
+      "fit": [
+        "value",
+        "small"
+      ]
+    },
+    {
+      "id": "water_head",
+      "type": "text",
+      "z": 5,
+      "x": 1614,
+      "y": 475,
+      "w": 176,
+      "h": 27,
+      "text": "{{slotHeadU:5}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "water",
+      "type": "text",
+      "z": 5,
+      "x": 1610,
+      "y": 506,
+      "w": 180,
+      "h": 70,
+      "text": "{{slot:5}}{{slotSuffix:5}}",
+      "font": "value",
+      "align": "right",
+      "slot": "5",
+      "fit": [
+        "small"
+      ]
+    },
+    {
+      "id": "oil_head",
+      "type": "text",
+      "z": 5,
+      "x": 1614,
+      "y": 600,
+      "w": 176,
+      "h": 27,
+      "text": "{{slotHeadU:6}}",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "id": "oil",
+      "type": "text",
+      "z": 5,
+      "x": 1610,
+      "y": 628,
+      "w": 180,
+      "h": 70,
+      "text": "{{slot:6}}{{slotSuffix:6}}",
+      "font": "value",
+      "align": "right",
+      "slot": "6",
+      "fit": [
+        "small"
+      ]
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "mode_head",
+      "x": 656,
+      "y": 600,
+      "w": 188,
+      "h": 27,
+      "text": "DRIVE MODE",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "mode",
+      "x": 648,
+      "y": 645,
+      "w": 204,
+      "h": 37,
+      "text": "{{mode}}",
+      "font": "unit",
+      "align": "center",
+      "fit": [
+        "head"
+      ]
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "gear_head",
+      "x": 892,
+      "y": 600,
+      "w": 136,
+      "h": 27,
+      "text": "GEAR",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "gear",
+      "x": 884,
+      "y": 628,
+      "w": 152,
+      "h": 70,
+      "text": "{{gearnum}}",
+      "font": "value",
+      "align": "center",
+      "hotWhen": "now",
+      "rate": 50,
+      "offRed": true
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "dsc_head",
+      "x": 1076,
+      "y": 600,
+      "w": 188,
+      "h": 27,
+      "text": "TRACTION",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "dsc",
+      "x": 1068,
+      "y": 645,
+      "w": 204,
+      "h": 37,
+      "text": "{{dsc}}",
+      "font": "unit",
+      "align": "center",
+      "fit": [
+        "head"
+      ]
+    }
+  ]
+}

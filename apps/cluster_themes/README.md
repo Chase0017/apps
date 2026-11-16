@@ -5,6 +5,8 @@ as **Apex**, a GT3-style race dash. Built on bimmer-lab's Cluster Themes (MIT), 
 windshield; this fork keeps one theme and fits it
 to the LCI cluster.
 
+Layouts: **Apex** (below) and **Apex Map**, Apex with BMW's own map showing through a window in the middle (see below).
+
 ## Apex
 
 - **Shift lights:** two banks of six either side of the driver camera, ramping up towards it, filling from the
@@ -31,6 +33,15 @@ to the LCI cluster.
 Everything clears what BMW draws over the cluster on this car: the camera pod, the turn arrows, the brake / tyre / ABS /
 traction lights down the left edge, the steering and PARK lights top right, the belt light and the gear letter at the
 bottom. `shared/visible.js` holds those areas and warns about any widget under one.
+
+
+## Apex Map
+
+- Apex's shift lights, rev bar and side columns (speed, rpm, fuel; boost, coolant, oil), with the middle cut
+  see-through (x 338-1582, y 245-580) so BMW's own map shows there, drawn by BMW with no lag.
+- Drive mode, gear and traction in a row under the map. No intake, oil pressure, timing or AFR boxes.
+- BMW's digital speed and its P / gear box show through the window too. The window shows whatever BMW's cluster draws
+  in the middle, so set BMW's cluster to show the map there.
 
 ## Data
 
