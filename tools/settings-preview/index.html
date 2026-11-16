@@ -170,7 +170,7 @@ async function start() {
     $('setupBtn').onclick = () => ctx.clicks.BTN_SETTINGS();
     window.dmeDraw = () => draw();
   } else if (app === 'apex_telemetry') {
-    const req = loader({ './gt3ui': '/shared/gt3ui.js', './draw': '/apps/apex_telemetry/draw.js', './setup': '/apps/apex_telemetry/setup.js' });
+    const req = loader({ './gt3ui': '/shared/gt3ui.js', './draw': '/apps/apex_telemetry/draw.js', './setup': '/apps/apex_telemetry/setup.js', './tz': '/shared/tz.js' });
     const D = req('./draw'), Setup = req('./setup');
     let mode = 'setup';
     const t = Date.now() / 1000;

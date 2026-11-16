@@ -7,12 +7,13 @@
  *   Units     US / Metric / Custom, then speed, temperature and pressure each
  *   Tyres     temperature (yellow / red from) and pressure (blue under, yellow / red over the car's target) limits
  *   Data      every engine unit value: the identifiers it is asked as, what the car answers, how old the reading is
- *   System    box colour, about
+ *   System    box colour, night dimming and the time zone it works sunset out from, about
  *
  * draw(cv, bottom, snap, u): snap = Telemetry.snapshot(), u = { sp, tf, ps } (US units or not, per measure).
  */
 const gt3 = require('./gt3ui');
 const D = require('./draw');
+const tz = require('./tz');
 
 const CX = 288, CR = 1584, CW = CR - CX;
 const TABS = [['board', 'Pit board', 'back'], ['readouts', 'Readouts', 'lines'], ['units', 'Units', 'units'], ['tyres', 'Tyres', 'tyre'], ['data', 'Data', 'data'], ['system', 'System', 'cog']];
@@ -182,10 +183,15 @@ class Setup {
     /* ---------- System ---------- */
     system(cv, bottom) {
         const P = this.P, w = (CW - 16) / 2, x = CX;
-        let y = gt3.section(cv, P, x, 50, w, 30 + 64, 'Display');
+        let y = gt3.section(cv, P, x, 50, w, 30 + 64 * 3, 'Display');
         let cy = gt3.row(cv, P, x, y, w, 64, 'Box colour', P.name + ' · this page and the pit board\'s boxes', true);
         gt3.swatches(cv, P, x + w - 14, cy, P.key, (v) => this.set('boxColour', v));
-        gt3.note(cv, P, x + 4, 50 + 30 + 64 + 34, ['A value the car stops sending stays on the board, dimmed with an amber dot,',
+        // night dimming as Apex Cluster's Night colours: the whole screen to 60 % after sunset (main.js NIGHT_VEIL)
+        cy = gt3.row(cv, P, x, y + 64, w, 64, 'Night dimming', this.opts.isNight && this.opts.isNight() ? 'Dimmed now' : 'Dimmer after sunset');
+        gt3.seg(cv, P, x + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('nightDim') || 'auto', (v) => this.set('nightDim', v), 'nightDim');
+        cy = gt3.row(cv, P, x, y + 128, w, 64, 'Time zone', 'Where sunset is worked out');
+        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('timeZone'), this.get('timeZone'), (v) => this.set('timeZone', v), (v) => (v === tz.AUTO ? 'Middle of US' : tz.name(v)), 200);
+        gt3.note(cv, P, x + 4, 50 + 30 + 64 * 3 + 34, ['A value the car stops sending stays on the board, dimmed with an amber dot,',
             'held until the car answers again. One it never sent shows as a dash.']);
         const rx = x + w + 16, spec = this.ctx.spec, car = this.tel.car, live = !!(car.carPresent && car.carPresent());
         y = gt3.section(cv, P, rx, 50, w, 30 + 200, 'About');

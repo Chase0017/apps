@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 15 2026
+
+- **Apex Telemetry 0.8.0:** **Night dimming** (Chase: the board is bright at night). Auto (default) dims the whole screen to 60 % brightness from sunset to sunrise, the same level as Apex Cluster's Night colours; On always, Off never. Sunset is worked out (shared `sun.js`) for the new **Time zone** setting's zone (shared `tz.js`, as the cluster's clock), the middle of the US until set. Both on System > Display. Board and settings page both dim, the kit's header too. Tried in `tools/telemetry-preview/` (new Night) and `tools/settings-preview/`; not yet on the car.
+
 ## Nov 14 2026
 
 - **Apex Cluster 0.30.0:** removed the **CRUISE CONTROL** box (Chase). On the car it always read N/A: DME 4A6A is the engine unit's own cruise flag, and these cars run cruise in another unit, so it stays 0. No other unit has a live cruise read (searched the DSC, cluster, driver assistance and FAS lists), so the box and its once-a-second read are gone; the gap between intake and oil pressure is back as before 0.26.0. The `{{cruise}}` token and `hotText` stay in the kit.

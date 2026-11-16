@@ -2,12 +2,14 @@
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
   "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
   "shared": [
-    "gt3ui.js"
+    "gt3ui.js",
+    "sun.js",
+    "tz.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -658,6 +660,100 @@
           "green",
           "Green"
         ]
+      ]
+    },
+    {
+      "key": "nightDim",
+      "label": "Night dimming",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (dimmer after sunset)"
+        ],
+        [
+          "on",
+          "Always dimmer"
+        ],
+        [
+          "off",
+          "Off"
+        ]
+      ]
+    },
+    {
+      "key": "timeZone",
+      "label": "Time zone (sunset)",
+      "type": "number",
+      "default": -9999,
+      "steps": [
+        -9999,
+        10001,
+        10002,
+        10003,
+        10004,
+        10005,
+        10006,
+        10007,
+        10008,
+        10009,
+        10011,
+        10012,
+        10013,
+        -720,
+        -690,
+        -660,
+        -630,
+        -600,
+        -570,
+        -540,
+        -510,
+        -480,
+        -450,
+        -420,
+        -390,
+        -360,
+        -330,
+        -300,
+        -270,
+        -240,
+        -210,
+        -180,
+        -150,
+        -120,
+        -90,
+        -60,
+        -30,
+        0,
+        30,
+        60,
+        90,
+        120,
+        150,
+        180,
+        210,
+        240,
+        270,
+        300,
+        330,
+        360,
+        390,
+        420,
+        450,
+        480,
+        510,
+        540,
+        570,
+        600,
+        630,
+        660,
+        690,
+        720,
+        750,
+        780,
+        810,
+        840
       ]
     }
   ],

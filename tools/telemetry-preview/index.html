@@ -17,6 +17,7 @@
   Units <select id="units"><option value="us">US</option><option value="metric">Metric</option></select>
   Temperature <select id="tu"><option value="">Follow Units</option><option value="f">°F</option><option value="c">°C</option></select>
   Pressure <select id="pu"><option value="">Follow Units</option><option value="psi">psi</option><option value="bar">bar</option></select>
+  <label><input id="night" type="checkbox"> Night (dimmed, as main.js NIGHT_VEIL)</label>
 </div>
 <canvas id="c" width="1600" height="520"></canvas>
 <script src="../../apps/apex_telemetry/draw.js?v=17"></script>
@@ -109,6 +110,7 @@ function scene(name) {
   const paint = () => {
     const s = scene($('scene').value); s.demo = false;
     ApexTelemetryDraw.draw(cv, s, { us: $('units').value === 'us', tempF: $('tu').value ? $('tu').value === 'f' : undefined, psi: $('pu').value ? $('pu').value === 'psi' : undefined, tyreWarn: 54, tyreHot: 66, frame, why: (k) => ({ hpfp: 'F423 NRC 31, F459 NRC 31, OBD 23 NO REPLY', egs: '6000 NO REPLY', chargeBefore: '59D4 NRC 31' })[k] || '' });
+    if ($('night').checked) cv.fillRect(0, 0, 1600, 520, '#00000066');
     requestAnimationFrame(paint);
   };
   paint();
