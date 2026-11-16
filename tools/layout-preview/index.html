@@ -155,6 +155,7 @@ function token(t, st, slots) {
     }
     return { gear: st.gear, gearnum: st.gear.replace(/^[DSM]/, ''), mode: st.mode, dsc: 'ON', badge: 'BMW X3 M40i', rpm: String(st.rpm),
       speed: '47', 'u:speedLc': 'mph', time: '9:30', ampm: 'am', range: '193', 'u:distLc': 'mi', ambient: '+45', 'u:temp': '°F', oil: $('cold').checked ? COLD_F.oil : '221', coolant: $('cold').checked ? COLD_F.coolant : '199',
+      'tyreP:FL': '36', 'tyreP:FR': '36', 'tyreP:RL': '38', 'tyreP:RR': '37', 'tyreT:FL': '78', 'tyreT:FR': '79', 'tyreT:RL': '81', 'tyreT:RR': '80', 'u:boost': 'PSI', 'u:temp': '°F',
       'setup:engine': 'EFFICIENT', 'setup:chassis': 'COMFORT', 'setup:steering': 'COMFORT' }[k] ?? '{{' + k + '}}';
   });
 }

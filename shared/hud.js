@@ -161,7 +161,7 @@
  *   h - rise tall); "blink": true (or ms per half period) flashes the row red at the
  *   shift point instead of holding it solid;
  * Layout "shiftBlink": ms per half flash at the shift point, shared by every widget so they flash together: the
- *   lights (unless their own "blink"), a shiftbar with "shiftFlash": true (the whole bar red, then dark) and text
+ *   lights (unless their own "blink"), a shiftbar with "shiftFlash": true (its lit part red, then its own colours; the unlit part stays dark) and text
  *   with "hotWhen": "now" (red, then its own colour).
  * "off" the alpha of an unlit light (0.14).
  * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself). Coolant also has a yellow
@@ -2313,7 +2313,7 @@ class HudApp {
             const segs = w.segments || (w.type === 'revarc' ? 30 : 40);
             const v = isNum(rpm) ? Math.min(1, Math.max(0, rpm / this._barMax())) : 0;
             const q = Math.round(v * segs * 2) / (segs * 2);        // only resend on half-segment steps
-            // "shiftFlash": at the shift point the whole bar flashes red with the shift lights (layout "shiftBlink")
+            // "shiftFlash": at the shift point the lit part of the bar flashes red with the shift lights (layout "shiftBlink")
             const ph = w.shiftFlash ? this._shiftPhase(this._shift(), now, this.shiftBlinkMs) : 0;
             const fl = ph === 1 ? 2 : ph === 2 ? 3 : (this.flash ? 1 : 0);
             const key = q + '|' + fl;

@@ -6,36 +6,31 @@
   "slots": [
     {
       "id": "1",
-      "where": "left box, top",
+      "where": "left column, top",
       "default": "speed"
     },
     {
-      "id": "2",
-      "where": "left box, middle",
-      "default": "rpm"
-    },
-    {
       "id": "3",
-      "where": "left box, bottom",
+      "where": "left column, bottom",
       "default": "fuel"
     },
     {
       "id": "4",
-      "where": "right box, top",
+      "where": "right column, top",
       "default": "boost"
     },
     {
       "id": "5",
-      "where": "right box, middle",
+      "where": "right column, middle",
       "default": "coolant"
     },
     {
       "id": "6",
-      "where": "right box, bottom",
+      "where": "right column, bottom",
       "default": "oil"
     }
   ],
-  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). The centre of the dash is a see-through window (x 338-1582, y 245-580) onto BMW's cluster, so the map BMW draws there shows with no lag: it is BMW's own drawing, not ours. BMW shows the map in the middle while its cluster is set to show it (the photo of Nov 15 2026, SPORT+); otherwise the window shows whatever BMW draws there. BMW's digital speed (left) and gear box (P, right) sit inside the window and show through too. Shift lights, rev bar, and the left (speed, rpm, fuel) and right (boost, water, oil) columns as Apex; drive mode, gear and traction along the bottom under the map, between BMW's seat-belt light (x 587-626) and its gear letter (x 1395-1440) as on Apex; the bottom corners beside them stay plain. map_frame is only a line round the window, so it is marked overBlackBox: BMW's gear box drawn over its right end is expected. Window measured off the photo: the map runs about x 430-1530, y 115-635 on the panel; the rev bar covers its top. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720, as bimmer-lab's themes) is left uncovered: BMW draws its black box over the gear slot while a theme covers that letter (bimmer-lab/apps issue 5).",
+  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). Reworked on Chase's car photo (Nov 15 2026): the map window (x 666-1254, y 136-575) is narrowed to the map between BMW's digital speed (left) and its gear display (right) and runs up to just under the driver camera, BMW's turn arrows over its top corners; the four tyres (TPMS pressure over temperature) with traction under them cover BMW's digital speed on the left, and the gear, big, covers BMW's own gear display on the right. Left column speed, drive mode (where rpm was: the rev bar shows the revs), fuel; right column boost, water, oil (readout slots 1, 3-6). The rev bar sits at the bottom (scale y 586, bar y 614, above BMW's bottom strip) so the window starts higher and shows more road ahead; everything else moved up 70 px. The window is BMW's own drawing, so the map has no lag; it shows whatever BMW draws there. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720) is left uncovered (frame hole2): BMW draws its black box while a theme covers it (bimmer-lab/apps issue 5).",
   "widgets": [
     {
       "id": "frame",
@@ -51,16 +46,16 @@
         {
           "id": "speed_box",
           "x": 118,
-          "y": 245,
+          "y": 175,
           "w": 204,
           "h": 210,
           "head": 36,
           "radius": 4
         },
         {
-          "id": "rpm_box",
+          "id": "mode_box",
           "x": 118,
-          "y": 470,
+          "y": 400,
           "w": 204,
           "h": 110,
           "head": 36,
@@ -69,16 +64,43 @@
         {
           "id": "fuel_box",
           "x": 118,
-          "y": 595,
+          "y": 525,
           "w": 204,
           "h": 107,
           "head": 36,
           "radius": 4
         },
         {
+          "id": "tyre_box",
+          "x": 338,
+          "y": 175,
+          "w": 312,
+          "h": 220,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "dsc_box",
+          "x": 338,
+          "y": 410,
+          "w": 312,
+          "h": 100,
+          "head": 36,
+          "radius": 4
+        },
+        {
+          "id": "gear_box",
+          "x": 1270,
+          "y": 175,
+          "w": 312,
+          "h": 335,
+          "head": 36,
+          "radius": 4
+        },
+        {
           "id": "boost_box",
           "x": 1598,
-          "y": 245,
+          "y": 175,
           "w": 204,
           "h": 210,
           "head": 36,
@@ -87,7 +109,7 @@
         {
           "id": "water_box",
           "x": 1598,
-          "y": 470,
+          "y": 400,
           "w": 204,
           "h": 110,
           "head": 36,
@@ -96,45 +118,18 @@
         {
           "id": "oil_box",
           "x": 1598,
-          "y": 595,
+          "y": 525,
           "w": 204,
-          "h": 107,
-          "head": 36,
-          "radius": 4
-        },
-        {
-          "id": "mode_box",
-          "x": 640,
-          "y": 595,
-          "w": 220,
-          "h": 107,
-          "head": 36,
-          "radius": 4
-        },
-        {
-          "id": "gear_box",
-          "x": 876,
-          "y": 595,
-          "w": 168,
-          "h": 107,
-          "head": 36,
-          "radius": 4
-        },
-        {
-          "id": "dsc_box",
-          "x": 1060,
-          "y": 595,
-          "w": 220,
           "h": 107,
           "head": 36,
           "radius": 4
         }
       ],
       "hole": [
-        338,
-        245,
-        1244,
-        335
+        666,
+        136,
+        588,
+        439
       ],
       "holeWhen": true,
       "holeInset": 2,
@@ -144,40 +139,6 @@
         660,
         80,
         60
-      ]
-    },
-    {
-      "id": "map_frame",
-      "type": "boxes",
-      "class": "content",
-      "z": 1,
-      "conn": 1,
-      "x": 338,
-      "y": 245,
-      "w": 1244,
-      "h": 335,
-      "color": [
-        0,
-        0,
-        0,
-        0
-      ],
-      "fill": [
-        0,
-        0,
-        0,
-        0
-      ],
-      "boxes": [
-        {
-          "id": "map_box",
-          "x": 338,
-          "y": 245,
-          "w": 1244,
-          "h": 335,
-          "head": 0,
-          "radius": 4
-        }
       ],
       "overBlackBox": true
     },
@@ -350,29 +311,6 @@
       "toggle": "shiftPlace=camera&shiftLights=bar"
     },
     {
-      "id": "revs",
-      "type": "shiftbar",
-      "z": 2,
-      "x": 200,
-      "y": 178,
-      "w": 1520,
-      "h": 34,
-      "segments": 60,
-      "shiftFlash": true
-    },
-    {
-      "id": "revs_scale",
-      "type": "scale",
-      "z": 2,
-      "x": 200,
-      "y": 216,
-      "w": 1520,
-      "h": 26,
-      "font": "scale",
-      "color": "dim",
-      "redFrom": true
-    },
-    {
       "id": "badge",
       "type": "text",
       "z": 5,
@@ -385,11 +323,34 @@
       "color": "dim"
     },
     {
+      "id": "revs",
+      "type": "shiftbar",
+      "z": 2,
+      "x": 338,
+      "y": 614,
+      "w": 1244,
+      "h": 34,
+      "segments": 60,
+      "shiftFlash": true
+    },
+    {
+      "id": "revs_scale",
+      "type": "scale",
+      "z": 2,
+      "x": 338,
+      "y": 586,
+      "w": 1244,
+      "h": 26,
+      "font": "scale",
+      "color": "dim",
+      "redFrom": true
+    },
+    {
       "id": "speed_head",
       "type": "text",
       "z": 5,
       "x": 134,
-      "y": 250,
+      "y": 180,
       "w": 176,
       "h": 27,
       "text": "{{slotHead:1}} {{slotUnit:1}}",
@@ -401,7 +362,7 @@
       "type": "text",
       "z": 5,
       "x": 126,
-      "y": 318,
+      "y": 248,
       "w": 188,
       "h": 93,
       "text": "{{slot:1}}",
@@ -414,42 +375,11 @@
       ]
     },
     {
-      "id": "rpm_head",
-      "type": "text",
-      "z": 5,
-      "x": 134,
-      "y": 475,
-      "w": 176,
-      "h": 27,
-      "text": "{{slotHead:2}} {{slotUnit:2}}",
-      "font": "head",
-      "color": "ink"
-    },
-    {
-      "id": "rpm",
-      "type": "text",
-      "z": 5,
-      "x": 130,
-      "y": 506,
-      "w": 180,
-      "h": 70,
-      "text": "{{slot:2}}",
-      "font": "value",
-      "align": "right",
-      "hotWhen": "now",
-      "slot": "2",
-      "fit": [
-        "small"
-      ],
-      "rate": 50,
-      "offRed": true
-    },
-    {
       "id": "fuel_head",
       "type": "text",
       "z": 5,
       "x": 134,
-      "y": 600,
+      "y": 530,
       "w": 176,
       "h": 27,
       "text": "{{slotHeadU:3}}",
@@ -461,7 +391,7 @@
       "type": "text",
       "z": 5,
       "x": 130,
-      "y": 628,
+      "y": 558,
       "w": 180,
       "h": 70,
       "text": "{{slot:3}}{{slotSuffix:3}}",
@@ -477,7 +407,7 @@
       "type": "text",
       "z": 5,
       "x": 1614,
-      "y": 250,
+      "y": 180,
       "w": 176,
       "h": 27,
       "text": "{{slotHead:4}} {{slotUnit:4}}",
@@ -489,7 +419,7 @@
       "type": "text",
       "z": 5,
       "x": 1606,
-      "y": 318,
+      "y": 248,
       "w": 188,
       "h": 93,
       "text": "{{slot:4}}",
@@ -506,7 +436,7 @@
       "type": "text",
       "z": 5,
       "x": 1614,
-      "y": 475,
+      "y": 405,
       "w": 176,
       "h": 27,
       "text": "{{slotHeadU:5}}",
@@ -518,7 +448,7 @@
       "type": "text",
       "z": 5,
       "x": 1610,
-      "y": 506,
+      "y": 436,
       "w": 180,
       "h": 70,
       "text": "{{slot:5}}{{slotSuffix:5}}",
@@ -534,7 +464,7 @@
       "type": "text",
       "z": 5,
       "x": 1614,
-      "y": 600,
+      "y": 530,
       "w": 176,
       "h": 27,
       "text": "{{slotHeadU:6}}",
@@ -546,7 +476,7 @@
       "type": "text",
       "z": 5,
       "x": 1610,
-      "y": 628,
+      "y": 558,
       "w": 180,
       "h": 70,
       "text": "{{slot:6}}{{slotSuffix:6}}",
@@ -561,9 +491,9 @@
       "type": "text",
       "z": 5,
       "id": "mode_head",
-      "x": 656,
-      "y": 600,
-      "w": 188,
+      "x": 134,
+      "y": 405,
+      "w": 176,
       "h": 27,
       "text": "DRIVE MODE",
       "font": "head",
@@ -573,9 +503,9 @@
       "type": "text",
       "z": 5,
       "id": "mode",
-      "x": 648,
-      "y": 645,
-      "w": 204,
+      "x": 126,
+      "y": 452,
+      "w": 188,
       "h": 37,
       "text": "{{mode}}",
       "font": "unit",
@@ -587,37 +517,10 @@
     {
       "type": "text",
       "z": 5,
-      "id": "gear_head",
-      "x": 892,
-      "y": 600,
-      "w": 136,
-      "h": 27,
-      "text": "GEAR",
-      "font": "head",
-      "color": "ink"
-    },
-    {
-      "type": "text",
-      "z": 5,
-      "id": "gear",
-      "x": 884,
-      "y": 628,
-      "w": 152,
-      "h": 70,
-      "text": "{{gearnum}}",
-      "font": "value",
-      "align": "center",
-      "hotWhen": "now",
-      "rate": 50,
-      "offRed": true
-    },
-    {
-      "type": "text",
-      "z": 5,
       "id": "dsc_head",
-      "x": 1076,
-      "y": 600,
-      "w": 188,
+      "x": 354,
+      "y": 415,
+      "w": 280,
       "h": 27,
       "text": "TRACTION",
       "font": "head",
@@ -627,16 +530,166 @@
       "type": "text",
       "z": 5,
       "id": "dsc",
-      "x": 1068,
-      "y": 645,
-      "w": 204,
+      "x": 346,
+      "y": 460,
+      "w": 296,
       "h": 37,
       "text": "{{dsc}}",
       "font": "unit",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tyre_head",
+      "x": 354,
+      "y": 180,
+      "w": 180,
+      "h": 27,
+      "text": "TYRES",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tyre_unit",
+      "x": 530,
+      "y": 180,
+      "w": 104,
+      "h": 27,
+      "text": "{{u:boost}} {{u:temp}}",
+      "font": "head",
+      "color": "ink",
+      "align": "right"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "gear_head",
+      "x": 1286,
+      "y": 180,
+      "w": 280,
+      "h": 27,
+      "text": "GEAR",
+      "font": "head",
+      "color": "ink"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "gear",
+      "x": 1280,
+      "y": 248,
+      "w": 292,
+      "h": 222,
+      "text": "{{gearnum}}",
+      "font": "y_gear",
       "align": "center",
-      "fit": [
-        "head"
-      ]
+      "hotWhen": "now",
+      "rate": 50,
+      "offRed": true,
+      "overBlackBox": true
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tFL_p",
+      "x": 346,
+      "y": 215,
+      "w": 140,
+      "h": 45,
+      "text": "{{tyreP:FL}}",
+      "font": "small",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tFL_t",
+      "x": 346,
+      "y": 265,
+      "w": 140,
+      "h": 27,
+      "text": "{{tyreT:FL}}\u00b0",
+      "font": "head",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tFR_p",
+      "x": 502,
+      "y": 215,
+      "w": 140,
+      "h": 45,
+      "text": "{{tyreP:FR}}",
+      "font": "small",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tFR_t",
+      "x": 502,
+      "y": 265,
+      "w": 140,
+      "h": 27,
+      "text": "{{tyreT:FR}}\u00b0",
+      "font": "head",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tRL_p",
+      "x": 346,
+      "y": 307,
+      "w": 140,
+      "h": 45,
+      "text": "{{tyreP:RL}}",
+      "font": "small",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tRL_t",
+      "x": 346,
+      "y": 357,
+      "w": 140,
+      "h": 27,
+      "text": "{{tyreT:RL}}\u00b0",
+      "font": "head",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tRR_p",
+      "x": 502,
+      "y": 307,
+      "w": 140,
+      "h": 45,
+      "text": "{{tyreP:RR}}",
+      "font": "small",
+      "align": "center"
+    },
+    {
+      "type": "text",
+      "z": 5,
+      "id": "tRR_t",
+      "x": 502,
+      "y": 357,
+      "w": 140,
+      "h": 27,
+      "text": "{{tyreT:RR}}\u00b0",
+      "font": "head",
+      "color": "dim",
+      "align": "center"
     }
   ]
 }

@@ -14,7 +14,7 @@ a black box over its gear slot.
 
 - **Shift lights:** two banks of six either side of the driver camera, ramping up towards it, filling from the
   outside in (green, yellow, red, blue). At the shift point every light, the whole rev bar, the gear and the rpm flash
-  red together. Settings (Shift & alerts): **Placement** Camera (either side of the driver attention camera) / No camera
+  red together (the rev bar's lit part only, so the rpm still shows). Settings (Shift & alerts): **Placement** Camera (either side of the driver attention camera) / No camera
   (across the middle); **Type** Row (round lights) / Bar (slanted lights on a dark trapezoid, yellow until both ends
   meet at the shift point, then the colour pattern's red) / Off; **Colours** GT3, F1 (green, red, blue), all
   red or all blue; **First light** 2,000 to 6,000 rpm (default 3,000).
@@ -40,12 +40,11 @@ bottom. `shared/visible.js` holds those areas and warns about any widget under o
 
 ## Apex Map
 
-- Apex's shift lights, rev bar and side columns (speed, rpm, fuel; boost, coolant, oil), with the middle cut
-  see-through (x 338-1582, y 245-580) so BMW's own map shows there, drawn by BMW with no lag.
-- Drive mode, gear and traction in a row under the map. No intake, oil pressure, timing or AFR boxes.
-- BMW's digital speed and its P / gear box show through the window too. The window shows whatever BMW's cluster draws
-  in the middle, so set BMW's cluster to show the map there.
-
+- BMW's own map through a window in the middle, drawn by BMW with no lag, from just under the driver camera down to
+  the rev bar (x 666-1254, y 136-575). The window shows whatever BMW's cluster draws there.
+- Left: speed, drive mode, fuel; the four tyres (pressure and temperature) and traction beside them, over BMW's
+  digital speed. Right: a big gear over BMW's own gear display; boost, coolant, oil.
+- The rev bar runs along the bottom, between the side columns. Shift lights and settings as Apex.
 
 ## Stock+
 
