@@ -32,7 +32,7 @@
   <label>First light <select id="from"><option>2000</option><option>2500</option><option selected>3000</option><option>3500</option><option>4000</option><option>4500</option><option>5000</option><option>5500</option><option>6000</option></select></label>
   <label><input id="held" type="checkbox"> Held values (readouts)</label>
   <label><input id="cold" type="checkbox"> Cold engine (oil 122, coolant 131)</label>
-  <label><input id="backdrop" type="checkbox"> Backdrop (backdrop-local.png, a photo of BMW's own cluster; not in git)</label>
+  <label><input id="backdrop" type="checkbox"> Backdrop (backdrop-local.png or the photo backdrop-local.json names, a photo of the car's cluster; not in git)</label>
   <button id="sweep">Rev sweep</button>
 </div>
 <canvas id="out" width="1920" height="720"></canvas>
@@ -271,6 +271,8 @@ function carView() {
  *  onto the panel as measured from the Nov 15 2026 SPORT+ photo (in px of the photo scaled to 2000 wide): panel x = 960 + (px - 985) / 0.8, y = 690 + (py - 742) / 0.77 */
 const BACKDROP = new Image(); BACKDROP.src = 'backdrop-local.png';
 const BD = { x0: 985, y0: 742, kx: 0.8, ky: 0.77 };
+// another photo and its own mapping: backdrop-local.json { src, x0, y0, kx, ky } (also git-ignored), in px of the photo 2000 wide
+fetch('backdrop-local.json').then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) { Object.assign(BD, j); if (j.src) BACKDROP.src = j.src; } }).catch(() => {});
 function drawBackdrop() {
   ctx.save(); ctx.globalAlpha = 0.85;
   const k = 2000 / BACKDROP.naturalWidth;   // the measurements are in px of the photo shown 2000 wide
