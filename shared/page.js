@@ -97,8 +97,8 @@ class Page {
         const s = this.item(k), o = s && (s.options || []).find((x) => x[0] === v);
         return o ? o[1] : String(v);
     }
-    /** a layout's short name: "Off (BMW's own cluster)" -> "BMW's own" */
-    layoutName(v) { return v === 'off' ? "BMW's own" : this.optLabel('hudLayout', v); }
+    /** a layout's name as the settings list has it, without the description: "Apex Map (GT3, ...)" -> "Apex Map" */
+    layoutName(v) { return this.optLabel('hudLayout', v).replace(/ \(.*\)$/, ''); }
     valueText(k) {
         const s = this.item(k), v = this.get(k);
         if (!s) return '';
@@ -275,7 +275,11 @@ class Page {
         this.pickRow(cv, CX + half + 20, by, half, this.get('byMode') ? 'Otherwise' : 'Layout', 'hudLayout', (v) => this.layoutName(v), 50);
     }
 
-    tag(v) { return v === 'off' ? 'stock ' + this.cfg.what : (this.cfg.look.tags || {})[v] || ''; }
+    /** the line under a layout's name: the app's own tag, else the settings list's description ("Off (BMW's own HUD)" -> "BMW's own HUD") */
+    tag(v) {
+        const m = / \((.*)\)$/.exec(this.optLabel('hudLayout', v));
+        return (this.cfg.look.tags || {})[v] || (m ? m[1] : '');
+    }
 
     /** A theme's picture (black when there is none: BMW's own, or a build without previews). */
     picture(cv, name, size, x, y, w, h) {
@@ -309,9 +313,9 @@ class Page {
         const slots = this.hud.slotsOf(lay);
         if (!slots.some((x) => x.id === this.slot)) this.slot = slots[0].id;
         // which layout: chips; Reset on the right
-        label(cv, CX, 70, this.layoutName(lay).replace(/ \(.*\)$/, '') + ' · readout slots');
+        label(cv, CX, 70, this.layoutName(lay) + ' · readout slots');
         let cx = CX;
-        this.slotLayouts().forEach((v) => { cx += chip(cv, cx, 82, this.layoutName(v).replace(/ \(.*\)$/, ''), v === lay, () => { this.slotLayout = v; this.kick(); }, 'slots:' + v) + 8; });
+        this.slotLayouts().forEach((v) => { cx += chip(cv, cx, 82, this.layoutName(v), v === lay, () => { this.slotLayout = v; this.kick(); }, 'slots:' + v) + 8; });
         const rw = cv.textWidth('Reset slots', 16, { font: 'bold', literal: true }) + 30;
         chip(cv, CX + 700 - rw, 82, 'Reset slots', false, () => { slots.forEach((x) => this.hud.setSlot(lay, x.id, null)); this.kick(); }, 'slots:reset');
         // the slots
