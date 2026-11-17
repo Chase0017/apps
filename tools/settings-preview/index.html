@@ -149,6 +149,19 @@ async function start() {
         window.SENT.push(hex(sid) + ' ' + data.map((b) => hex(b)).join(' '));
         await new Promise((r) => setTimeout(r, 150));
         if (window.DME === 'none') return null;
+        // MG Flasher Live Control, as captured: 22 5820 marker, 2E 69 <id> answered 7F 2E 69, state read with 23 44
+        if (window.DME === 'mgf') {
+          const M = window.MGF = window.MGF || { 0x60107F67: [0], 0x60107F98: [0], 0x60107F6F: [0], 0x60107FC7: [0], 0x60107F8B: [0], 0x60107F26: [0x70, 0x17], 0xB0007345: [0], 0x60107F64: [1], 0x60107F14: [0, 0] };
+          const ADDR = { 0x46: 0x60107F67, 0x47: 0x60107F98, 0x49: 0x60107F6F, 0x4A: 0x60107FC7, 0x4B: 0x60107F8B, 0x4C: 0x60107F26, 0x4E: 0xB0007345 };
+          if (sid === 0x22 && data[0] === 0x58 && data[1] === 0x20) return [0x62, 0x58, 0x20, 0x01];
+          if (sid === 0x3E) return [0x7E, 0x00];
+          if (sid === 0x2E && data[0] === 0x69 && ADDR[data[1]] && data[3] === ((0x69 + data[1] + data[2]) & 255)) {
+            const v = data[2]; M[ADDR[data[1]]] = data[1] === 0x4C ? [(v * 200) & 255, (v * 200) >> 8] : [v]; M[0x60107F14] = [data[1], 0x69];
+            return [0x7F, 0x2E, 0x69];
+          }
+          if (sid === 0x23 && data[0] === 0x44) { const a = ((data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4]) >>> 0; return M[a] ? [0x63].concat(M[a]) : [0x7F, 0x23, 0x31]; }
+          return [0x7F, sid, 0x11];
+        }
         if (sid === 0x2F && data[0] === 0x60 && data[1] === 0xFD) return [0x6F].concat(data.slice(0, 3));
         if (sid === 0x2F && window.DME === 'mhd' && data.length === 2) return [0x6F].concat(data);
         return [0x7F, sid, 0x31];

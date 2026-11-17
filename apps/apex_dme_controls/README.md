@@ -18,13 +18,14 @@ so the map switch and Max Cooling wait for live ones.
 All to the DME (diagnostic address 0x12) over the head unit's own diagnostic link, as cauliflowermossgrape's Engine
 Config (idrive7-apps, `apps/live_adjustments`, MIT) sends them; see `NOTICE`.
 
-| What | Stock / any DME | MHD | BM3 |
-|---|---|---|---|
-| Valve open | `2F 60FD 03 03E8` | `2F 02 01` | `2F 60FD 03 14FE` |
-| Valve closed | `2F 60FD 03 2328` | `2F 02 02` | `2F 60FD 03 2328` |
-| Valve OEM | `2F 60FD 00` | `2F 02 00` | `2F 60FD 00` |
-| Map n | | `2F 01 <n-1>` (accepted on the echo, no read-back) | ROM identified, map slot written to DME memory and read back |
-| Max Cooling | | `2F 03 01` on, `2F 03 00` off | |
+| What | Stock / any DME | MHD | BM3 | MG Flasher |
+|---|---|---|---|---|
+| Valve open | `2F 60FD 03 03E8` | `2F 02 01` | `2F 60FD 03 14FE` | `2E 6949 02 B4` |
+| Valve closed | `2F 60FD 03 2328` | `2F 02 02` | `2F 60FD 03 2328` | `2E 6949 01 B3` |
+| Valve OEM | `2F 60FD 00` | `2F 02 00` | `2F 60FD 00` | `2E 6949 00 B2` |
+| Map n | | `2F 01 <n-1>` (accepted on the echo, no read-back) | ROM identified, map slot written to DME memory and read back | on the wheel |
+| Max Cooling | | `2F 03 01` on, `2F 03 00` off | | `2E 6947 01 B1` on, `2E 6947 00 B0` off |
+| Burble, radiator flap, ethanol, valet | | | | `2E 6946` / `694E` / `694B` + `694C` / `694A`, see below |
 
 The DME lets a tester's valve command go after about 20 s: with **Hold** on, Open / Closed is sent again every 15 s.
 **Closed: back to OEM above** (default 4,000 rpm) hands the valve back to the car while the engine is above it and
@@ -34,11 +35,15 @@ MHD and BM3 can't be told apart from the head unit (MHD's marker sits at a ROM-d
 software** is picked in Settings. An MHD press counts only when the DME echoes it; an untuned DME refuses it and the
 page says so. BM3 needs its ROM in `bm3_profiles.js`; an unknown ROM is refused and nothing is written.
 
-**MG Flasher:** pick it in Settings and the exhaust valve works through BMW's own job (as with Off). Map switching and
-Max Cooling stay on MG Flasher's Custom Code Menu (the cruise control buttons on the steering wheel), and the page says
-so: MG Flasher's own Live Control commands (its phone app over ENET) aren't published, and this app doesn't guess
-commands for an engine unit. A capture of them on a car (as a1-mapping's MHD capture, idrive7-apps PR #23) would let
-them in.
+**MG Flasher:** pick it in Settings and the page becomes MG Flasher's own: **Exhaust** (valve, burble 0 to 5),
+**Cooling** (Max Cooling, radiator flap, temperatures) and **Fuel and car** (ethanol override and content, valet mode).
+Every command was taken from Wireshark captures of MG Flasher's app on a car (HSFZ over ENET) and is sent the same
+way: `3E 00`, then `2E 69 <id> <value> <check>` with the check byte `0x69 + id + value`. The DME answers `7F 2E 69`,
+which is MG Flasher's own "taken", not a refusal. The app then reads back from DME memory, as MG Flasher does:
+`60107F64` (done), `60107F14` (the last write) and the function's own state, which is what each button lights.
+The states are read again every 10 s, so a change made in MG Flasher's app shows here too. Ethanol changes what the
+tune fuels for, so it needs the car stopped and a confirm. Map switching stays on MG Flasher's Custom Code Menu
+(the cruise control buttons on the steering wheel).
 
 ## Settings (the header's Settings tab)
 

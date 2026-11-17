@@ -32,7 +32,7 @@ class Setup {
         cv.clear(P.bg);
         const lim = this.get('closeLimit');
         const value = {
-            back: 'map, valve, Max Cooling', tuning: TUNER[v.tuner] + (v.tuner === 'off' || v.tuner === 'mgf' ? ' · valve only' : ''),
+            back: 'map, valve, Max Cooling', tuning: TUNER[v.tuner] + (v.tuner === 'off' ? ' · valve only' : v.tuner === 'mgf' ? ' · own page' : ''),
             maps: [1, 2, 3, 4].map((i) => this.label('map' + i)).join(' · '), units: (u.tf ? '°F' : '°C') + ' · ' + (u.sp ? 'mph' : 'km/h'),
             valve: 'start ' + this.label('valveStart') + ' · closed to ' + (lim === 'off' ? 'any rpm' : lim + ' rpm'),
             system: 'v' + this.ctx.spec.version + ' · ' + P.name.toLowerCase() + ' boxes',
@@ -53,13 +53,13 @@ class Setup {
         gt3.note(cv, P, x + 4, 50 + 30 + 140 + 30, [
             'Pick what is flashed: MHD and BM3 can\'t be told apart from here.',
             v.tuner === 'bm3' ? (v.bm3Rom ? 'BM3 ROM ' + v.bm3Rom + ' found on the DME.' : 'BM3: the ROM is read from the DME at start.') : '',
-            v.tuner === 'mgf' ? 'MG Flasher: maps and Max Cooling stay on its Custom Code Menu (cruise buttons).' : '',
-            v.tuner === 'mgf' ? 'Its own commands aren\'t public yet; the valve works here.' : '',
+            v.tuner === 'mgf' ? 'MG Flasher: its own page with every Live Control function, read back.' : '',
+            v.tuner === 'mgf' ? 'Maps stay on its Custom Code Menu (cruise buttons).' : '',
         ].filter(Boolean));
         const rx = x + w + 16;
         y = gt3.section(cv, P, rx, 50, w, 30 + 4 * 70, 'What each one does');
         [['Off', 'Exhaust valve only (BMW\'s own job, any DME)'], ['MHD', 'Engine map 1 to 4, exhaust valve, Max Cooling'],
-            ['BM3', 'Engine map 1 to 4 (read back), exhaust valve'], ['MG Flasher', 'Exhaust valve; map and Max Cooling on the wheel']].forEach((r, i) => {
+            ['BM3', 'Engine map 1 to 4 (read back), exhaust valve'], ['MG Flasher', 'Valve, burble, cooling, ethanol, valet; map on the wheel']].forEach((r, i) => {
             gt3.row(cv, P, rx, y + i * 70, w, 70, r[0], r[1], !i);
         });
     }
@@ -129,7 +129,7 @@ class Setup {
             j > 0 ? () => this.set('closeLimit', opts[j - 1][0]) : null, j < opts.length - 1 ? () => this.set('closeLimit', opts[j + 1][0]) : null, 'closeLimit', 150);
         const rx = x + w + 16;
         y = gt3.section(cv, P, rx, 50, w, 30 + 2 * 74, 'Max cooling');
-        gt3.row(cv, P, rx, y, w, 74, 'Needs', 'MHD, and the engine running (over 500 rpm)', true);
+        gt3.row(cv, P, rx, y, w, 74, 'Needs', 'MHD or MG Flasher, and the engine running (over 500 rpm)', true);
         gt3.row(cv, P, rx, y + 74, w, 74, 'Off', 'Always allowed');
     }
 

@@ -14,7 +14,7 @@ A GT3 pit board on the center screen: tyre pressures and temperatures against th
 
 <img src="apps/apex_dme_controls/icon.png" width="72" align="left" alt="Apex DME Controls icon">
 
-One page on the center screen to switch the engine map (MHD or BM3), set the exhaust valve (OEM, open, closed) and turn on MHD's Max Cooling. Maps switch only with the car stopped and the engine running. No xDrive control. [Read more](apps/apex_dme_controls/README.md)
+One page on the center screen to switch the engine map (MHD or BM3), set the exhaust valve (OEM, open, closed) and turn on MHD's Max Cooling. With MG Flasher, its own page: valve, burble, Max Cooling, radiator flap, ethanol override and valet, each read back from the DME. Maps switch only with the car stopped and the engine running. No xDrive control. [Read more](apps/apex_dme_controls/README.md)
 
 ## Cluster Themes
 
