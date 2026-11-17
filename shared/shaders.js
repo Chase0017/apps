@@ -13,8 +13,8 @@ const SHIFTBAR = `// Segmented shift bar for a cluster-render "effect" layer (GL
 //   u_midAt, u_highAt      where the mid and high zones start (0..1 of the bar)
 //   u_track   unlit segment colour (rgba, straight alpha)
 //   u_flash   1 = at the redline: every lit segment shows the high colour; 2 = shift flash, red half: the lit
-//             segments red; 3 = shift flash, other half: the lit segments in their own colours. The unlit ones always
-//             stay u_track, so the end of the fill shows the rpm through the flash.
+//             segments red; 3 = shift flash, dark half: the lit segments a dim red, as the shift lights go dark on the
+//             same beat. The unlit ones always stay u_track, so the end of the fill shows the rpm through the flash.
 // Output is straight alpha. Whether cluster-render blends effect layers as
 // straight or premultiplied alpha is not confirmed yet: check the edges on the car.
 precision mediump float;
@@ -51,9 +51,11 @@ void main() {
     float pos = (idx + 0.5) / u_segs;               // segment centre, 0..1
     bool lit = pos <= u_value;
     vec3 c = pos >= u_highAt ? u_high : (pos >= u_midAt ? u_mid : u_low);
-    // shift flash: only the lit part flashes (red, then its own colours) and the unlit part stays dark, so the fill's end
-    // still shows the rpm (Chase, Nov 15 2026: the whole bar flashing hid where the revs were)
-    if (u_flash > 1.5 && u_flash < 2.5) c = u_high;                 // shift flash, red half
+    // shift flash: only the lit part flashes and the unlit part stays dark, so the fill's end still shows the rpm
+    // (Chase, Nov 15 2026: the whole bar flashing hid where the revs were). Red, then a dim red: on / off with the shift
+    // lights (Nov 17: its own colours on the dark beat kept the bar looking lit, so it read out of step with the lights)
+    if (u_flash > 2.5) c = u_high * 0.3;                            // shift flash, dark half
+    else if (u_flash > 1.5) c = u_high;                             // shift flash, red half
     else if (u_flash > 0.5 && u_flash < 1.5) c = u_high;            // at the redline
     gl_FragColor = lit ? vec4(c, cover) : vec4(u_track.rgb, u_track.a * cover);
 }
