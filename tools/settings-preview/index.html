@@ -134,7 +134,7 @@ async function start() {
   const loop = { kick: () => draw() };
   const ctx = { settings, spec, log: { info() {}, warn() {}, error: logErr }, theme: () => theme, canvas: () => cv, ui: { image() {}, onClick(n, f) { ctx.clicks[n] = f; } }, clicks: {},
     loop: (n, fps, fn) => { render = fn; return loop; }, onLayout() {} };
-  for (const f of ['/shared/gt3ui.js', '/shared/sensors.js', '/shared/badges.js', '/shared/tz.js', '/shared/visible.js', '/shared/page.js', '/kit/runtime/themes.js',
+  for (const f of ['/shared/gt3ui.js', '/shared/sensors.js', '/shared/badges.js', '/shared/tz.js', '/shared/sun.js', '/shared/night.js', '/shared/visible.js', '/shared/page.js', '/kit/runtime/themes.js',
     '/apps/apex_telemetry/draw.js', '/apps/apex_telemetry/setup.js']) await src(f);
   if (app === 'apex_dme_controls') {
     for (const f of ['main.js', 'control.js', 'draw.js', 'setup.js', 'bm3_protocol.js', 'bm3_profiles.js']) await src('/apps/apex_dme_controls/' + f);
@@ -162,7 +162,7 @@ async function start() {
     if (window.__dmeTimer) clearInterval(window.__dmeTimer);
     const realSetInterval = window.setInterval;
     const reqMain = loader({ './kit/mgu': mguMod, './kit/gauges': gauges, './kit/themes': '/kit/runtime/themes.js', './kit/car': FakeCar, './kit/diag': diagMod,
-      './gt3ui': '/shared/gt3ui.js', './control': A + 'control.js', './draw': A + 'draw.js', './setup': A + 'setup.js', './bm3_protocol': A + 'bm3_protocol.js', './bm3_profiles': A + 'bm3_profiles.js', './main': A + 'main.js' });
+      './gt3ui': '/shared/gt3ui.js', './tz': '/shared/tz.js', './night': '/shared/night.js', './sun': '/shared/sun.js', './control': A + 'control.js', './draw': A + 'draw.js', './setup': A + 'setup.js', './bm3_protocol': A + 'bm3_protocol.js', './bm3_profiles': A + 'bm3_profiles.js', './main': A + 'main.js' });
     window.setInterval = (fn, ms) => (window.__dmeTimer = realSetInterval(fn, ms));
     reqMain('./main');
     window.setInterval = realSetInterval;
@@ -198,7 +198,7 @@ async function start() {
   } else {
     $('setupBtn').style.display = 'none';
     const req = loader({ './kit/gauges': gauges, './gt3ui': '/shared/gt3ui.js', './kit/themes': '/kit/runtime/themes.js', './previews': { get: () => null }, './sensors': '/shared/sensors.js',
-      './visible': '/shared/visible.js', './badges': '/shared/badges.js', './tz': '/shared/tz.js', './page': '/shared/page.js' });
+      './visible': '/shared/visible.js', './badges': '/shared/badges.js', './tz': '/shared/tz.js', './night': '/shared/night.js', './sun': '/shared/sun.js', './page': '/shared/page.js' });
     const sensors = req('./sensors');
     const hud = app === 'cluster_themes';
     const slots = hud ? [{ id: '1', default: 'speed' }, { id: '2', default: 'rpm' }, { id: '3', default: 'fuel' }, { id: '4', default: 'boost' }, { id: '5', default: 'coolant' }]
@@ -212,8 +212,8 @@ async function start() {
       sensorUnit(sn) { return sn.unit ? sn.unit(this.unitUs(sn.dim || 'units')) : ''; }, shiftTesting: () => false, testShift: () => true,
       unitUs(dim) { const v = settings.get({ speed: 'unitSpeed', temp: 'unitTemp', press: 'unitPress' }[dim]); if (v === 'mph' || v === 'f' || v === 'psi') return true; if (v === 'kmh' || v === 'c' || v === 'bar') return false; return settings.get('units') === 'us'; } };
     const Page = req('./page');
-    const cfg = hud ? { title: spec.title, what: 'cluster', look: { name: 'Layouts', style: 'hero' }, tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'], display: ['tankLitres'] }
-      : { title: spec.title, what: 'HUD', look: { name: 'Layouts', style: 'cards', tags: {} }, tabs: ['look', 'readouts', 'position', 'units', 'shift', 'system'], display: ['showClock', 'showOil', 'showCoolant', 'showBoost', 'clock', 'tankLitres'] };
+    const cfg = hud ? { title: spec.title, what: 'cluster', look: { name: 'Layouts' }, tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'], display: ['pageDim', 'tankLitres'] }
+      : { title: spec.title, what: 'HUD', look: { name: 'Layouts', tags: { sport: 'rev bar · temps · boost', redline: 'shift lights · shift score', shiftonly: 'lights · gear' } }, tabs: ['look', 'readouts', 'position', 'units', 'shift', 'system'], display: ['showOil', 'showCoolant', 'showBoost', 'shiftGear', 'pageDim', 'timeZone'] };
     page = new Page(ctx, stub, cfg);
     page.tab = window.__tab || 'units';
     page.start();

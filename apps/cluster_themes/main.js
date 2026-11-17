@@ -40,9 +40,9 @@ mgu.run({
         if (!hud) return;
         new Page(ctx, hud, {
             title: ctx.spec.title, what: 'cluster',
-            look: { name: 'Layouts', style: 'hero' },
+            look: { name: 'Layouts' },
             tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'],
-            display: ['tankLitres'],
+            display: ['pageDim', 'tankLitres'],
         }).start();
     },
 });

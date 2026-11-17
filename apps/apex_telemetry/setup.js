@@ -186,7 +186,7 @@ class Setup {
         let y = gt3.section(cv, P, x, 50, w, 30 + 64 * 3, 'Display');
         let cy = gt3.row(cv, P, x, y, w, 64, 'Box colour', P.name + ' · this page and the pit board\'s boxes', true);
         gt3.swatches(cv, P, x + w - 14, cy, P.key, (v) => this.set('boxColour', v));
-        // night dimming as Apex Cluster's Night colours: the whole screen to 60 % after sunset (main.js NIGHT_VEIL)
+        // night dimming as Apex Cluster's Night colours: the whole screen to 60 % after sunset (main.js, shared night.js)
         cy = gt3.row(cv, P, x, y + 64, w, 64, 'Night dimming', this.opts.isNight && this.opts.isNight() ? 'Dimmed now' : 'Dimmer after sunset');
         gt3.seg(cv, P, x + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('nightDim') || 'auto', (v) => this.set('nightDim', v), 'nightDim');
         cy = gt3.row(cv, P, x, y + 128, w, 64, 'Time zone', 'Where sunset is worked out');

@@ -12,10 +12,12 @@
  * draw(cv, bottom, v, u): v = Control.view(), u = { sp, tf } (US units or not).
  */
 const gt3 = require('./gt3ui');
+const tz = require('./tz');
 
 const CX = 288, CR = 1584, CW = CR - CX;
 const TABS = [['back', 'Controls', 'back'], ['tuning', 'Tuning', 'cog'], ['maps', 'Maps', 'lines'], ['units', 'Units', 'units'], ['valve', 'Valve & cooling', 'alert'], ['system', 'System', 'screen']];
 const TUNER = { off: 'Off', mhd: 'MHD', bm3: 'BM3', mgf: 'MG Flasher' };
+const MAP_BASES = ['stage1', 'stage2', 'stage3', 'custom'];   // map names with variations (app.json map1-4: stage1, stage193, stage1e85, ...)
 
 class Setup {
     /** opts: { kick(), close(), openList() } */
@@ -66,10 +68,23 @@ class Setup {
         const P = this.P, w = 760, x = CX;
         const y = gt3.section(cv, P, x, 50, w, 30 + 4 * 70, 'Map names', 'shown on the map tiles');
         for (let i = 1; i <= 4; i++) {
-            const k = 'map' + i, it = this.item(k), opts = (it && it.options) || [], cur = this.get(k), j = opts.findIndex((o) => o[0] === cur);
+            // two steppers: the name (Stock, Stage 1, ..., Custom, Track, ...) and, for Stage 1-3 and Custom, its
+            // variation (91, E85, Kill, Shotgun, ...): ~60 names would take too many taps through one list
+            const k = 'map' + i, it = this.item(k), opts = (it && it.options) || [], cur = this.get(k);
+            const fams = [], fam = (key) => MAP_BASES.find((b) => key.indexOf(b) === 0) || key;
+            opts.forEach((o) => { if (fams.indexOf(fam(o[0])) < 0) fams.push(fam(o[0])); });
+            const f = fam(cur || ''), fi = Math.max(0, fams.indexOf(f)), vars = opts.filter((o) => fam(o[0]) === f);
+            const vi = Math.max(0, vars.findIndex((o) => o[0] === cur)), wrap = (n, len) => (n + len) % len;
             const cy = gt3.row(cv, P, x, y + (i - 1) * 70, w, 70, 'Map ' + i, v.map.active === i ? 'Active now' : '', i === 1);
-            const step = (d) => () => this.set(k, opts[(Math.max(0, j) + d + opts.length) % opts.length][0]);
-            gt3.stepper(cv, P, x + w - 14, cy, gt3.up(this.label(k)), step(-1), step(1), k, 220);
+            const famStep = (d) => () => this.set(k, fams[wrap(fi + d, fams.length)]);
+            const varStep = (d) => () => this.set(k, vars[wrap(vi + d, vars.length)][0]);
+            let xr = x + w - 14;
+            if (vars.length > 1) {
+                const base = (opts.find((o) => o[0] === f) || [f, f])[1];
+                const vt = vi ? vars[vi][1].slice(base.length).trim() : 'None';
+                xr = gt3.stepper(cv, P, xr, cy, gt3.up(vt), varStep(-1), varStep(1), k + ':var', 150) - 28;
+                gt3.stepper(cv, P, xr, cy, gt3.up(base), famStep(-1), famStep(1), k, 130);
+            } else gt3.stepper(cv, P, xr, cy, gt3.up(this.label(k)), famStep(-1), famStep(1), k, 150);
         }
         const rx = x + w + 16, rw = CR - rx;
         const y2 = gt3.section(cv, P, rx, 50, rw, 30 + 2 * 70, 'Switching');
@@ -121,10 +136,15 @@ class Setup {
     system(cv, bottom, v) {
         let cy;
         const P = this.P, w = (CW - 16) / 2, x = CX;
-        let y = gt3.section(cv, P, x, 50, w, 30 + 64, 'Display');
+        let y = gt3.section(cv, P, x, 50, w, 30 + 64 * 3, 'Display');
         cy = gt3.row(cv, P, x, y, w, 64, 'Box colour', P.name, true);
         gt3.swatches(cv, P, x + w - 14, cy, P.key, (val) => this.set('boxColour', val));
-        gt3.note(cv, P, x + 4, 50 + 30 + 64 + 34, ['A value the car stops sending stays, dimmed with an amber dot,', 'held until the car answers again.']);
+        // night dimming as Apex Telemetry's: the whole screen to 60 % after sunset (main.js, shared night.js)
+        cy = gt3.row(cv, P, x, y + 64, w, 64, 'Night dimming', this.opts.isNight && this.opts.isNight() ? 'Dimmed now' : 'Dimmer after sunset');
+        gt3.seg(cv, P, x + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('pageDim') || 'auto', (val) => this.set('pageDim', val), 'pageDim');
+        cy = gt3.row(cv, P, x, y + 128, w, 64, 'Time zone', 'Where sunset is worked out');
+        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('timeZone'), this.get('timeZone'), (val) => this.set('timeZone', val), (val) => (val === tz.AUTO ? 'Middle of US' : tz.name(val)), 200);
+        gt3.note(cv, P, x + 4, 50 + 30 + 64 * 3 + 34, ['A value the car stops sending stays, dimmed with an amber dot,', 'held until the car answers again.']);
         const rx = x + w + 16, spec = this.ctx.spec;
         y = gt3.section(cv, P, rx, 50, w, 30 + 200, 'About');
         gt3.txt(cv, spec.title, rx + 16, y + 40, 32, P.text);

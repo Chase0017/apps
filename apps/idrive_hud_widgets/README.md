@@ -12,70 +12,28 @@ Puts your own readouts on the windshield HUD: gear, a shift bar, boost, oil and 
 
 <table align="center">
   <tr>
-    <th align="center">Daily</th>
     <th align="center">Sport</th>
     <th align="center">Redline</th>
-  </tr>
-  <tr>
-    <td><img src="../../docs/images/hud-daily.png" width="300" alt="Daily layout"></td>
-    <td><img src="../../docs/images/hud-sport.png" width="300" alt="Sport layout"></td>
-    <td><img src="../../docs/images/hud-redline.png" width="300" alt="Redline layout at the shift point"></td>
-  </tr>
-</table>
-
-<table align="center">
-  <tr>
-    <th align="center">Minimal</th>
     <th align="center">Shift only</th>
   </tr>
   <tr>
-    <td><img src="../../docs/images/hud-minimal.png" width="300" alt="Minimal layout"></td>
+    <td><img src="../../docs/images/hud-sport.png" width="300" alt="Sport layout"></td>
+    <td><img src="../../docs/images/hud-redline.png" width="300" alt="Redline layout at the shift point"></td>
     <td><img src="../../docs/images/hud-shiftonly.png" width="300" alt="Shift only layout"></td>
-  </tr>
-  <tr>
-    <th align="center">Boost</th>
-    <th align="center">Warm-up</th>
-  </tr>
-  <tr>
-    <td><img src="../../docs/images/hud-boost.png" width="300" alt="Boost layout"></td>
-    <td><img src="../../docs/images/hud-warmup.png" width="300" alt="Warm-up layout"></td>
-  </tr>
-  <tr>
-    <th align="center">Track</th>
-    <th align="center">Cruise</th>
-  </tr>
-  <tr>
-    <td><img src="../../docs/images/hud-track.png" width="300" alt="Track layout"></td>
-    <td><img src="../../docs/images/hud-cruise.png" width="300" alt="Cruise layout"></td>
-  </tr>
-  <tr>
-    <th align="center">Retro</th>
-    <th align="center"></th>
-  </tr>
-  <tr>
-    <td><img src="../../docs/images/hud-retro.png" width="300" alt="Retro layout"></td>
-    <td></td>
   </tr>
 </table>
 
-- **Daily:** the gear, the clock and the oil temperature.
 - **Sport:** a segmented shift bar, a big gear, a boost gauge, oil and coolant.
 - **Redline:** a slanted rev bar with 12 shift lights, a big gear, your shift point and your last shift with its grade.
-- **Minimal:** built round BMW's own speed and speed-limit sign without covering them: a thin shift bar beside them, the gear right of BMW's speed, and one readout.
-- **Shift only:** 12 shift lights and the gear, and SHIFT at the shift point.
-- **Boost:** a boost gauge with a dot that holds the peak for 4 seconds, the boost in figures, and the peak since your last 0 to 60 run.
-- **Warm-up:** oil, coolant and intake air temperature as bars with figures, and WARMING UP until the oil reaches 80°C. The intake temperature is read from the engine unit (read-only), like the boost fallback.
-- **Track:** 12 shift lights, the gear with SHIFT beside it, and a G-meter: a dot shows the cornering and braking or accelerating force (into the turn and up when you speed up), white, then amber from 0.5 g, then red from 0.8 g, with a fading trail and an outline of the most g this drive in every direction. Beside it the g now (left or right, accelerating or braking) and the best of the drive.
-- **Cruise:** four quiet figures in soft white: range, outside temperature, your average speed this drive (time moving only, after the first minute) and the time.
-- **Retro:** an 80s digital look in amber: a segmented rev bar, the gear in seven-segment digits, and boost, oil and water as figures with bar graphs.
-- The clock, oil, coolant and shift point readouts can each show another sensor instead (page's Readouts tab).
+- **Shift only:** 12 shift lights and the gear, and SHIFT at the shift point. **Show gear** (System tab) hides the gear: then only the lights show, with SHIFT just under them.
+- The oil, coolant and shift point readouts can each show another sensor instead (page's Readouts tab).
   - **Shift lights:** they come on from 3000 rpm and fill up to the shift point. At the shift point everything goes red and SHIFT shows.
   - **Shift grades:** every upshift is graded on its peak rpm. EARLY means more than 250 rpm under the shift point, LATE more than 200 over it, COLD REV the same while the cold guard is on, LIMITER within 60 rpm of the redline, and anything in between is SPOT ON.
   - **Cold-engine guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
 
 ## Themes
 
-Classic, M and Night, plus Auto, which switches to Night at sunset. You choose which theme Auto uses in daytime. Cruise and Retro always keep their own colours (soft white and teal, amber and green).
+Classic, M and Night, plus Auto, which switches to Night at sunset. You choose which theme Auto uses in daytime.
 
 <table align="center">
   <tr>
@@ -93,7 +51,7 @@ Classic, M and Night, plus Auto, which switches to Night at sunset. You choose w
 ## Off and drive modes
 
 - **Off (BMW's own HUD):** the first card on the Layouts tab. Tap it and the app draws nothing in any drive mode, so BMW's HUD comes back.
-- **Change with SPORT / COMFORT / ECO PRO** (on by default): the HUD follows the drive mode buttons, with a layout for each mode. Out of the box, Comfort shows Daily, and Sport and Eco Pro hand the HUD back to BMW. In Sport, BMW's own HUD adds its rev band bottom left, next to its speed; every layout leaves that corner empty, so any layout can be used in Sport too. Until the car reports a mode, the plain layout setting is used.
+- **Change with SPORT / COMFORT / ECO PRO** (on by default): the HUD follows the drive mode buttons, with a layout for each mode. Out of the box, Comfort shows Sport, Sport shows Redline and Eco Pro hands the HUD back to BMW. In Sport, BMW's own HUD adds its rev band bottom left, next to its speed; every layout leaves that corner empty, so any layout can be used in Sport too. Until the car reports a mode, the plain layout setting is used.
 - **With Redline:** while Redline holds the HUD, HUD Widgets draws nothing and the status line says so. It comes back by itself when Redline lets go, and Redline hands the HUD back when the car is switched off.
 - **M cars:** the Efficient, Sport and Sport+ modes of M cars are not recognised yet, so the layout doesn't change with them. The last line of the Settings tab shows the value your car sends; please post it in an issue so it can be added.
 - **With Cluster Themes:** on cluster-render 0.5.1 and newer, a HUD layout and a cluster theme show at the same time. On older cluster-render they share one screen slot and take turns: pick a layout while a cluster theme is on and the page asks whether to turn the theme off, and it asks the same the other way round.
@@ -130,7 +88,7 @@ BMW keeps drawing its own HUD content over ours, bottom left: the speed and spee
 
 ## On the car
 
-Tested on a 2020 X3 M40i. It runs, the rpm is smooth at idle, the layouts are fitted to the window BMW's own height-adjust frame shows, and Redline and Warm-up were checked on the glass in Sport, next to BMW's own rev band. Still to be checked:
+Tested on a 2020 X3 M40i. It runs, the rpm is smooth at idle, the layouts are fitted to the window BMW's own height-adjust frame shows, and Redline was checked on the glass in Sport, next to BMW's own rev band. Still to be checked:
 
 - the other layouts on the glass: nothing cut off on the right, nothing under BMW's speed or sign;
 - a HUD layout and a cluster theme showing together (0.12.5);

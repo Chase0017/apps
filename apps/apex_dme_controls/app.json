@@ -2,12 +2,15 @@
  "id": "apex_dme_controls",
  "title": "Apex DME Controls",
  "description": "One GT3 page on the center screen: engine map switching (MHD or BM3), the exhaust valve (OEM, open, closed) and MHD's Max Cooling. Maps switch only with the car stopped and the engine running. No xDrive control",
- "version": "0.3.1",
+ "version": "0.4.0",
  "vendor": "custom",
  "loggingId": "OAD1",
  "iconGlyph": "DME",
  "shared": [
-  "gt3ui.js"
+  "gt3ui.js",
+  "sun.js",
+  "tz.js",
+  "night.js"
  ],
  "signals": {
   "de.bmw.infotainment.vehicle.CDS": {
@@ -90,20 +93,224 @@
      "Stage 1"
     ],
     [
+     "stage191",
+     "Stage 1 91"
+    ],
+    [
      "stage193",
      "Stage 1 93"
+    ],
+    [
+     "stage195",
+     "Stage 1 95"
     ],
     [
      "stage1e30",
      "Stage 1 E30"
     ],
     [
+     "stage1e40",
+     "Stage 1 E40"
+    ],
+    [
+     "stage1e50",
+     "Stage 1 E50"
+    ],
+    [
+     "stage1e85",
+     "Stage 1 E85"
+    ],
+    [
+     "stage1kill",
+     "Stage 1 Kill"
+    ],
+    [
+     "stage1quiet",
+     "Stage 1 Quiet"
+    ],
+    [
+     "stage1maxburble",
+     "Stage 1 Max Burble"
+    ],
+    [
+     "stage1pops",
+     "Stage 1 Pops"
+    ],
+    [
+     "stage1shotgun",
+     "Stage 1 Shotgun"
+    ],
+    [
+     "stage1valet",
+     "Stage 1 Valet"
+    ],
+    [
      "stage2",
      "Stage 2"
     ],
     [
+     "stage291",
+     "Stage 2 91"
+    ],
+    [
+     "stage293",
+     "Stage 2 93"
+    ],
+    [
+     "stage295",
+     "Stage 2 95"
+    ],
+    [
      "stage2e30",
      "Stage 2 E30"
+    ],
+    [
+     "stage2e40",
+     "Stage 2 E40"
+    ],
+    [
+     "stage2e50",
+     "Stage 2 E50"
+    ],
+    [
+     "stage2e85",
+     "Stage 2 E85"
+    ],
+    [
+     "stage2kill",
+     "Stage 2 Kill"
+    ],
+    [
+     "stage2quiet",
+     "Stage 2 Quiet"
+    ],
+    [
+     "stage2maxburble",
+     "Stage 2 Max Burble"
+    ],
+    [
+     "stage2pops",
+     "Stage 2 Pops"
+    ],
+    [
+     "stage2shotgun",
+     "Stage 2 Shotgun"
+    ],
+    [
+     "stage2valet",
+     "Stage 2 Valet"
+    ],
+    [
+     "stage3",
+     "Stage 3"
+    ],
+    [
+     "stage391",
+     "Stage 3 91"
+    ],
+    [
+     "stage393",
+     "Stage 3 93"
+    ],
+    [
+     "stage395",
+     "Stage 3 95"
+    ],
+    [
+     "stage3e30",
+     "Stage 3 E30"
+    ],
+    [
+     "stage3e40",
+     "Stage 3 E40"
+    ],
+    [
+     "stage3e50",
+     "Stage 3 E50"
+    ],
+    [
+     "stage3e85",
+     "Stage 3 E85"
+    ],
+    [
+     "stage3kill",
+     "Stage 3 Kill"
+    ],
+    [
+     "stage3quiet",
+     "Stage 3 Quiet"
+    ],
+    [
+     "stage3maxburble",
+     "Stage 3 Max Burble"
+    ],
+    [
+     "stage3pops",
+     "Stage 3 Pops"
+    ],
+    [
+     "stage3shotgun",
+     "Stage 3 Shotgun"
+    ],
+    [
+     "stage3valet",
+     "Stage 3 Valet"
+    ],
+    [
+     "custom",
+     "Custom"
+    ],
+    [
+     "custom91",
+     "Custom 91"
+    ],
+    [
+     "custom93",
+     "Custom 93"
+    ],
+    [
+     "custom95",
+     "Custom 95"
+    ],
+    [
+     "custome30",
+     "Custom E30"
+    ],
+    [
+     "custome40",
+     "Custom E40"
+    ],
+    [
+     "custome50",
+     "Custom E50"
+    ],
+    [
+     "custome85",
+     "Custom E85"
+    ],
+    [
+     "customkill",
+     "Custom Kill"
+    ],
+    [
+     "customquiet",
+     "Custom Quiet"
+    ],
+    [
+     "custommaxburble",
+     "Custom Max Burble"
+    ],
+    [
+     "custompops",
+     "Custom Pops"
+    ],
+    [
+     "customshotgun",
+     "Custom Shotgun"
+    ],
+    [
+     "customvalet",
+     "Custom Valet"
     ],
     [
      "track",
@@ -154,20 +361,224 @@
      "Stage 1"
     ],
     [
+     "stage191",
+     "Stage 1 91"
+    ],
+    [
      "stage193",
      "Stage 1 93"
+    ],
+    [
+     "stage195",
+     "Stage 1 95"
     ],
     [
      "stage1e30",
      "Stage 1 E30"
     ],
     [
+     "stage1e40",
+     "Stage 1 E40"
+    ],
+    [
+     "stage1e50",
+     "Stage 1 E50"
+    ],
+    [
+     "stage1e85",
+     "Stage 1 E85"
+    ],
+    [
+     "stage1kill",
+     "Stage 1 Kill"
+    ],
+    [
+     "stage1quiet",
+     "Stage 1 Quiet"
+    ],
+    [
+     "stage1maxburble",
+     "Stage 1 Max Burble"
+    ],
+    [
+     "stage1pops",
+     "Stage 1 Pops"
+    ],
+    [
+     "stage1shotgun",
+     "Stage 1 Shotgun"
+    ],
+    [
+     "stage1valet",
+     "Stage 1 Valet"
+    ],
+    [
      "stage2",
      "Stage 2"
     ],
     [
+     "stage291",
+     "Stage 2 91"
+    ],
+    [
+     "stage293",
+     "Stage 2 93"
+    ],
+    [
+     "stage295",
+     "Stage 2 95"
+    ],
+    [
      "stage2e30",
      "Stage 2 E30"
+    ],
+    [
+     "stage2e40",
+     "Stage 2 E40"
+    ],
+    [
+     "stage2e50",
+     "Stage 2 E50"
+    ],
+    [
+     "stage2e85",
+     "Stage 2 E85"
+    ],
+    [
+     "stage2kill",
+     "Stage 2 Kill"
+    ],
+    [
+     "stage2quiet",
+     "Stage 2 Quiet"
+    ],
+    [
+     "stage2maxburble",
+     "Stage 2 Max Burble"
+    ],
+    [
+     "stage2pops",
+     "Stage 2 Pops"
+    ],
+    [
+     "stage2shotgun",
+     "Stage 2 Shotgun"
+    ],
+    [
+     "stage2valet",
+     "Stage 2 Valet"
+    ],
+    [
+     "stage3",
+     "Stage 3"
+    ],
+    [
+     "stage391",
+     "Stage 3 91"
+    ],
+    [
+     "stage393",
+     "Stage 3 93"
+    ],
+    [
+     "stage395",
+     "Stage 3 95"
+    ],
+    [
+     "stage3e30",
+     "Stage 3 E30"
+    ],
+    [
+     "stage3e40",
+     "Stage 3 E40"
+    ],
+    [
+     "stage3e50",
+     "Stage 3 E50"
+    ],
+    [
+     "stage3e85",
+     "Stage 3 E85"
+    ],
+    [
+     "stage3kill",
+     "Stage 3 Kill"
+    ],
+    [
+     "stage3quiet",
+     "Stage 3 Quiet"
+    ],
+    [
+     "stage3maxburble",
+     "Stage 3 Max Burble"
+    ],
+    [
+     "stage3pops",
+     "Stage 3 Pops"
+    ],
+    [
+     "stage3shotgun",
+     "Stage 3 Shotgun"
+    ],
+    [
+     "stage3valet",
+     "Stage 3 Valet"
+    ],
+    [
+     "custom",
+     "Custom"
+    ],
+    [
+     "custom91",
+     "Custom 91"
+    ],
+    [
+     "custom93",
+     "Custom 93"
+    ],
+    [
+     "custom95",
+     "Custom 95"
+    ],
+    [
+     "custome30",
+     "Custom E30"
+    ],
+    [
+     "custome40",
+     "Custom E40"
+    ],
+    [
+     "custome50",
+     "Custom E50"
+    ],
+    [
+     "custome85",
+     "Custom E85"
+    ],
+    [
+     "customkill",
+     "Custom Kill"
+    ],
+    [
+     "customquiet",
+     "Custom Quiet"
+    ],
+    [
+     "custommaxburble",
+     "Custom Max Burble"
+    ],
+    [
+     "custompops",
+     "Custom Pops"
+    ],
+    [
+     "customshotgun",
+     "Custom Shotgun"
+    ],
+    [
+     "customvalet",
+     "Custom Valet"
     ],
     [
      "track",
@@ -218,20 +629,224 @@
      "Stage 1"
     ],
     [
+     "stage191",
+     "Stage 1 91"
+    ],
+    [
      "stage193",
      "Stage 1 93"
+    ],
+    [
+     "stage195",
+     "Stage 1 95"
     ],
     [
      "stage1e30",
      "Stage 1 E30"
     ],
     [
+     "stage1e40",
+     "Stage 1 E40"
+    ],
+    [
+     "stage1e50",
+     "Stage 1 E50"
+    ],
+    [
+     "stage1e85",
+     "Stage 1 E85"
+    ],
+    [
+     "stage1kill",
+     "Stage 1 Kill"
+    ],
+    [
+     "stage1quiet",
+     "Stage 1 Quiet"
+    ],
+    [
+     "stage1maxburble",
+     "Stage 1 Max Burble"
+    ],
+    [
+     "stage1pops",
+     "Stage 1 Pops"
+    ],
+    [
+     "stage1shotgun",
+     "Stage 1 Shotgun"
+    ],
+    [
+     "stage1valet",
+     "Stage 1 Valet"
+    ],
+    [
      "stage2",
      "Stage 2"
     ],
     [
+     "stage291",
+     "Stage 2 91"
+    ],
+    [
+     "stage293",
+     "Stage 2 93"
+    ],
+    [
+     "stage295",
+     "Stage 2 95"
+    ],
+    [
      "stage2e30",
      "Stage 2 E30"
+    ],
+    [
+     "stage2e40",
+     "Stage 2 E40"
+    ],
+    [
+     "stage2e50",
+     "Stage 2 E50"
+    ],
+    [
+     "stage2e85",
+     "Stage 2 E85"
+    ],
+    [
+     "stage2kill",
+     "Stage 2 Kill"
+    ],
+    [
+     "stage2quiet",
+     "Stage 2 Quiet"
+    ],
+    [
+     "stage2maxburble",
+     "Stage 2 Max Burble"
+    ],
+    [
+     "stage2pops",
+     "Stage 2 Pops"
+    ],
+    [
+     "stage2shotgun",
+     "Stage 2 Shotgun"
+    ],
+    [
+     "stage2valet",
+     "Stage 2 Valet"
+    ],
+    [
+     "stage3",
+     "Stage 3"
+    ],
+    [
+     "stage391",
+     "Stage 3 91"
+    ],
+    [
+     "stage393",
+     "Stage 3 93"
+    ],
+    [
+     "stage395",
+     "Stage 3 95"
+    ],
+    [
+     "stage3e30",
+     "Stage 3 E30"
+    ],
+    [
+     "stage3e40",
+     "Stage 3 E40"
+    ],
+    [
+     "stage3e50",
+     "Stage 3 E50"
+    ],
+    [
+     "stage3e85",
+     "Stage 3 E85"
+    ],
+    [
+     "stage3kill",
+     "Stage 3 Kill"
+    ],
+    [
+     "stage3quiet",
+     "Stage 3 Quiet"
+    ],
+    [
+     "stage3maxburble",
+     "Stage 3 Max Burble"
+    ],
+    [
+     "stage3pops",
+     "Stage 3 Pops"
+    ],
+    [
+     "stage3shotgun",
+     "Stage 3 Shotgun"
+    ],
+    [
+     "stage3valet",
+     "Stage 3 Valet"
+    ],
+    [
+     "custom",
+     "Custom"
+    ],
+    [
+     "custom91",
+     "Custom 91"
+    ],
+    [
+     "custom93",
+     "Custom 93"
+    ],
+    [
+     "custom95",
+     "Custom 95"
+    ],
+    [
+     "custome30",
+     "Custom E30"
+    ],
+    [
+     "custome40",
+     "Custom E40"
+    ],
+    [
+     "custome50",
+     "Custom E50"
+    ],
+    [
+     "custome85",
+     "Custom E85"
+    ],
+    [
+     "customkill",
+     "Custom Kill"
+    ],
+    [
+     "customquiet",
+     "Custom Quiet"
+    ],
+    [
+     "custommaxburble",
+     "Custom Max Burble"
+    ],
+    [
+     "custompops",
+     "Custom Pops"
+    ],
+    [
+     "customshotgun",
+     "Custom Shotgun"
+    ],
+    [
+     "customvalet",
+     "Custom Valet"
     ],
     [
      "track",
@@ -282,20 +897,224 @@
      "Stage 1"
     ],
     [
+     "stage191",
+     "Stage 1 91"
+    ],
+    [
      "stage193",
      "Stage 1 93"
+    ],
+    [
+     "stage195",
+     "Stage 1 95"
     ],
     [
      "stage1e30",
      "Stage 1 E30"
     ],
     [
+     "stage1e40",
+     "Stage 1 E40"
+    ],
+    [
+     "stage1e50",
+     "Stage 1 E50"
+    ],
+    [
+     "stage1e85",
+     "Stage 1 E85"
+    ],
+    [
+     "stage1kill",
+     "Stage 1 Kill"
+    ],
+    [
+     "stage1quiet",
+     "Stage 1 Quiet"
+    ],
+    [
+     "stage1maxburble",
+     "Stage 1 Max Burble"
+    ],
+    [
+     "stage1pops",
+     "Stage 1 Pops"
+    ],
+    [
+     "stage1shotgun",
+     "Stage 1 Shotgun"
+    ],
+    [
+     "stage1valet",
+     "Stage 1 Valet"
+    ],
+    [
      "stage2",
      "Stage 2"
     ],
     [
+     "stage291",
+     "Stage 2 91"
+    ],
+    [
+     "stage293",
+     "Stage 2 93"
+    ],
+    [
+     "stage295",
+     "Stage 2 95"
+    ],
+    [
      "stage2e30",
      "Stage 2 E30"
+    ],
+    [
+     "stage2e40",
+     "Stage 2 E40"
+    ],
+    [
+     "stage2e50",
+     "Stage 2 E50"
+    ],
+    [
+     "stage2e85",
+     "Stage 2 E85"
+    ],
+    [
+     "stage2kill",
+     "Stage 2 Kill"
+    ],
+    [
+     "stage2quiet",
+     "Stage 2 Quiet"
+    ],
+    [
+     "stage2maxburble",
+     "Stage 2 Max Burble"
+    ],
+    [
+     "stage2pops",
+     "Stage 2 Pops"
+    ],
+    [
+     "stage2shotgun",
+     "Stage 2 Shotgun"
+    ],
+    [
+     "stage2valet",
+     "Stage 2 Valet"
+    ],
+    [
+     "stage3",
+     "Stage 3"
+    ],
+    [
+     "stage391",
+     "Stage 3 91"
+    ],
+    [
+     "stage393",
+     "Stage 3 93"
+    ],
+    [
+     "stage395",
+     "Stage 3 95"
+    ],
+    [
+     "stage3e30",
+     "Stage 3 E30"
+    ],
+    [
+     "stage3e40",
+     "Stage 3 E40"
+    ],
+    [
+     "stage3e50",
+     "Stage 3 E50"
+    ],
+    [
+     "stage3e85",
+     "Stage 3 E85"
+    ],
+    [
+     "stage3kill",
+     "Stage 3 Kill"
+    ],
+    [
+     "stage3quiet",
+     "Stage 3 Quiet"
+    ],
+    [
+     "stage3maxburble",
+     "Stage 3 Max Burble"
+    ],
+    [
+     "stage3pops",
+     "Stage 3 Pops"
+    ],
+    [
+     "stage3shotgun",
+     "Stage 3 Shotgun"
+    ],
+    [
+     "stage3valet",
+     "Stage 3 Valet"
+    ],
+    [
+     "custom",
+     "Custom"
+    ],
+    [
+     "custom91",
+     "Custom 91"
+    ],
+    [
+     "custom93",
+     "Custom 93"
+    ],
+    [
+     "custom95",
+     "Custom 95"
+    ],
+    [
+     "custome30",
+     "Custom E30"
+    ],
+    [
+     "custome40",
+     "Custom E40"
+    ],
+    [
+     "custome50",
+     "Custom E50"
+    ],
+    [
+     "custome85",
+     "Custom E85"
+    ],
+    [
+     "customkill",
+     "Custom Kill"
+    ],
+    [
+     "customquiet",
+     "Custom Quiet"
+    ],
+    [
+     "custommaxburble",
+     "Custom Max Burble"
+    ],
+    [
+     "custompops",
+     "Custom Pops"
+    ],
+    [
+     "customshotgun",
+     "Custom Shotgun"
+    ],
+    [
+     "customvalet",
+     "Custom Valet"
     ],
     [
      "track",
@@ -496,7 +1315,125 @@
     [
      "green",
      "Green"
+    ],
+    [
+     "bronze",
+     "Bronze"
+    ],
+    [
+     "lilac",
+     "Lilac"
+    ],
+    [
+     "violet",
+     "Violet"
+    ],
+    [
+     "mint",
+     "Mint"
+    ],
+    [
+     "iceblue",
+     "Ice blue"
+    ],
+    [
+     "pink",
+     "Pink"
     ]
+   ]
+  },
+  {
+   "key": "pageDim",
+   "label": "Night dimming (this screen)",
+   "type": "choice",
+   "default": "auto",
+   "options": [
+    [
+     "auto",
+     "Auto (dimmer after sunset)"
+    ],
+    [
+     "on",
+     "On (always dimmer)"
+    ],
+    [
+     "off",
+     "Off"
+    ]
+   ]
+  },
+  {
+   "key": "timeZone",
+   "label": "Time zone (sunset)",
+   "type": "number",
+   "default": -9999,
+   "steps": [
+    -9999,
+    10001,
+    10002,
+    10003,
+    10004,
+    10005,
+    10006,
+    10007,
+    10008,
+    10009,
+    10011,
+    10012,
+    10013,
+    -720,
+    -690,
+    -660,
+    -630,
+    -600,
+    -570,
+    -540,
+    -510,
+    -480,
+    -450,
+    -420,
+    -390,
+    -360,
+    -330,
+    -300,
+    -270,
+    -240,
+    -210,
+    -180,
+    -150,
+    -120,
+    -90,
+    -60,
+    -30,
+    0,
+    30,
+    60,
+    90,
+    120,
+    150,
+    180,
+    210,
+    240,
+    270,
+    300,
+    330,
+    360,
+    390,
+    420,
+    450,
+    480,
+    510,
+    540,
+    570,
+    600,
+    630,
+    660,
+    690,
+    720,
+    750,
+    780,
+    810,
+    840
    ]
   }
  ],

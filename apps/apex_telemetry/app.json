@@ -2,14 +2,15 @@
   "id": "apex_telemetry",
   "title": "Apex Telemetry",
   "description": "A GT3 pit board on the center screen: tyre pressures and temperatures against the car's targets, boost against its target, fuel pressures, engine load, gearbox and outside temperatures, range and g-force",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "vendor": "custom",
   "loggingId": "OAT1",
   "iconGlyph": "TEL",
   "shared": [
     "gt3ui.js",
     "sun.js",
-    "tz.js"
+    "tz.js",
+    "night.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -659,6 +660,30 @@
         [
           "green",
           "Green"
+        ],
+        [
+          "bronze",
+          "Bronze"
+        ],
+        [
+          "lilac",
+          "Lilac"
+        ],
+        [
+          "violet",
+          "Violet"
+        ],
+        [
+          "mint",
+          "Mint"
+        ],
+        [
+          "iceblue",
+          "Ice blue"
+        ],
+        [
+          "pink",
+          "Pink"
         ]
       ]
     },
@@ -674,7 +699,7 @@
         ],
         [
           "on",
-          "Always dimmer"
+          "On (always dimmer)"
         ],
         [
           "off",

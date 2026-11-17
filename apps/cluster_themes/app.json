@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Apex Cluster",
   "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
-  "version": "0.38.1",
+  "version": "0.39.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -28,7 +28,8 @@
     "badges.js",
     "screen.js",
     "runs.js",
-    "tz.js"
+    "tz.js",
+    "night.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -315,7 +316,7 @@
     },
     {
       "key": "timeZone",
-      "label": "Time zone (clock)",
+      "label": "Time zone (clock, sunset)",
       "type": "number",
       "default": -9999,
       "steps": [
@@ -979,6 +980,50 @@
         [
           "green",
           "Green"
+        ],
+        [
+          "bronze",
+          "Bronze"
+        ],
+        [
+          "lilac",
+          "Lilac"
+        ],
+        [
+          "violet",
+          "Violet"
+        ],
+        [
+          "mint",
+          "Mint"
+        ],
+        [
+          "iceblue",
+          "Ice blue"
+        ],
+        [
+          "pink",
+          "Pink"
+        ]
+      ]
+    },
+    {
+      "key": "pageDim",
+      "label": "Night dimming (this screen)",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (dimmer after sunset)"
+        ],
+        [
+          "on",
+          "On (always dimmer)"
+        ],
+        [
+          "off",
+          "Off"
         ]
       ]
     }

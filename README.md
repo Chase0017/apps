@@ -31,20 +31,20 @@ Redraws the whole instrument cluster in a theme of your choice: a GT3 race dash,
 
 <img src="apps/idrive_hud_widgets/icon.png" width="72" align="left" alt="HUD Widgets icon">
 
-Puts your own readouts on the windshield HUD: gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures. Ten layouts, in Classic, M and Night colours (Cruise and Retro bring their own). [Read more](apps/idrive_hud_widgets/README.md)
+Puts your own readouts on the windshield HUD: gear, shift lights, boost, oil and coolant. Three layouts (Sport, Redline and Shift only), in Classic, M and Night colours. [Read more](apps/idrive_hud_widgets/README.md)
 
 <p align="center"><img src="docs/images/hud-redline.gif" width="600" alt="Redline layout on the HUD"></p>
 
 <table align="center">
   <tr>
-    <th align="center">Daily</th>
     <th align="center">Sport</th>
     <th align="center">Redline</th>
+    <th align="center">Shift only</th>
   </tr>
   <tr>
-    <td><img src="docs/images/hud-daily.png" width="300" alt="Daily layout"></td>
     <td><img src="docs/images/hud-sport.png" width="300" alt="Sport layout"></td>
     <td><img src="docs/images/hud-redline.png" width="300" alt="Redline layout at the shift point"></td>
+    <td><img src="docs/images/hud-shiftonly.png" width="300" alt="Shift only layout"></td>
   </tr>
 </table>
 

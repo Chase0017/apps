@@ -12,7 +12,7 @@
  *
  *   new Page(ctx, hud, {
  *       title, what: 'cluster' | 'HUD',
- *       look: { name: 'Themes', style: 'hero' | 'cards', tags: { gt3: 'race dash', ... } },
+ *       look: { name: 'Layouts', tags: { sport: 'rev bar', ... } },   // tags: else the settings list's descriptions
  *       tabs: ['look', 'readouts', 'units', 'shift', 'clock', 'system'],   // and 'position' (HUD)
  *       display: ['showBoost', 'tankLitres', ...],   // the System tab's Display rows, after the box colour
  *   }).start();
@@ -28,6 +28,7 @@ const sensors = require('./sensors');
 const visible = require('./visible');
 const badges = require('./badges');
 const tz = require('./tz');
+const night = require('./night');
 
 const W = 1600, H = 520;
 const A = G.withAlpha;
@@ -77,12 +78,13 @@ class Page {
         this.cat = sensors.CATS[0];      // Readouts: the sensor group shown
         this.series = null;              // Badge: the series shown (null: the picked model's)
         this.confirm = null;             // { title, lines, yes, run } while a question is open over the page
+        this.isNight = night.dimmer(ctx.settings, 'pageDim');   // night dimming of this page (System, Display)
     }
 
     start() {
         const ctx = this.ctx;
         this.loop = ctx.loop('MAIN', 10, () => this.render());
-        ctx.settings.onChange(() => this.kick());
+        ctx.settings.onChange(() => { this.isNight.reset(); this.kick(); });
         ctx.onLayout(() => this.kick());
         this.hud.onStatus(() => this.kick());
         this.render();
@@ -170,6 +172,7 @@ class Page {
         cv.target = target;
         if (this.picker) this.drawPicker(cv, bottom);
         if (this.confirm) this.drawConfirm(cv, bottom);
+        if (this.isNight()) cv.fillRect(0, 0, W, H, night.VEIL);
         return this.ctx.ui.image('MAIN_GFX', cv);
     }
     theme() { return this.ctx.theme(); }
@@ -197,68 +200,30 @@ class Page {
     }
 
     /* ---------- Themes / Layouts ---------- */
-    lookTab(cv, bottom) {
-        if (this.cfg.look.style === 'hero') this.lookHero(cv, bottom);
-        else this.lookCards(cv, bottom);
-    }
+    lookTab(cv, bottom) { this.lookCards(cv, bottom); }
 
-    /** Cluster: the theme showing now, the drive modes beside it; every theme below in two rows. */
-    lookHero(cv, bottom) {
-        const shown = this.shownName();
-        label(cv, CX, 70, 'Now showing');
-        const pw = 523, ph = 196, px = CX, py = 82;
-        this.picture(cv, shown, 'big', px, py, pw, ph);
-        // right: name, tag line, the drive modes side by side
-        const rx = px + pw + 28, rw = CR - rx;
-        cv.text(this.layoutName(shown), rx, py + 32, 34, '#ffffff', { font: 'bold', literal: true });
-        cv.text(this.yieldNote() || this.tag(shown), rx, py + 58, 17, this.yieldNote() ? '#e0a340' : C.dim, { literal: true });
-        const y = this.toggleRow(cv, rx, py + 72, rw, 'Change with the drive mode', 'byMode', 46);
-        if (this.get('byMode') === true) {
-            const now = MODE_KEY[this.hud.driveMode], cw = (rw - 24) / 3;
-            MODES.forEach((m, i) => this.modeCell(cv, rx + i * (cw + 12), y, cw, m[1] + (m[0] === now ? '  ·  now' : ''), m[0]));
-        } else this.pickRow(cv, rx, y, rw, 'Theme', 'hudLayout', (v) => this.layoutName(v), 52);
-        // the gallery, two rows: a tap shows that theme (in the drive mode the car is in, when it changes with it)
-        const looks = this.looks(), cols = Math.max(5, Math.ceil(looks.length / 2)), gap = 12, gy = py + ph + 16;
-        const gw = (CW - gap * (cols - 1)) / cols, gh = (bottom - gy - 4 - gap) / 2;
-        looks.forEach((v, i) => {
-            const x = CX + (i % cols) * (gw + gap), yy = gy + Math.floor(i / cols) * (gh + gap), sel = v === shown;
-            glass(cv, x, yy, gw, gh, sel);
-            const ih = Math.min(gh - 34, (gw - 16) * 0.375), iw = ih / 0.375;
-            this.picture(cv, v, 'small', x + (gw - iw) / 2, yy + 8, iw, ih);
-            const nw = cv.text(this.layoutName(v), x + 12, yy + gh - 10, 16, '#ffffff', { font: 'bold', literal: true });
-            if (nw + cv.textWidth(this.tag(v), 13, { literal: true }) + 36 < gw) cv.text(this.tag(v), x + gw - 12, yy + gh - 10, 13, C.dim, { align: 'right', literal: true });
-            cv.target(x, yy, gw, gh, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
-        });
-    }
-
-    /** A drive mode's theme as a small two-line cell (name over value), a tap opens the list. */
-    modeCell(cv, x, y, w, name, key) {
-        const h = 52;
-        glass(cv, x, y, w, h, false);
-        cv.text(name, x + 14, y + 20, 14, C.dim, { literal: true });
-        cv.text(this.layoutName(this.get(key)), x + 14, y + 42, 18, C.blueHi, { font: 'bold', literal: true });
-        chevron(cv, x + w - 18, y + h / 2, C.dim);
-        cv.target(x, y, w, h, () => { this.picker = { key, title: name, fmt: (v) => this.layoutName(v) }; this.kick(); }, 'set:' + key, 14);
-    }
-
-    /** HUD: a card per layout with its picture and the drive modes that show it, in two rows. */
+    /** Both apps (cluster and HUD, Nov 16 2026): a card per layout with its picture and the drive modes that show it. */
     lookCards(cv, bottom) {
         const shown = this.shownName();
         label(cv, CX, 70, this.yieldNote() || this.cfg.look.name + ' · tap a drive mode to give it that layout');
-        const looks = this.looks(), cols = Math.max(5, Math.ceil(looks.length / 2)), gap = 12, y0 = 84;
-        const cw = (CW - gap * (cols - 1)) / cols, ch = (bottom - y0 - 56 - 12 - gap) / 2;
+        // five layouts or fewer: one row of bigger cards; more: two rows
+        const looks = this.looks(), rows = looks.length > 5 ? 2 : 1, gap = 12, y0 = 84;
+        const cols = rows === 1 ? looks.length : Math.max(5, Math.ceil(looks.length / 2));
+        const cw = (CW - gap * (cols - 1)) / cols;
+        const ar = this.cfg.what === 'cluster' ? 0.375 : 0.624;   // the pictures' height : width (cluster 1920x720, HUD 1.6 : 1)
+        const ch = Math.min((bottom - y0 - 56 - 12 - gap * (rows - 1)) / rows, (cw - 20) * ar + 82);
         looks.forEach((v, i) => {
             const x = CX + (i % cols) * (cw + gap), y = y0 + Math.floor(i / cols) * (ch + gap), sel = v === shown;
             glass(cv, x, y, cw, ch, sel);
-            const ih = Math.min(ch - 82, (cw - 20) * 0.624), iw = ih / 0.624;
+            const ih = Math.min(ch - 82, (cw - 20) * ar), iw = ih / ar;
             this.picture(cv, v, 'big', x + (cw - iw) / 2, y + 10, iw, ih);
             const ty = y + 10 + ih + 22;
-            cv.text(v === 'off' ? 'Off' : this.layoutName(v), x + 12, ty, 17, '#ffffff', { font: 'bold', literal: true });
-            cv.text(this.tag(v), x + cw - 12, ty, 12, C.dim, { align: 'right', literal: true });
+            const nw = cv.text(this.layoutName(v), x + 12, ty, 17, '#ffffff', { font: 'bold', literal: true });
+            if (nw + cv.textWidth(this.tag(v), 12, { literal: true }) + 32 < cw) cv.text(this.tag(v), x + cw - 12, ty, 12, C.dim, { align: 'right', literal: true });
             if (v === 'off') {
-                // the off switch: BMW's own HUD in every drive mode
+                // the off switch: BMW's own in every drive mode
                 cv.target(x, y, cw, ch, () => { this.set('byMode', false); this.chooseLayout('hudLayout', 'off'); }, 'look:off', 16);
-                cv.text(sel ? 'HUD is off' : 'Tap to turn the HUD off', x + 12, ty + 30, 14, sel ? C.blueHi : C.dim, { literal: true });
+                cv.text(sel ? "BMW's own " + this.cfg.what + ' is showing' : "Tap for BMW's own " + this.cfg.what, x + 12, ty + 30, 14, sel ? C.blueHi : C.dim, { literal: true });
                 return;
             }
             cv.target(x, y, cw, ih + 20, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
@@ -269,7 +234,7 @@ class Page {
             });
         });
         // under the cards: switching with the drive mode, and what shows when it doesn't
-        const by = y0 + 2 * ch + gap + 12;
+        const by = y0 + rows * ch + gap * (rows - 1) + 12;
         const half = (CW - 20) / 2;
         this.toggleRow(cv, CX, by, half, 'Change with the drive mode', 'byMode', 50);
         this.pickRow(cv, CX + half + 20, by, half, this.get('byMode') ? 'Otherwise' : 'Layout', 'hudLayout', (v) => this.layoutName(v), 50);

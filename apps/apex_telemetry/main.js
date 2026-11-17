@@ -23,13 +23,11 @@ const gt3 = require('./gt3ui');
 const Telemetry = require('./telemetry');
 const D = require('./draw');
 const Setup = require('./setup');
-const sun = require('./sun');
-const tz = require('./tz');
+const night = require('./night');
 
 const W = 1600, H = 520;
-// night dimming ("nightDim"), as Apex Cluster's Night colours (shared/hud.js NIGHT_DIM 0.6): black at 40 % over the
-// whole screen, so everything drawn (board, settings page, the kit's header) is at 60 % brightness
-const NIGHT_VEIL = '#00000066';
+// night dimming ("nightDim", shared night.js): black at 40 % over the whole screen, so everything drawn (board,
+// settings page, the kit's header) is at 60 % brightness
 // the kit's chrome (header, bar, Settings sheet) in black and white, as Apex Cluster's page
 Object.assign(themes.THEMES.ice, { sel: '#ffffff', selText: '#0b0d10', bg: '#050607' });
 
@@ -51,19 +49,7 @@ mgu.run({
         const slots = () => [1, 2, 3, 4, 5].map((i) => { const v = settings.get('tBox' + i); return D.SLOTS[v] ? v : D.SLOT_DEFAULTS[i - 1]; });
         let mode = 'board', loop = null;
         const kick = () => { if (loop && loop.kick) loop.kick(); };
-        // after sunset: sun.js at the middle of the "timeZone" setting's zone (the head unit's clock is UTC and gives no
-        // zone), else the middle of the US; worked out once a minute
-        let nightAt = 0, nightNow = false;
-        const isNight = () => {
-            const v = settings.get('nightDim');
-            if (v === 'off') return false;
-            if (v === 'on') return true;
-            if (Date.now() - nightAt > 60000) {
-                const p = tz.place(Number(settings.get('timeZone'))) || tz.FALLBACK;
-                nightNow = sun.isNight(Date.now(), p.lat, p.lon); nightAt = Date.now();
-            }
-            return nightNow;
-        };
+        const isNight = night.dimmer(settings, 'nightDim');
         const setup = new Setup(ctx, tel, { kick, isNight, close: () => { mode = 'board'; kick(); }, openList: () => ctx.openSettingsList && ctx.openSettingsList() });
         loop = ctx.loop('MAIN', 5, () => {
             tel.wanted();
@@ -83,13 +69,13 @@ mgu.run({
                     target: (c, x, y, w, h) => { if (c.target) c.target(x, y, w, h, () => { tel.resetPeaks(); kick(); }, 'peaks', 5); },
                 });
             }
-            if (isNight()) cv.fillRect(0, 0, W, H, NIGHT_VEIL);
+            if (isNight()) cv.fillRect(0, 0, W, H, night.VEIL);
             return ctx.ui.image('MAIN_GFX', cv);
         });
         // the Settings tab opens our page (and closes it again); older kits without ownSettings keep their list
         const toggle = () => { mode = mode === 'setup' ? 'board' : 'setup'; kick(); return null; };
         if (ctx.ownSettings) ctx.ownSettings(toggle);
-        settings.onChange(() => { nightAt = 0; kick(); });
+        settings.onChange(() => { isNight.reset(); kick(); });
         log.info('Apex Telemetry started');
     },
 });

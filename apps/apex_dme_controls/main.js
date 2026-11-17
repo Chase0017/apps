@@ -22,6 +22,7 @@ const gt3 = require('./gt3ui');
 const { Control } = require('./control');
 const D = require('./draw');
 const Setup = require('./setup');
+const night = require('./night');
 
 const W = 1600, H = 520;
 Object.assign(themes.THEMES.ice, { sel: '#ffffff', selText: '#0b0d10', bg: '#050607' });
@@ -42,7 +43,8 @@ mgu.run({
         let mode = 'main', confirm = null, loop = null;
         const kick = () => { if (loop && loop.kick) loop.kick(); };
         ctl.onChange = kick;
-        const setup = new Setup(ctx, { kick, close: () => { mode = 'main'; kick(); }, openList: () => ctx.openSettingsList && ctx.openSettingsList() });
+        const isNight = night.dimmer(settings, 'pageDim');      // the whole screen to 60 % after sunset (System, Display)
+        const setup = new Setup(ctx, { kick, isNight, close: () => { mode = 'main'; kick(); }, openList: () => ctx.openSettingsList && ctx.openSettingsList() });
         const act = {
             map(n) {
                 if (settings.get('confirmMap') === false) { ctl.setMap(n); return; }
@@ -70,11 +72,12 @@ mgu.run({
                 }
             }
             G.frame(cv, ctx.theme(), [], -1, badges);
+            if (isNight()) cv.fillRect(0, 0, W, H, night.VEIL);
             return ctx.ui.image('MAIN_GFX', cv);
         });
         // the Settings tab opens our page (and closes it again)
         if (ctx.ownSettings) ctx.ownSettings(() => { mode = mode === 'settings' ? 'main' : 'settings'; confirm = null; kick(); return null; });
-        settings.onChange((k) => { if (k === 'tuner') ctl.tunerChanged(); kick(); });
+        settings.onChange((k) => { if (k === 'tuner') ctl.tunerChanged(); isNight.reset(); kick(); });
         ctl.start().catch((e) => log.error('DME link: ' + (e && e.stack || e)));
         log.info('Apex DME Controls started');
     },

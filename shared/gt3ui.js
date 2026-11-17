@@ -13,8 +13,11 @@ const FONT = { font: 'race', literal: true };
 const BOX = [
     ['white', '#ffffff', 'White'], ['silver', '#c9d3df', 'Silver'], ['yellow', '#ffd60a', 'Yellow'], ['orange', '#ff9f0a', 'Orange'],
     ['red', '#ff3b30', 'Red'], ['mblue', '#1c69d4', 'M blue'], ['green', '#3ddc84', 'Green'],
+    // BMW's ambient lighting colours (G-series iDrive 7 light designs; Chase, Nov 16 2026): solid, to match the cabin
+    ['bronze', '#d9955a', 'Bronze'], ['lilac', '#c4a3ff', 'Lilac'], ['violet', '#8a5cff', 'Violet'],
+    ['mint', '#5ff0c0', 'Mint'], ['iceblue', '#8fd8ff', 'Ice blue'], ['pink', '#ff7eb6', 'Pink'],
 ];
-const WHITE_INK = ['red', 'mblue'];
+const WHITE_INK = ['red', 'mblue', 'violet'];
 
 /** The page colours for a box colour: box (frames, header strips, selected), ink (text on them), and the fixed ones. */
 function palette(key) {
@@ -163,16 +166,16 @@ function chip(cv, P, x, y, text, on, run, key, size) {
     if (run) cv.target(x, y, w, h, run, key, 4);
     return w;
 }
-/** The box colour swatches, right edge at xr. */
+/** The box colour swatches, right edge at xr, in two rows (the first row the original seven, then the ambient ones). */
 function swatches(cv, P, xr, cy, cur, pick) {
-    const s = 34, g = 9;
-    let x = xr - BOX.length * (s + g) + g;
-    BOX.forEach((b) => {
-        if (b[0] === cur) cv.roundRect(x - 4, cy - s / 2 - 4, s + 8, s + 8, 6, '#ffffff');
-        cv.roundRect(x - 1, cy - s / 2 - 1, s + 2, s + 2, 5, '#000000');
-        cv.roundRect(x, cy - s / 2, s, s, 4, b[1]);
-        cv.target(x - 4, cy - s / 2 - 6, s + 8, s + 12, () => pick(b[0]), 'box:' + b[0], 4);
-        x += s + g;
+    const s = 24, g = 8, perRow = Math.ceil(BOX.length / 2);
+    const x0 = xr - perRow * (s + g) + g, y0 = cy - s - g / 2;
+    BOX.forEach((b, i) => {
+        const x = x0 + (i % perRow) * (s + g), y = y0 + Math.floor(i / perRow) * (s + g);
+        if (b[0] === cur) cv.roundRect(x - 3, y - 3, s + 6, s + 6, 5, '#ffffff');
+        cv.roundRect(x - 1, y - 1, s + 2, s + 2, 4, '#000000');
+        cv.roundRect(x, y, s, s, 3, b[1]);
+        cv.target(x - 4, y - 4, s + 8, s + 8, () => pick(b[0]), 'box:' + b[0], 2);
     });
 }
 /** A colour bar under a limit: grey, then yellow from yel, red from red (null: none), over lo..hi. */

@@ -1,8 +1,8 @@
 {
   "id": "idrive_hud_widgets",
   "title": "Apex HUD",
-  "description": "Gear, shift lights, boost, oil, coolant and intake temperatures, a G-meter and trip figures on the windshield HUD; Redline (shift lights and shift score) in Sport. Starts with the car.",
-  "version": "0.16.2",
+  "description": "Shift lights, gear, rev bar, boost, oil and coolant on the windshield HUD in three layouts: Sport, Redline (shift lights and shift score) and Shift only. Starts with the car.",
+  "version": "0.17.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -28,7 +28,8 @@
     "badges.js",
     "screen.js",
     "runs.js",
-    "tz.js"
+    "tz.js",
+    "night.js"
   ],
   "signals": {
     "de.bmw.infotainment.vehicle.CDS": {
@@ -85,16 +86,8 @@
       "key": "hudLayout",
       "label": "Layout (when not by drive mode)",
       "type": "choice",
-      "default": "daily",
+      "default": "sport",
       "options": [
-        [
-          "off",
-          "Off (BMW's own HUD)"
-        ],
-        [
-          "daily",
-          "Daily"
-        ],
         [
           "sport",
           "Sport"
@@ -104,32 +97,12 @@
           "Redline"
         ],
         [
-          "minimal",
-          "Minimal"
-        ],
-        [
           "shiftonly",
           "Shift only"
         ],
         [
-          "boost",
-          "Boost"
-        ],
-        [
-          "warmup",
-          "Warm-up"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "retro",
-          "Retro"
+          "off",
+          "Off (BMW's own HUD)"
         ],
         [
           "grid",
@@ -149,18 +122,10 @@
     },
     {
       "key": "inComfort",
-      "label": "In Comfort (Daily by default; BMW keeps its speed bottom-left)",
+      "label": "In Comfort (Sport by default; BMW keeps its speed bottom-left)",
       "type": "choice",
-      "default": "daily",
+      "default": "sport",
       "options": [
-        [
-          "off",
-          "Off (BMW's own HUD)"
-        ],
-        [
-          "daily",
-          "Daily"
-        ],
         [
           "sport",
           "Sport"
@@ -170,32 +135,12 @@
           "Redline"
         ],
         [
-          "minimal",
-          "Minimal"
-        ],
-        [
           "shiftonly",
           "Shift only"
         ],
         [
-          "boost",
-          "Boost"
-        ],
-        [
-          "warmup",
-          "Warm-up"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "retro",
-          "Retro"
+          "off",
+          "Off (BMW's own HUD)"
         ]
       ]
     },
@@ -206,14 +151,6 @@
       "default": "redline",
       "options": [
         [
-          "off",
-          "Off (BMW's own HUD)"
-        ],
-        [
-          "daily",
-          "Daily"
-        ],
-        [
           "sport",
           "Sport"
         ],
@@ -222,32 +159,12 @@
           "Redline"
         ],
         [
-          "minimal",
-          "Minimal"
-        ],
-        [
           "shiftonly",
           "Shift only"
         ],
         [
-          "boost",
-          "Boost"
-        ],
-        [
-          "warmup",
-          "Warm-up"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "retro",
-          "Retro"
+          "off",
+          "Off (BMW's own HUD)"
         ]
       ],
       "reset": 1
@@ -259,14 +176,6 @@
       "default": "off",
       "options": [
         [
-          "off",
-          "Off (BMW's own HUD)"
-        ],
-        [
-          "daily",
-          "Daily"
-        ],
-        [
           "sport",
           "Sport"
         ],
@@ -275,32 +184,12 @@
           "Redline"
         ],
         [
-          "minimal",
-          "Minimal"
-        ],
-        [
           "shiftonly",
           "Shift only"
         ],
         [
-          "boost",
-          "Boost"
-        ],
-        [
-          "warmup",
-          "Warm-up"
-        ],
-        [
-          "track",
-          "Track"
-        ],
-        [
-          "cruise",
-          "Cruise"
-        ],
-        [
-          "retro",
-          "Retro"
+          "off",
+          "Off (BMW's own HUD)"
         ]
       ]
     },
@@ -549,7 +438,7 @@
     },
     {
       "key": "timeZone",
-      "label": "Time zone (clock)",
+      "label": "Time zone (clock, sunset)",
       "type": "number",
       "default": -9999,
       "steps": [
@@ -748,12 +637,6 @@
       "default": true
     },
     {
-      "key": "showClock",
-      "label": "Show clock",
-      "type": "bool",
-      "default": true
-    },
-    {
       "key": "showOil",
       "label": "Show oil temperature",
       "type": "bool",
@@ -768,6 +651,12 @@
     {
       "key": "showBoost",
       "label": "Show boost (Sport layout)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "shiftGear",
+      "label": "Show gear (Shift only layout)",
       "type": "bool",
       "default": true
     },
@@ -824,70 +713,6 @@
       ]
     },
     {
-      "key": "gFlipLat",
-      "label": "G-meter: swap left / right",
-      "type": "bool",
-      "default": false
-    },
-    {
-      "key": "gFlipLong",
-      "label": "G-meter: brake on top",
-      "type": "bool",
-      "default": false
-    },
-    {
-      "key": "gRange",
-      "label": "G-meter range",
-      "type": "choice",
-      "default": 1.2,
-      "options": [
-        [
-          0.8,
-          "0.8 g"
-        ],
-        [
-          1.0,
-          "1.0 g"
-        ],
-        [
-          1.2,
-          "1.2 g"
-        ],
-        [
-          1.5,
-          "1.5 g"
-        ],
-        [
-          2.0,
-          "2.0 g"
-        ]
-      ]
-    },
-    {
-      "key": "gTrail",
-      "label": "G-meter trail",
-      "type": "choice",
-      "default": 2,
-      "options": [
-        [
-          0,
-          "Off"
-        ],
-        [
-          1,
-          "1 s"
-        ],
-        [
-          2,
-          "2 s"
-        ],
-        [
-          4,
-          "4 s"
-        ]
-      ]
-    },
-    {
       "key": "boxColour",
       "label": "Box colour",
       "type": "choice",
@@ -920,6 +745,50 @@
         [
           "green",
           "Green"
+        ],
+        [
+          "bronze",
+          "Bronze"
+        ],
+        [
+          "lilac",
+          "Lilac"
+        ],
+        [
+          "violet",
+          "Violet"
+        ],
+        [
+          "mint",
+          "Mint"
+        ],
+        [
+          "iceblue",
+          "Ice blue"
+        ],
+        [
+          "pink",
+          "Pink"
+        ]
+      ]
+    },
+    {
+      "key": "pageDim",
+      "label": "Night dimming (this screen)",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Auto (dimmer after sunset)"
+        ],
+        [
+          "on",
+          "On (always dimmer)"
+        ],
+        [
+          "off",
+          "Off"
         ]
       ]
     }
