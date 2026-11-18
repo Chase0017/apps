@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Apex Cluster",
   "description": "Redraws the instrument cluster as Apex, a GT3 race dash fitted round the 2022+ X3's driver camera: shift lights, gear, speed, rpm, boost, oil pressure, AFR, temperatures, drive mode and traction",
-  "version": "0.39.1",
+  "version": "0.40.0",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",
@@ -25,7 +25,6 @@
     "waze.js",
     "previews.js",
     "sensors.js",
-    "badges.js",
     "screen.js",
     "runs.js",
     "tz.js",
@@ -102,9 +101,9 @@
   "settings": [
     {
       "key": "hudLayout",
-      "label": "Theme (when not by drive mode)",
+      "label": "Theme (when not by drive mode) (unused: always BMW's own)",
       "type": "choice",
-      "default": "apex",
+      "default": "off",
       "options": [
         [
           "apex",
@@ -170,6 +169,72 @@
       "type": "choice",
       "default": "apex",
       "options": [
+        [
+          "apex",
+          "Apex (GT3 race dash)"
+        ],
+        [
+          "apexmap",
+          "Apex Map (GT3, BMW's map in the middle)"
+        ],
+        [
+          "stockplus",
+          "Stock+ (BMW's own with shift lights and temps)"
+        ],
+        [
+          "analog",
+          "Analog (central tachometer)"
+        ],
+        [
+          "off",
+          "Off (BMW's own cluster)"
+        ]
+      ],
+      "reset": 1
+    },
+    {
+      "key": "inSportPlus",
+      "label": "In Sport+",
+      "type": "choice",
+      "default": "same",
+      "options": [
+        [
+          "same",
+          "Same as Sport"
+        ],
+        [
+          "apex",
+          "Apex (GT3 race dash)"
+        ],
+        [
+          "apexmap",
+          "Apex Map (GT3, BMW's map in the middle)"
+        ],
+        [
+          "stockplus",
+          "Stock+ (BMW's own with shift lights and temps)"
+        ],
+        [
+          "analog",
+          "Analog (central tachometer)"
+        ],
+        [
+          "off",
+          "Off (BMW's own cluster)"
+        ]
+      ],
+      "reset": 1
+    },
+    {
+      "key": "inSportInd",
+      "label": "In Sport Individual",
+      "type": "choice",
+      "default": "same",
+      "options": [
+        [
+          "same",
+          "Same as Sport"
+        ],
         [
           "apex",
           "Apex (GT3 race dash)"
@@ -318,9 +383,8 @@
       "key": "timeZone",
       "label": "Time zone (clock, sunset)",
       "type": "number",
-      "default": -9999,
+      "default": 10004,
       "steps": [
-        -9999,
         10001,
         10002,
         10003,
@@ -387,30 +451,6 @@
         810,
         840
       ]
-    },
-    {
-      "key": "spGauge1",
-      "label": "Stock+ gauge 1 (left outer)",
-      "type": "bool",
-      "default": true
-    },
-    {
-      "key": "spGauge2",
-      "label": "Stock+ gauge 2 (left inner)",
-      "type": "bool",
-      "default": true
-    },
-    {
-      "key": "spGauge3",
-      "label": "Stock+ gauge 3 (right inner)",
-      "type": "bool",
-      "default": true
-    },
-    {
-      "key": "spGauge4",
-      "label": "Stock+ gauge 4 (right outer)",
-      "type": "bool",
-      "default": true
     },
     {
       "key": "tankLitres",
@@ -700,252 +740,6 @@
           "Off"
         ]
       ]
-    },
-    {
-      "key": "badge",
-      "label": "Badge",
-      "type": "choice",
-      "default": "none",
-      "options": [
-        [
-          "none",
-          "None"
-        ],
-        [
-          "128ti",
-          "128ti"
-        ],
-        [
-          "M135i",
-          "M135i"
-        ],
-        [
-          "228i",
-          "228i"
-        ],
-        [
-          "230i",
-          "230i"
-        ],
-        [
-          "M235i",
-          "M235i"
-        ],
-        [
-          "M240i",
-          "M240i"
-        ],
-        [
-          "320i",
-          "320i"
-        ],
-        [
-          "330i",
-          "330i"
-        ],
-        [
-          "330e",
-          "330e"
-        ],
-        [
-          "M340i",
-          "M340i"
-        ],
-        [
-          "430i",
-          "430i"
-        ],
-        [
-          "M440i",
-          "M440i"
-        ],
-        [
-          "i4 eDrive40",
-          "i4 eDrive40"
-        ],
-        [
-          "i4 M50",
-          "i4 M50"
-        ],
-        [
-          "530i",
-          "530i"
-        ],
-        [
-          "530e",
-          "530e"
-        ],
-        [
-          "540i",
-          "540i"
-        ],
-        [
-          "M550i",
-          "M550i"
-        ],
-        [
-          "i5 M60",
-          "i5 M60"
-        ],
-        [
-          "740i",
-          "740i"
-        ],
-        [
-          "760i",
-          "760i"
-        ],
-        [
-          "i7 M70",
-          "i7 M70"
-        ],
-        [
-          "840i",
-          "840i"
-        ],
-        [
-          "M850i",
-          "M850i"
-        ],
-        [
-          "X1 M35i",
-          "X1 M35i"
-        ],
-        [
-          "X2 M35i",
-          "X2 M35i"
-        ],
-        [
-          "X3 30i",
-          "X3 30i"
-        ],
-        [
-          "X3 M40i",
-          "X3 M40i"
-        ],
-        [
-          "X3 M50",
-          "X3 M50"
-        ],
-        [
-          "X4 M40i",
-          "X4 M40i"
-        ],
-        [
-          "X5 40i",
-          "X5 40i"
-        ],
-        [
-          "X5 M60i",
-          "X5 M60i"
-        ],
-        [
-          "X6 M60i",
-          "X6 M60i"
-        ],
-        [
-          "X7 M60i",
-          "X7 M60i"
-        ],
-        [
-          "XM",
-          "XM"
-        ],
-        [
-          "Z4 30i",
-          "Z4 30i"
-        ],
-        [
-          "Z4 M40i",
-          "Z4 M40i"
-        ],
-        [
-          "i4",
-          "i4"
-        ],
-        [
-          "i5",
-          "i5"
-        ],
-        [
-          "i7",
-          "i7"
-        ],
-        [
-          "iX",
-          "iX"
-        ],
-        [
-          "iX M60",
-          "iX M60"
-        ],
-        [
-          "M2",
-          "M2"
-        ],
-        [
-          "M3",
-          "M3"
-        ],
-        [
-          "M4",
-          "M4"
-        ],
-        [
-          "M5",
-          "M5"
-        ],
-        [
-          "M8",
-          "M8"
-        ],
-        [
-          "X3 M",
-          "X3 M"
-        ],
-        [
-          "X4 M",
-          "X4 M"
-        ],
-        [
-          "X5 M",
-          "X5 M"
-        ],
-        [
-          "X6 M",
-          "X6 M"
-        ],
-        [
-          "B3",
-          "B3"
-        ],
-        [
-          "B4",
-          "B4"
-        ],
-        [
-          "B5",
-          "B5"
-        ],
-        [
-          "B8",
-          "B8"
-        ],
-        [
-          "XB7",
-          "XB7"
-        ],
-        [
-          "XD3",
-          "XD3"
-        ]
-      ]
-    },
-    {
-      "key": "badgeBMW",
-      "label": "BMW lettering on the badge",
-      "type": "bool",
-      "default": true
     },
     {
       "key": "boxColour",

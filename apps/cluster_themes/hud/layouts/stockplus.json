@@ -3,92 +3,8 @@
   "name": "Stock+",
   "theme": "gt3",
   "shiftBlink": 200,
-  "slots": [
-    {
-      "id": "1",
-      "where": "left dial, outer",
-      "default": "fuel",
-      "toggle": "spGauge1"
-    },
-    {
-      "id": "2",
-      "where": "left dial, inner",
-      "default": "coolant",
-      "toggle": "spGauge2"
-    },
-    {
-      "id": "3",
-      "where": "right dial, inner",
-      "default": "oil",
-      "toggle": "spGauge3"
-    },
-    {
-      "id": "4",
-      "where": "right dial, outer",
-      "default": "boost",
-      "toggle": "spGauge4"
-    }
-  ],
-  "_about": "BMW's own cluster with a few additions on top (Chase, Nov 15 2026): no background, so BMW's gauges, map and lights all show. Shift lights: two banks of six (x 680-955 and 965-1240, y 174-218, about 41 px lights, ending clear of the inner gauges) under BMW's turn arrows and over the lower edge of BMW's model badge, the same for both placements (y 174 clears the camera and both cars' arrows), clear until lit (\"off\" 0, no backing); Row or Bar, Off as the setting says. Four round gauges (r 60, centre y 262, x 395 / 636 / 1282 / 1476, where Chase marked them on a photo of the stock cluster in COMFORT, Nov 15 2026: a black disc, an arc that follows its readout slot, the value in the middle, the name in the open bottom) inside BMW's two dials level with its model badge, above its digital speed and its gear: fuel %, coolant, oil and boost by default (slots 1-4), each switched on or off on its own (settings spGauge1-4, the Readouts tab's switches). The gear (P R N or the gear number, no box) just left of BMW's gear slot (x 1250-1400, y 402-472: under the line BMW draws below its drive mode name, which sits at y 351-381 in COMFORT): while any theme is up BMW leaves its own gear display black or empty, so Stock+ shows it. Placed off Chase's car photos of Nov 15 2026 (the last: panel x = 960 + (px - 1000) / 1.013, y = 322 + (py - 765) / 0.99, photo 2000 wide).",
+  "_about": "BMW's own cluster with a few additions on top (Chase, Nov 15 2026): no background, so BMW's gauges, map and lights all show. Shift lights: two banks of six (x 680-955 and 965-1240, y 174-218, about 41 px lights, ending clear of the inner gauges) under BMW's turn arrows and over the lower edge of BMW's model badge, the same for both placements (y 174 clears the camera and both cars' arrows), clear until lit (\"off\" 0, no backing); Row or Bar, Off as the setting says. Oil and coolant tags (Chase, Nov 18 2026; they replaced four round gauges): OIL and WATER stacked inside the top of BMW's own engine temperature gauge (the small arc right of the tachometer, x 1786-1876, y 436-495, above where its needle sits when warm), shown only while that reading is out of range: blue until up to temperature (oil 80 C, coolant 70 C), yellow over the caution (coolant: its setting; oil: 10 C under its warning), flashing red over the warning; hidden in between (text \"tempTag\"). The gear (P R N or the gear number, no box) just left of BMW's gear slot (x 1250-1400, y 402-472: under the line BMW draws below its drive mode name, which sits at y 351-381 in COMFORT): while any theme is up BMW leaves its own gear display black or empty, so Stock+ shows it. Placed off Chase's car photos of Nov 15 2026 (the last: panel x = 960 + (px - 1000) / 1.013, y = 322 + (py - 765) / 0.99, photo 2000 wide).",
   "widgets": [
-    {
-      "id": "frame",
-      "type": "boxes",
-      "class": "content",
-      "z": 1,
-      "x": 320,
-      "y": 202,
-      "w": 1240,
-      "h": 120,
-      "color": [
-        0,
-        0,
-        0,
-        0
-      ],
-      "boxes": [
-        {
-          "id": "g1_disc",
-          "x": 335,
-          "y": 202,
-          "w": 120,
-          "h": 120,
-          "head": 0,
-          "radius": 60,
-          "toggle": "spGauge1"
-        },
-        {
-          "id": "g2_disc",
-          "x": 576,
-          "y": 202,
-          "w": 120,
-          "h": 120,
-          "head": 0,
-          "radius": 60,
-          "toggle": "spGauge2"
-        },
-        {
-          "id": "g3_disc",
-          "x": 1222,
-          "y": 202,
-          "w": 120,
-          "h": 120,
-          "head": 0,
-          "radius": 60,
-          "toggle": "spGauge3"
-        },
-        {
-          "id": "g4_disc",
-          "x": 1416,
-          "y": 202,
-          "w": 120,
-          "h": 120,
-          "head": 0,
-          "radius": 60,
-          "toggle": "spGauge4"
-        }
-      ]
-    },
     {
       "id": "lights_l",
       "type": "lights",
@@ -158,202 +74,6 @@
       "join": true
     },
     {
-      "id": "g1",
-      "type": "arc",
-      "z": 2,
-      "x": 340,
-      "y": 207,
-      "w": 110,
-      "h": 110,
-      "slot": "1",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 6,
-      "color": "arc",
-      "start": 225,
-      "sweep": 270,
-      "toggle": "spGauge1"
-    },
-    {
-      "id": "g1_val",
-      "type": "text",
-      "z": 5,
-      "x": 347,
-      "y": 232,
-      "w": 96,
-      "h": 45,
-      "text": "{{slot:1}}{{slotSuffix:1}}",
-      "font": "small",
-      "align": "center",
-      "slot": "1",
-      "fit": [
-        "head"
-      ],
-      "toggle": "spGauge1"
-    },
-    {
-      "id": "g1_head",
-      "type": "text",
-      "z": 5,
-      "x": 351,
-      "y": 284,
-      "w": 88,
-      "h": 27,
-      "text": "{{slotHeadU:1}}",
-      "font": "head",
-      "color": "dim",
-      "align": "center",
-      "toggle": "spGauge1"
-    },
-    {
-      "id": "g2",
-      "type": "arc",
-      "z": 2,
-      "x": 581,
-      "y": 207,
-      "w": 110,
-      "h": 110,
-      "slot": "2",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 6,
-      "color": "arc",
-      "start": 225,
-      "sweep": 270,
-      "toggle": "spGauge2"
-    },
-    {
-      "id": "g2_val",
-      "type": "text",
-      "z": 5,
-      "x": 588,
-      "y": 232,
-      "w": 96,
-      "h": 45,
-      "text": "{{slot:2}}{{slotSuffix:2}}",
-      "font": "small",
-      "align": "center",
-      "slot": "2",
-      "fit": [
-        "head"
-      ],
-      "toggle": "spGauge2"
-    },
-    {
-      "id": "g2_head",
-      "type": "text",
-      "z": 5,
-      "x": 592,
-      "y": 284,
-      "w": 88,
-      "h": 27,
-      "text": "{{slotHeadU:2}}",
-      "font": "head",
-      "color": "dim",
-      "align": "center",
-      "toggle": "spGauge2"
-    },
-    {
-      "id": "g3",
-      "type": "arc",
-      "z": 2,
-      "x": 1227,
-      "y": 207,
-      "w": 110,
-      "h": 110,
-      "slot": "3",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 6,
-      "color": "arc",
-      "start": 225,
-      "sweep": 270,
-      "toggle": "spGauge3"
-    },
-    {
-      "id": "g3_val",
-      "type": "text",
-      "z": 5,
-      "x": 1234,
-      "y": 232,
-      "w": 96,
-      "h": 45,
-      "text": "{{slot:3}}{{slotSuffix:3}}",
-      "font": "small",
-      "align": "center",
-      "slot": "3",
-      "fit": [
-        "head"
-      ],
-      "toggle": "spGauge3"
-    },
-    {
-      "id": "g3_head",
-      "type": "text",
-      "z": 5,
-      "x": 1238,
-      "y": 284,
-      "w": 88,
-      "h": 27,
-      "text": "{{slotHeadU:3}}",
-      "font": "head",
-      "color": "dim",
-      "align": "center",
-      "toggle": "spGauge3"
-    },
-    {
-      "id": "g4",
-      "type": "arc",
-      "z": 2,
-      "x": 1421,
-      "y": 207,
-      "w": 110,
-      "h": 110,
-      "slot": "4",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 6,
-      "color": "arc",
-      "start": 225,
-      "sweep": 270,
-      "toggle": "spGauge4"
-    },
-    {
-      "id": "g4_val",
-      "type": "text",
-      "z": 5,
-      "x": 1428,
-      "y": 232,
-      "w": 96,
-      "h": 45,
-      "text": "{{slot:4}}{{slotSuffix:4}}",
-      "font": "small",
-      "align": "center",
-      "slot": "4",
-      "fit": [
-        "head"
-      ],
-      "toggle": "spGauge4"
-    },
-    {
-      "id": "g4_head",
-      "type": "text",
-      "z": 5,
-      "x": 1432,
-      "y": 284,
-      "w": 88,
-      "h": 27,
-      "text": "{{slotHeadU:4}}",
-      "font": "head",
-      "color": "dim",
-      "align": "center",
-      "toggle": "spGauge4"
-    },
-    {
       "id": "gear",
       "type": "text",
       "z": 5,
@@ -367,6 +87,30 @@
       "hotWhen": "now",
       "rate": 50,
       "offRed": true
+    },
+    {
+      "id": "oil_tag",
+      "type": "text",
+      "x": 1786,
+      "y": 436,
+      "w": 90,
+      "h": 27,
+      "font": "head",
+      "text": "OIL",
+      "align": "center",
+      "tempTag": "oil"
+    },
+    {
+      "id": "water_tag",
+      "type": "text",
+      "x": 1786,
+      "y": 468,
+      "w": 90,
+      "h": 27,
+      "font": "head",
+      "text": "WATER",
+      "align": "center",
+      "tempTag": "coolant"
     }
   ]
 }

@@ -6,7 +6,7 @@ windshield; this fork keeps one theme and fits it
 to the LCI cluster.
 
 Layouts: **Apex** (below), **Apex Map** (Apex with BMW's own map showing through a window in the middle) **Stock+**
-(BMW's own cluster with shift lights, fuel % and temperatures added) and **Analog** (a big central tachometer).
+(BMW's own cluster with shift lights, the gear and oil / coolant warm-up tags added) and **Analog** (a big central tachometer).
 Apex, Apex Map and Analog leave a small window over BMW's gear letter at the bottom right: covering it makes BMW draw
 a black box over its gear slot.
 
@@ -17,7 +17,7 @@ a black box over its gear slot.
   red together (the rev bar's lit part only, so the rpm still shows). Settings (Shift & alerts): **Placement** Camera (either side of the driver attention camera) / No camera
   (across the middle); **Type** Row (round lights) / Bar (slanted lights on a dark trapezoid, leaning out at the bottom, one piece in the middle, yellow until both ends
   meet at the shift point, then the colour pattern's red) / Off; **Colours** GT3, F1 (green, red, blue), all
-  red or all blue; **First light** 2,000 to 6,000 rpm (default 3,000).
+  red or all blue; **First light** 2,000 to 6,000 rpm (default 3,000): the first light comes on there, the last at the shift point.
 - **Held values:** a value the car stops sending stays on screen, dimmed, with a small amber dot after it (in the
   corner just above the digits where the box has no room) until the car answers again.
 - **Rev bar** across the top with its scale, under the camera and BMW's turn arrows.
@@ -41,18 +41,27 @@ bottom. `shared/visible.js` holds those areas and warns about any widget under o
 ## Apex Map
 
 - BMW's own map through a window in the middle, drawn by BMW with no lag, from just under the driver camera down to
-  the rev bar (x 740-1210, y 136-575). The window shows whatever BMW's cluster draws there.
+  the rev bar (x 737-1183, y 134-602, centred, with a thin frame open at the top so BMW's turn arrows stay clear).
+  The window shows whatever BMW's cluster draws there.
 - Left: speed, drive mode, fuel; the four tyres (pressure and temperature) and traction beside them, over BMW's
   digital speed. Right: a big gear over BMW's own gear display; boost, coolant, oil.
 - The rev bar runs along the bottom, between the side columns. Shift lights and settings as Apex.
+
+## Drive modes
+
+- **Change with the drive mode** (Layouts tab): a layout for Comfort, Sport, Sport+, Sport Individual and Eco Pro
+  each (Sport+ and Individual follow Sport until set). BMW's own cluster is one of the choices, so any mode can hand
+  the cluster back to BMW. Otherwise (the mode not known, or not following it) it is always BMW's own.
+- At a start nothing is drawn until the car reports its drive mode (up to 3 s), so the right layout comes up first.
 
 ## Stock+
 
 - BMW's own cluster left as it is, with a few additions on top (no background).
 - Big shift lights in two rows under BMW's turn arrows, clear until they light. Same Shift & alerts settings as Apex
   (Row, Bar or Off; the same spot with or without the camera).
-- Four round gauges in the top inside of BMW's dials, level with its model badge: fuel %, coolant, oil (degrees, blue until warm) and boost.
-  Each can show another sensor and has its own on / off switch (Readouts tab).
+- **OIL** and **WATER** tags inside the top of BMW's own temperature gauge (right of the tachometer), shown only
+  when something needs a look: blue until warm (oil 80 °C, coolant 70 °C), yellow over the caution (coolant: its
+  setting; oil: 10 °C under its warning), flashing red over the warning. Hidden in between.
 - The gear (no box) beside BMW's gear slot, under its drive mode name (BMW blanks its own while a theme is up).
 - Placed from photos of the stock cluster; BMW moves things in other drive modes.
 
@@ -81,7 +90,7 @@ Store that honours it).
 - `tools/layout-preview/`: serve the repo root and open `/tools/layout-preview/?layout=apex` for a browser preview
   with the app's real shaders and fonts, an rpm slider and the visibility check.
 - The center-screen page is GT3 like the dash (shared/gt3ui.js): tabs Layouts, Readouts, Units, Shift & alerts,
-  Badge & clock, System. **Box colour** (System tab) colours the page and the dash's boxes.
+  Clock, System. **Box colour** (System tab) colours the page and the dash's boxes.
 - `tools/settings-preview/`: the page as the car draws it, clickable, in a browser.
 
 Third-party parts are listed in `NOTICE`.

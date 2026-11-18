@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "Apex HUD",
   "description": "Shift lights, gear, rev bar, boost, oil and coolant on the windshield HUD in three layouts: Sport, Redline (shift lights and shift score) and Shift only. Starts with the car.",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",
@@ -25,7 +25,6 @@
     "previews.js",
     "sensors.js",
     "waze.js",
-    "badges.js",
     "screen.js",
     "runs.js",
     "tz.js",
@@ -84,9 +83,9 @@
   "settings": [
     {
       "key": "hudLayout",
-      "label": "Layout (when not by drive mode)",
+      "label": "Layout (when not by drive mode) (unused: always BMW's own)",
       "type": "choice",
-      "default": "sport",
+      "default": "off",
       "options": [
         [
           "sport",
@@ -150,6 +149,64 @@
       "type": "choice",
       "default": "redline",
       "options": [
+        [
+          "sport",
+          "Sport"
+        ],
+        [
+          "redline",
+          "Redline"
+        ],
+        [
+          "shiftonly",
+          "Shift only"
+        ],
+        [
+          "off",
+          "Off (BMW's own HUD)"
+        ]
+      ],
+      "reset": 1
+    },
+    {
+      "key": "inSportPlus",
+      "label": "In Sport+",
+      "type": "choice",
+      "default": "same",
+      "options": [
+        [
+          "same",
+          "Same as Sport"
+        ],
+        [
+          "sport",
+          "Sport"
+        ],
+        [
+          "redline",
+          "Redline"
+        ],
+        [
+          "shiftonly",
+          "Shift only"
+        ],
+        [
+          "off",
+          "Off (BMW's own HUD)"
+        ]
+      ],
+      "reset": 1
+    },
+    {
+      "key": "inSportInd",
+      "label": "In Sport Individual",
+      "type": "choice",
+      "default": "same",
+      "options": [
+        [
+          "same",
+          "Same as Sport"
+        ],
         [
           "sport",
           "Sport"
@@ -440,9 +497,8 @@
       "key": "timeZone",
       "label": "Time zone (clock, sunset)",
       "type": "number",
-      "default": -9999,
+      "default": 10004,
       "steps": [
-        -9999,
         10001,
         10002,
         10003,
@@ -628,6 +684,24 @@
         500,
         800,
         1000
+      ]
+    },
+    {
+      "key": "shiftFrom",
+      "label": "First shift light at",
+      "type": "number",
+      "unit": "rpm",
+      "default": 3000,
+      "steps": [
+        2000,
+        2500,
+        3000,
+        3500,
+        4000,
+        4500,
+        5000,
+        5500,
+        6000
       ]
     },
     {

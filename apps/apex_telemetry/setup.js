@@ -190,7 +190,7 @@ class Setup {
         cy = gt3.row(cv, P, x, y + 64, w, 64, 'Night dimming', this.opts.isNight && this.opts.isNight() ? 'Dimmed now' : 'Dimmer after sunset');
         gt3.seg(cv, P, x + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('nightDim') || 'auto', (v) => this.set('nightDim', v), 'nightDim');
         cy = gt3.row(cv, P, x, y + 128, w, 64, 'Time zone', 'Where sunset is worked out');
-        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('timeZone'), this.get('timeZone'), (v) => this.set('timeZone', v), (v) => (v === tz.AUTO ? 'Middle of US' : tz.name(v)), 200);
+        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('timeZone'), this.get('timeZone'), (v) => this.set('timeZone', v), (v) => tz.name(v), 200);
         gt3.note(cv, P, x + 4, 50 + 30 + 64 * 3 + 34, ['A value the car stops sending stays on the board, dimmed with an amber dot,',
             'held until the car answers again. One it never sent shows as a dash.']);
         const rx = x + w + 16, spec = this.ctx.spec, car = this.tel.car, live = !!(car.carPresent && car.carPresent());

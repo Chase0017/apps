@@ -1,12 +1,15 @@
 'use strict';
 /**
  * Time zones for the clock. The head unit's clock runs on UTC and no car signal gives the local zone (issues #6, #8),
- * so the "timeZone" setting picks one. Its value is minutes from UTC (a fixed offset), AUTO (the head unit's own),
+ * so the "timeZone" setting picks one. Its value is minutes from UTC (a fixed offset), AUTO (the old "Automatic",
+ * which only ever gave UTC; since Nov 18 2026 it reads as DEFAULT, Arizona: Chase's call until a car signal for the
+ * local time is found),
  * or a ZONES code (10000+): a named zone that follows its daylight saving rules by itself.
  * US rules: from the second Sunday of March, 2:00 local, to the first Sunday of November, 2:00 local (since 2007).
  * EU rules: from the last Sunday of March to the last Sunday of October, both at 1:00 UTC.
  */
 const AUTO = -9999;
+const DEFAULT = 10004;            // Arizona: the zone before one is picked (and a saved Automatic)
 
 // code: [name, standard offset in minutes, rule, [lat, lon] roughly the middle of the zone (for sunrise / sunset only;
 // a point inside the zone is close enough to dim the colours at about the right time, and names no one's town)]
@@ -30,7 +33,8 @@ const FALLBACK = { lat: 39.8, lon: -98.6 };
 /** Where to work out sunrise / sunset for a setting value: a zone's middle, or for a plain offset 15 degrees of
  *  longitude per hour at latitude 40; null for AUTO or anything unknown. */
 function place(v) {
-    if (typeof v !== 'number' || v === AUTO) return null;
+    if (v === AUTO) v = DEFAULT;
+    if (typeof v !== 'number') return null;
     const z = ZONES[v];
     if (z) return { lat: z[3][0], lon: z[3][1] };
     return v >= -720 && v <= 840 ? { lat: 40, lon: Math.max(-180, Math.min(180, v / 4)) } : null;
@@ -60,7 +64,8 @@ function dst(t, std, rule) {
 
 /** Minutes from UTC for a setting value at UTC ms `t` (default now); null for AUTO or anything unknown. */
 function offset(v, t) {
-    if (typeof v !== 'number' || v === AUTO) return null;
+    if (v === AUTO) v = DEFAULT;
+    if (typeof v !== 'number') return null;
     const z = ZONES[v];
     if (!z) return v >= -720 && v <= 840 ? v : null;
     t = t === undefined ? Date.now() : t;
@@ -69,11 +74,12 @@ function offset(v, t) {
 
 /** The setting value as the settings row shows it. */
 function name(v) {
-    if (v === AUTO || typeof v !== 'number') return 'Automatic';
+    if (v === AUTO) v = DEFAULT;
+    if (typeof v !== 'number') return ZONES[DEFAULT][0];
     if (ZONES[v]) return ZONES[v][0];
     if (v === 0) return 'UTC';
     const a = Math.abs(v), h = Math.floor(a / 60), m = a % 60;
     return 'UTC' + (v < 0 ? '-' : '+') + h + (m ? ':' + (m < 10 ? '0' : '') + m : '');
 }
 
-module.exports = { AUTO, ZONES, FALLBACK, offset, name, place, dst };
+module.exports = { AUTO, DEFAULT, ZONES, FALLBACK, offset, name, place, dst };

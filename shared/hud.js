@@ -62,7 +62,7 @@
  *             "holeRadius" px corners (28), so BMW's own cluster doesn't peek out at the window's corners.
  *             Opaque fill hides BMW's gauges under it.
  *   box       effect layer; a framed box: "fill" and "line" roles, "border" px, "radius" px, and a
- *             header strip "head" px tall in role "headColor" (its label is a text widget on top)
+ *             header strip "head" px tall in role "headColor" (its label is a text widget on top); "frameOnly": true draws only its border (a frame round the map window), "openTop": true without its top edge
  *   mdash     effect layer; the M theme's whole backdrop (shaders.js mdash): "card" [x, yBottom, rBottom, rTop] (the
  *             left card, traced off the M8 photo: outer edge x, bottom y, the big round at the bottom outer corner, the
  *             rounding where the top curve meets the outer edge; the right card is its mirror), "cardTop" [a, b, c] (the
@@ -167,7 +167,8 @@
  * Text "warnFlash": false: no flash over the warning limit (a tile that turns red itself). Coolant also has a yellow
  * caution level under the warning ("cautionCoolant"), steady in the "caution" role. Text "offRed": true: shift red
  * while the engine is off. An oil / coolant readout is blue until up to temp (oil 80 C, coolant 70 C; WARM_TEMP);
- * "coldBlue": false keeps its own colour.
+ * "coldBlue": false keeps its own colour. "tempTag": "oil" / "coolant": the text shows only while that reading is cold (blue),
+ * over its caution (yellow; oil: 10 C under its warning) or over its warning (flashing red); otherwise nothing.
  * Text "colorBy": "verdict" colours it by the last shift's grade. Text "near": ["speed" | "rpm", i] turns it
  * "nearColor" (fg) while scale label i is the one nearest the value (BMW lights up the label by the needle).
  *
@@ -192,7 +193,7 @@
  * {{cruise}} (CRUISE while cruise control is on, N/A while off: config.dme.cruise, DME 4A6A) {{intake}} (intake air, from the engine unit: app.json config.dme.intake) {{boostPeak}} (the highest boost since the last
  * 0-60 run started) {{avgSpeed}} (average moving speed this drive, from its first minute) {{run}} (the 0-60 clock running, else the last time, s) {{runBest}} {{runState}} (READY / GO / DONE)
  * {{runLabel}} (0-60 MPH, 0-100 KM/H): runs.js. {{warm}}: WARMING UP while the oil is under 80 C, then ENGINE WARM.
- * {{badge}}: the model picked on the Badge tab (badges.js), "BMW X3 M40i" with the lettering on, '' for none.
+ * (The {{badge}} model name went in Nov 2026.)
  * Warnings: a text showing oil, coolant or boost (a {{oil}} / {{coolant}} / {{boost}} token, or a readout slot with that
  * sensor) flashes in the shift red while the value is over "warnOil" / "warnCoolant" (C) / "warnBoost" (bar); 0 = off.
  * Shift-light test (testShift(), the page's Alerts tab): for about 4 s the rpm every widget sees climbs from 1500 to just
@@ -225,7 +226,6 @@ const calibration = require('./calibration');
 const Car = require('./kit/car');
 const Waze = require('./waze');
 const Screen = require('./screen');
-const badges = require('./badges');
 const Runs = require('./runs');
 const tz = require('./tz');
 // sharing the HUD with other kit apps (Redline, issue #4): kit/runtime/hud_claim.js, from cauliflowermossgrape's kit
@@ -247,6 +247,10 @@ const TICK_MS = 50;              // 20 Hz: shift bar and gauges
 const TEXT_MS = 200;             // text re-draws at most 5 times a second (what BMW's own readouts do)
 const TARGET_SIZES = { hud: [800, 480], panel: [1920, 720] };
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
+// a drive mode variation with its own layout setting (Chase, Nov 18 2026); its value "same" follows the base mode's.
+// An app without the setting (the HUD) follows the base mode.
+const VARIANT_KEY = { 'sport:plus': 'inSportPlus', 'sport:individual': 'inSportInd' };
+const MODE_WAIT_MS = 3000;       // at a start, how long to wait for the car's drive mode before drawing the plain layout
 const TYRE_CORNERS = ['FL', 'FR', 'RL', 'RR'];
 // the Roadster's speed dial: 0..160 mph or 0..240 km/h in 8 steps (labels {{dial:speed:<i>}})
 const DIAL_SPEED = { us: { max: 160, ticks: 8 }, metric: { max: 240, ticks: 8 } };
@@ -257,7 +261,7 @@ const PLACE_KEYS = ['hudX', 'hudY', 'hudScale', 'stripClear'];
 // cluster-render has no clip, so the switch squeezes every layer to 662 / 720 of its height about the panel's top.
 const STRIP_TOP = 662;
 // settings that only change what a text shows (the next tick paints it), no rebuild
-const LIVE_KEYS = ['shiftFrom', 'warnOil', 'warnCoolant', 'cautionCoolant', 'warnBoost', 'badge', 'badgeBMW', 'gFlipLat', 'gFlipLong', 'gRange', 'gTrail'];
+const LIVE_KEYS = ['shiftFrom', 'warnOil', 'warnCoolant', 'cautionCoolant', 'warnBoost', 'gFlipLat', 'gFlipLong', 'gRange', 'gTrail'];
 // g (after cauliflowermossgrape's G-Force, MIT, idea only): a sample over G_BAD is a bad reading, not a corner;
 // the rest are averaged over G_AVG_MS so kerbs and potholes don't throw the dot about
 const G_BAD = 3;
@@ -309,7 +313,7 @@ const HELD_DIM = 0.45, HELD_DOT = [255, 176, 0, 255];
 const STALE_TOKENS = { cruise: 'cruise', intake: 'intake', afr: 'afr', timing: 'timing', oilP: 'oilP', speed: 'speed', oil: 'oil', coolant: 'coolant', boost: 'boost',
     range: 'range', torque: 'torque', hvSoc: 'hvSoc', fuelPct: 'fuel', ambientN: 'ambient', torquePct: 'torquePct', powerPct: 'powerPct',
     gLat: 'gLat', gLong: 'gLong', gSide: 'gLat', gFwd: 'gLong', rpm: 'rpm', rpm10: 'rpm', ambient: 'ambient', power: 'torque' };
-const TZ_AUTO = -9999;           // the "timeZone" setting's Automatic: the head unit's own time zone
+const TZ_AUTO = -9999;           // the "timeZone" setting's old Automatic: tz.js reads it as its DEFAULT (Arizona)
 // A plug-in hybrid's high-voltage battery charge: read-only UDS 22 DDBC from its battery unit (SME, 0x07), 0.1 %.
 // The read Redline 2.0 and eDrive use (cauliflowermossgrape/idrive7-apps, MIT; apps/redline/electrical.js).
 // Asked every HV_EVERY_MS only while a shown readout uses it; a car that doesn't answer is asked once a minute.
@@ -355,6 +359,14 @@ const SETUP = {
     individual: { engine: 'INDIVIDUAL', chassis: 'INDIVIDUAL', steering: 'INDIVIDUAL', gearbox: 'INDIVIDUAL' },
 };
 const SETUP_LEVEL = { EFFICIENT: 1, COMFORT: 1, SPORT: 2, 'SPORT PLUS': 3, INDIVIDUAL: 0 };
+
+/** How many of n shift lights are lit: the first comes on at "from" rpm exactly, the last at the shift point, evenly
+ *  between (Nov 18 2026: they used to round down, so the first one came on a whole step above "from"). */
+function litLights(rpm, from, at, n) {
+    if (!(rpm >= from)) return 0;
+    if (rpm >= at || n <= 1) return n;
+    return Math.min(n, 1 + Math.floor((rpm - from) / (at - from) * (n - 1)));
+}
 
 function driveModeOf(raw) {
     let v = raw;
@@ -477,6 +489,10 @@ class HudApp {
         this.slotsFile = path.join(ctx.dataDir || '.', 'slots.json');
         this.slotPicks = {};             // { layout: { slot id: sensor id } }: the readout slots' picks (page.js Readouts)
         try { this.slotPicks = JSON.parse(fs.readFileSync(this.slotsFile, 'utf8')) || {}; } catch (e) { /* none yet */ }
+        // following the drive mode: nothing is drawn until the car says its mode (up to MODE_WAIT_MS), so a start
+        // doesn't show the plain layout for a moment first (Chase, Nov 18 2026: it flashed Apex at every start)
+        this.bornAt = Date.now();
+        setTimeout(() => { if (!this.driveMode) this._rebuild(); }, MODE_WAIT_MS + 50);
         this.layoutSlots = [];           // the active layout's "slots"
         this.shiftBlinkMs = 0;           // the active layout's "shiftBlink" (ms per half flash at the shift point; 0 = solid)
         this.placed = [];                // every layer made for the layout: { c, ref, x, y, w, h } (where the layout puts it)
@@ -501,7 +517,7 @@ class HudApp {
         this.layouts.onChange(() => this._rebuild());
         ctx.settings.onChange((key) => {
             // a theme or layout picked anywhere (the page asks first, the kit's All settings list doesn't): no longer stepping aside
-            if (['hudLayout', 'inComfort', 'inSport', 'inEco', 'byMode'].indexOf(key) >= 0 && this.screen.yielded) this.screen.release();
+            if (['hudLayout', 'inComfort', 'inSport', 'inSportPlus', 'inSportInd', 'inEco', 'byMode'].indexOf(key) >= 0 && this.screen.yielded) this.screen.release();
             if (PLACE_KEYS.indexOf(key) >= 0) this._guard('place', () => this._place());
             else if (LIVE_KEYS.indexOf(key) >= 0) this.widgets.forEach((x) => { x.last = null; });
             else if (key !== 'demo') this._rebuild(); else this._status();
@@ -977,11 +993,23 @@ class HudApp {
     }
     /** The layout the driver picked for now, before anything that makes us step aside. */
     _chosenName() {
-        if (this.setting('byMode') === true && this.driveMode && MODE_KEY[this.driveMode]) {
-            const v = this._pick(MODE_KEY[this.driveMode]);
+        if (this.setting('byMode') === true && !this.driveMode && Date.now() - this.bornAt < MODE_WAIT_MS) return 'off';
+        const k = this._modeKey(false);
+        if (k) {
+            const v = this._pick(k);
             if (v) return v;
         }
-        return this._pick('hudLayout');
+        // not following the drive mode, or the car hasn't said it: BMW's own (Chase, Nov 18 2026: "Otherwise" locked to Off)
+        return 'off';
+    }
+    /** The setting that picks the layout in the drive mode now (null: not by drive mode, or the mode not known yet).
+     *  own: the variation's own setting even while it is "same" (where the Layouts page puts a tap). */
+    _modeKey(own) {
+        if (this.setting('byMode') !== true || !this.driveMode || !MODE_KEY[this.driveMode]) return null;
+        const vk = VARIANT_KEY[this.driveMode + ':' + this.driveVariant];
+        const it = vk && this.ctx.settings.item ? this.ctx.settings.item(vk) : null;
+        if (it && (own || (this._pick(vk) && this._pick(vk) !== 'same'))) return vk;
+        return MODE_KEY[this.driveMode];
     }
     /** A layout setting's value, or its default when the saved one isn't among its options any more (a theme that
      *  was removed, e.g. the X3 M one, Nov 12 2026): BMW's own for a drive mode, the default theme otherwise. */
@@ -1171,6 +1199,7 @@ class HudApp {
     _warning(w) { return this._overLimit(this._sensorOf(w)); }
     /** Which of oil / coolant / boost a text shows ({{oil}} ..., or a readout slot), else null. */
     _sensorOf(w) {
+        if (w.tempTag) return w.tempTag;
         const t = String(w.text || '');
         if (t.indexOf('{{slot:') >= 0 && w.slot) return (this.slotSensor(this.activeName, w.slot, this.layoutSlots) || {}).id;
         if (t.indexOf('{{oil}}') >= 0) return 'oil';
@@ -1181,8 +1210,9 @@ class HudApp {
     /** Over its caution level ("cautionCoolant" C; 0 = off) but not its warning limit: shown yellow, steady. */
     _caution(w) {
         const id = this._sensorOf(w);
-        if (!CAUTION[id]) return false;
-        const lim = this.setting(CAUTION[id]), v = this._raw(id);
+        // oil has no caution setting: yellow from 10 C under its warning limit (Nov 18 2026, Stock+'s temp tags)
+        const warnOil = this.setting('warnOil');
+        const lim = id === 'oil' ? (isNum(warnOil) && warnOil > 0 ? warnOil - 10 : 0) : CAUTION[id] ? this.setting(CAUTION[id]) : 0, v = this._raw(id);
         return isNum(lim) && lim > 0 && isNum(v) && v > lim;
     }
     /** An oil / coolant readout under its warm-up temperature (WARM_TEMP C): shown blue until the engine is up to temp. */
@@ -1238,6 +1268,12 @@ class HudApp {
     _barMax(w) { return Math.ceil(this.setting('redline') / 1000) * 1000 + ((w && w.over) || 0); }
 
     /** The shift point now ({ rpm, cold }) and whether the rpm is at or past it. */
+    /** The rpm the first shift light comes on at: the "shiftFrom" setting (else the layout's "from", else 3000); a start
+     *  at or past the shift point means the last 500 rpm. */
+    _lightsFrom(w, sp) {
+        const own = this.setting('shiftFrom'), from = isNum(own) ? own : isNum(w.from) ? w.from : 3000;
+        return from < sp.rpm ? from : sp.rpm - 500;
+    }
     _shift() {
         const d = this.car.data();
         const sp = this.score.shiftPoint(d.oil);
@@ -1515,7 +1551,6 @@ class HudApp {
             case 'runState': return this.runs.word();
             case 'runLabel': return sp ? '0-60 MPH' : '0-100 KM/H';
             case 'warm': { const o = this._raw('oil'); return isNum(o) ? (o < 80 ? 'WARMING UP' : 'ENGINE WARM') : ''; }
-            case 'badge': return badges.text(this.setting('badge'), this.setting('badgeBMW') === true);
             case 'speed': { const v = this._raw('speed'); return fix(isNum(v) ? (sp ? v * 0.621371 : v) : v, 0); }
             case 'u:speed': return sp ? 'MPH' : 'KM/H';
             case 'oil': case 'coolant': { const v = this._raw(tok); return fix(isNum(v) ? (tf ? v * 9 / 5 + 32 : v) : v, 0); }
@@ -1641,7 +1676,7 @@ class HudApp {
         const c = this.config.location;
         if (c && isNum(c.lat) && isNum(c.lon)) return [c.lat, c.lon];
         const setting = this.ctx.settings.item('timeZone') ? this.setting('timeZone') : TZ_AUTO;
-        const p = tz.place(isNum(setting) && setting !== TZ_AUTO ? setting : this.config.utcOffsetMinutes);
+        const p = tz.place(isNum(setting) ? setting : this.config.utcOffsetMinutes);
         return p ? [p.lat, p.lon] : [tz.FALLBACK.lat, tz.FALLBACK.lon];
     }
 
@@ -2080,7 +2115,7 @@ class HudApp {
             for (let i = 0; i < 12; i++) {
                 const b = list[i];
                 rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
-                styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.headColor === 'accent' ? 1 : 0);
+                styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.frameOnly ? (b.openTop ? 3 : 2) : b && b.headColor === 'accent' ? 1 : 0);
             }
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_bg', rgba(color(t, w.color || 'bg')));
@@ -2198,7 +2233,7 @@ class HudApp {
         } else if (w.type === 'text') {
             if (!force && now - x.lastPaint < (w.rate || TEXT_MS)) return;
             this._heldHit = false;
-            const s = this._resolve(w.text), held = this._heldHit;
+            let s = this._resolve(w.text), held = this._heldHit;
             this._heldHit = false;
             let role = w.color || 'fg';
             if (w.colorBy === 'verdict' && this.score.last) role = VERDICT[this.score.last.verdict] || role;
@@ -2219,6 +2254,10 @@ class HudApp {
             else if (w.warnFlash !== false && this._caution(w)) role = 'caution';
             // "offRed": true shows it in the shift red while the engine is off (the gear and rpm on Apex)
             if (w.offRed && this._engineOff()) role = 'hot';
+            // "tempTag": "oil" / "coolant": shown only while that reading is out of its normal range (blue cold, yellow
+            // caution, red flashing over the warning limit), else nothing (Stock+, Nov 18 2026)
+            const tagOut = w.tempTag && !(role === VERDICT.COLD || role === 'caution' || role === 'hot');
+            if (tagOut) s = '';
             const key = s + '|' + role + '|' + held;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
@@ -2411,11 +2450,7 @@ class HudApp {
             x.c.uniform(x.ref, 'u_shiftNow', [sp.now ? 1 : 0]);
         } else if (w.type === 'lights') {
             const rpm = this._raw('rpm'), sp = this._shift(), n = w.count || 12;
-            // the lights fill from "from" rpm (3000; Apex Cluster's "shiftFrom" setting wins) up to the shift point;
-            // a start at or past it means the last 500 rpm
-            const own = this.setting('shiftFrom');
-            const from = Math.min(isNum(own) ? own : isNum(w.from) ? w.from : 3000, sp.rpm - 500);
-            const lit = isNum(rpm) ? Math.floor(Math.min(1, Math.max(0, (rpm - from) / (sp.rpm - from))) * n) : 0;
+            const lit = isNum(rpm) ? litLights(rpm, this._lightsFrom(w, sp), sp.rpm, n) : 0;
             // "blink": ms per half period (true = 100, 5 Hz; the tick is 50 ms); at the shift point the row flashes red
             const half = w.blink === true ? 100 : (isNum(w.blink) && w.blink > 0 ? w.blink : this.shiftBlinkMs);
             const strobe = this._shiftPhase(sp, now, half);

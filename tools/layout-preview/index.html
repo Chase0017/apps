@@ -177,13 +177,13 @@ async function draw() {
       const rects = [], styles = [];
       for (let i = 0; i < 12; i++) { const b = w.boxes[i];
         rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
-        styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.headColor === 'accent' ? 1 : 0); }
+        styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.frameOnly ? (b.openTop ? 3 : 2) : b && b.headColor === 'accent' ? 1 : 0); }
       effect(w, 'boxes', { u_size: [w.w, w.h], u_bg: rgba(Array.isArray(w.color) ? w.color : theme[w.color || 'bg']), u_hole: hole(w), u_holeR: [w.holeRadius >= 0 ? w.holeRadius : 28], u_hole2: w.hole2 ? [w.hole2[0] - w.x, w.hole2[1] - w.y, w.hole2[2], w.hole2[3]] : [0, 0, 0, 0], u_n: [Math.min(12, w.boxes.length)],
         u_box: rects, u_boxStyle: styles, u_fill: rgba(role(w.fill, 'panel')), u_line: rgba(role(w.line, 'line')), u_head: rgba(role(w.head, 'head')), u_accent: rgba(role(w.accent, 'accent')) });
     } else if (w.type === 'lights') {
       const n = w.count || 12, from = Math.min(Number($('from').value), SHIFT_AT - 500);
       const pat = { gt3: ['green', 'yellow', 'red', 'blue'], f1: ['green', 'red', 'red', 'blue'], red: ['red', 'red', 'red', 'red'], blue: ['blue', 'blue', 'blue', 'blue'] }[$('colours').value];
-      const lit = Math.floor(Math.min(1, Math.max(0, (st.rpm - from) / (SHIFT_AT - from))) * n);
+      const lit = st.rpm < from ? 0 : st.rpm >= SHIFT_AT ? n : Math.min(n, 1 + Math.floor((st.rpm - from) / (SHIFT_AT - from) * (n - 1)));   // as hud.js litLights
       const strobe = phase(w.blink === true ? 100 : (w.blink > 0 ? w.blink : lay));
       effect(w, 'lights', { u_size: [w.w, w.h], u_n: [n], u_tail: [w.tail || 0], u_round: [w.round ? 1 : 0], u_mirror: [w.mirror ? 1 : 0], u_rise: [w.rise > 0 ? Math.min(w.h - 4, w.rise) : 0],
         u_green: rgb(TH.LIGHTS[w.barFill || pat[0]]), u_yellow: rgb(TH.LIGHTS[w.barFill || pat[1]]), u_red: rgb(TH.LIGHTS[w.barFill || pat[2]]), u_blue: rgb(TH.LIGHTS[w.barFill || pat[3]]),
@@ -226,9 +226,11 @@ async function draw() {
         const left = Math.round(Math.max(0, Math.min(w.w - lw, i / (n - 1) * w.w - lw / 2)));
         text(w.x, w.y, w.w, w.h, s, f, (w.redFrom && i * 1000 >= REDLINE ? theme.hot : theme[w.color || 'dim']), 'left', left); }
     } else if (w.type === 'text') {
+      // "tempTag" as hud.js: only while out of range; this preview's only out-of-range state is Cold engine (blue)
+      if (w.tempTag && !$('cold').checked) continue;
       const s = token(w.text, st, layout.slots || []);
       const col = (w.hotWhen === 'now' && phase(lay) === 1) || (w.hotText && s === w.hotText) ? theme.hot
-        : underTemp(w, layout.slots || []) ? [61, 139, 255, 255] : (theme[w.color || 'fg'] || theme.fg);
+        : w.tempTag || underTemp(w, layout.slots || []) ? [61, 139, 255, 255] : (theme[w.color || 'fg'] || theme.fg);
       // "fit" as hud.js: a smaller font on the same baseline when the text is too wide or has a missing glyph
       let f = await font(w.font), dy = 0;
       const held = $('held').checked && /\{\{slot:/.test(w.text) && !/^-+$/.test(s);

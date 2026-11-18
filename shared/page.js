@@ -3,7 +3,7 @@
  * page.js - the app's own centre-screen page (Apex Cluster, Apex HUD), in place of BMW's plain settings list.
  * Look (chase0017-apps, Nov 13 2026, design/settings-v3/): GT3 like the dash, from shared/gt3ui.js: black, sections
  * framed in the box colour (setting "boxColour") with a header strip, Barlow Condensed caps, a rail of tabs on the
- * left (icon, name, current value). Tabs: Layouts, Readouts, Units, Shift & alerts, Badge & clock (cluster),
+ * left (icon, name, current value). Tabs: Layouts, Readouts, Units, Shift & alerts, Clock (cluster),
  * Position & colours (HUD), System.
  *
  * Drawn on the kit's canvas screen (kit/runtime/display.js): on the Store's renderer it fills the screen at
@@ -26,7 +26,6 @@ const themes = require('./kit/themes');
 const previews = require('./previews');
 const sensors = require('./sensors');
 const visible = require('./visible');
-const badges = require('./badges');
 const tz = require('./tz');
 const night = require('./night');
 
@@ -40,7 +39,7 @@ const C = {
 };
 const RAIL = { x: 16, y: 50, w: 252 };
 const CX = 288, CR = 1584, CW = CR - CX;
-const MODES = [['inComfort', 'Comfort'], ['inSport', 'Sport'], ['inEco', 'Eco Pro']];
+const MODES = [['inComfort', 'Comfort'], ['inSport', 'Sport'], ['inSportPlus', 'Sport+', 'inSport'], ['inSportInd', 'Individual', 'inSport'], ['inEco', 'Eco Pro']];
 const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 const TAB = {
     look: { icon: 'screen' },
@@ -48,7 +47,7 @@ const TAB = {
     position: { name: 'Position & colours', icon: 'move' },
     units: { name: 'Units', icon: 'units' },
     shift: { name: 'Shift & alerts', icon: 'alert' },
-    clock: { name: 'Badge & clock', icon: 'clock' },
+    clock: { name: 'Clock', icon: 'clock' },
     system: { name: 'System', icon: 'cog' },
 };
 // the Test row's six dots per shift light colour pattern (setting "shiftColours"; hud.js SHIFT_PATTERNS draws the lights)
@@ -76,7 +75,6 @@ class Page {
         this.slotLayout = null;          // Readouts: the layout whose slots are edited (null: the one showing)
         this.slot = null;                // Readouts: the slot picked (its id)
         this.cat = sensors.CATS[0];      // Readouts: the sensor group shown
-        this.series = null;              // Badge: the series shown (null: the picked model's)
         this.confirm = null;             // { title, lines, yes, run } while a question is open over the page
         this.isNight = night.dimmer(ctx.settings, 'pageDim');   // night dimming of this page (System, Display)
     }
@@ -146,9 +144,19 @@ class Page {
 
     /** the key a tap on a theme sets: the drive mode's own while it changes with the drive mode */
     lookKey() {
+        if (this.hud._modeKey) return this.hud._modeKey(true) || 'hudLayout';
         const m = this.hud.driveMode;
         return this.get('byMode') === true && MODE_KEY[m] ? MODE_KEY[m] : 'hudLayout';
     }
+    /** A tap on a layout's card: that layout in the drive mode now (switching drive-mode layouts on if they were off;
+     *  Comfort's when the car hasn't said its mode yet). */
+    pickCard(v) {
+        if (this.get('byMode') !== true) this.set('byMode', true);
+        const k = (this.hud._modeKey && this.hud._modeKey(true)) || MODE_KEY[this.hud.driveMode] || 'inComfort';
+        this.chooseLayout(k, v);
+    }
+    /** the drive modes this app has a layout setting for (the variations only where the app has them: the cluster) */
+    modes() { return MODES.filter((m) => this.item(m[0])); }
 
     /* ---------- drawing ---------- */
     render() {
@@ -194,7 +202,7 @@ class Page {
             const n = WARN_KEYS.filter((k) => this.item(k) && this.get(k) > 0).length;
             return fmtInt(this.get('redline') - (this.get('shiftBefore') || 0)) + ' rpm · ' + n + ' warning' + (n === 1 ? '' : 's');
         }
-        if (id === 'clock') return (badges.text(this.get('badge'), false) || 'no badge') + ' · ' + (this.get('clock') === '24h' ? '24-hour' : '12-hour');
+        if (id === 'clock') return (this.get('clock') === '24h' ? '24-hour' : '12-hour');
         if (id === 'system') return 'v' + this.ctx.spec.version + ' · ' + this.P.name.toLowerCase() + ' boxes';
         return '';
     }
@@ -211,33 +219,38 @@ class Page {
         const cols = rows === 1 ? looks.length : Math.max(5, Math.ceil(looks.length / 2));
         const cw = (CW - gap * (cols - 1)) / cols;
         const ar = this.cfg.what === 'cluster' ? 0.375 : 0.624;   // the pictures' height : width (cluster 1920x720, HUD 1.6 : 1)
-        const ch = Math.min((bottom - y0 - 56 - 12 - gap * (rows - 1)) / rows, (cw - 20) * ar + 82);
+        // the drive mode chips under each card's name: a second row when they don't fit in one
+        const modes = this.modes(), chipW = (m) => cv.textWidth(m[1].toUpperCase(), 14, { font: 'race', literal: true }) + 16;
+        const chipRows = modes.reduce((a, m) => a + chipW(m) + 6, 0) - 6 > cw - 24 ? 2 : 1, extra = 82 + (chipRows - 1) * 32;
+        const ch = Math.min((bottom - y0 - 56 - 12 - gap * (rows - 1)) / rows, (cw - 20) * ar + extra);
         looks.forEach((v, i) => {
             const x = CX + (i % cols) * (cw + gap), y = y0 + Math.floor(i / cols) * (ch + gap), sel = v === shown;
             glass(cv, x, y, cw, ch, sel);
-            const ih = Math.min(ch - 82, (cw - 20) * ar), iw = ih / ar;
+            const ih = Math.min(ch - extra, (cw - 20) * ar), iw = ih / ar;
             this.picture(cv, v, 'big', x + (cw - iw) / 2, y + 10, iw, ih);
             const ty = y + 10 + ih + 22;
             const nw = cv.text(this.layoutName(v), x + 12, ty, 17, '#ffffff', { font: 'bold', literal: true });
             if (nw + cv.textWidth(this.tag(v), 12, { literal: true }) + 32 < cw) cv.text(this.tag(v), x + cw - 12, ty, 12, C.dim, { align: 'right', literal: true });
-            if (v === 'off') {
-                // the off switch: BMW's own in every drive mode
-                cv.target(x, y, cw, ch, () => { this.set('byMode', false); this.chooseLayout('hudLayout', 'off'); }, 'look:off', 16);
-                cv.text(sel ? "BMW's own " + this.cfg.what + ' is showing' : "Tap for BMW's own " + this.cfg.what, x + 12, ty + 30, 14, sel ? C.blueHi : C.dim, { literal: true });
-                return;
-            }
-            cv.target(x, y, cw, ih + 20, () => this.chooseLayout(this.lookKey(), v), 'look:' + v, 16);
-            let cx = x + 12;
-            MODES.forEach((m) => {
-                const lit = this.get(m[0]) === v;
-                cx += miniChip(cv, cx, ty + 12, m[1], lit, () => this.chooseLayout(m[0], lit ? 'off' : v), 'mode:' + v + ':' + m[0]) + 6;
+            // BMW's own (Off) is a layout like the others (Chase, Nov 18 2026): a tap gives it to the drive mode now,
+            // a chip to that drive mode; "Change with the drive mode" off and Otherwise Off turn the app off everywhere
+            cv.target(x, y, cw, ih + 20, () => this.pickCard(v), 'look:' + v, 16);
+            let cx = x + 12, cy = ty + 12;
+            modes.forEach((m) => {
+                // a variation set to "same" shows its base mode's layout (lit with it); a tap there turns it off
+                const own = this.get(m[0]), same = m[2] && own === 'same', lit = (same ? this.get(m[2]) : own) === v;
+                if (cx + chipW(m) > x + cw - 12) { cx = x + 12; cy += 32; }
+                // a lit chip: a variation goes back to its base mode's; a base mode to BMW's own (already BMW's own: stays)
+                const next = !lit ? v : m[2] && !same ? 'same' : v === 'off' ? null : 'off';
+                cx += miniChip(cv, cx, cy, m[1], lit, next === null ? () => {} : () => this.chooseLayout(m[0], next), 'mode:' + v + ':' + m[0]) + 6;
             });
         });
         // under the cards: switching with the drive mode, and what shows when it doesn't
         const by = y0 + rows * ch + gap * (rows - 1) + 12;
         const half = (CW - 20) / 2;
         this.toggleRow(cv, CX, by, half, 'Change with the drive mode', 'byMode', 50);
-        this.pickRow(cv, CX + half + 20, by, half, this.get('byMode') ? 'Otherwise' : 'Layout', 'hudLayout', (v) => this.layoutName(v), 50);
+        // Otherwise (drive mode not known, or not following it) is always BMW's own (Chase, Nov 18 2026)
+        const ob = this.rowBox(cv, CX + half + 20, by, half, 'Otherwise', 50);
+        cv.text("BMW's own " + this.cfg.what, CX + half + 20 + half - 20, ob, 19, C.dim, { align: 'right', font: 'bold', literal: true });
     }
 
     /** the line under a layout's name: the app's own tag, else the settings list's description ("Off (BMW's own HUD)" -> "BMW's own HUD") */
@@ -376,40 +389,16 @@ class Page {
         }
     }
 
-    /* ---------- Badge & clock (cluster) ---------- */
-    /** The series as chips and that series' models on the left; the badge, the lettering, the clock and night colours right. */
+    /* ---------- Clock (cluster) ---------- */
+    /** The clock, its time zone and the night colours (the model badge went Nov 18 2026). */
     clockTab(cv, bottom) {
-        const P = this.P, model = this.get('badge'), lw = 640;
-        const series = this.series || badges.seriesOf(model) || 'X';
-        label(cv, CX, 70, 'Series');
-        let cx = CX;
-        badges.SERIES.forEach((s) => { cx += chip(cv, cx, 80, s[0], s[0] === series, () => { this.series = s[0]; this.kick(); }, 'series:' + s[0]) + 6; });
-        label(cv, CX, 144, 'Model');
-        const list = (badges.SERIES.find((s) => s[0] === series) || [null, []])[1];
-        const cw = (lw - 12) / 2, rh = Math.min(50, Math.floor((bottom - 156) / Math.ceil(list.length / 2)) - 6);
-        list.forEach((m, i) => {
-            const x = CX + (i % 2) * (cw + 12), y = 156 + Math.floor(i / 2) * (rh + 6), sel = m === model;
-            glass(cv, x, y, cw, rh, sel);
-            cv.text(m, x + 18, y + rh / 2 + 7, 19, sel ? '#ffffff' : C.text, { font: sel ? 'bold' : 'label', literal: true });
-            if (sel) check(cv, x + cw - 30, y + rh / 2, '#ffffff');
-            cv.target(x, y, cw, rh, () => this.set('badge', m), 'badge:' + m, 6);
-        });
-        // right: the badge as it shows, the lettering, none; then the clock
-        const rx = CX + lw + 16, rw = CR - rx, shown = badges.text(model, this.get('badgeBMW') === true);
-        let y = gt3.section(cv, P, rx, 50, rw, 30 + 64 + 56 + 56, 'Badge', 'top left of the cluster');
-        gt3.fit(cv, shown || 'NO BADGE', rx + rw / 2, y + 46, 40, rw - 40, shown ? P.text : P.dim, { align: 'center' });
-        y += 64;
-        let cy = gt3.row(cv, P, rx, y, rw, 56, 'BMW lettering');
-        gt3.toggle(cv, P, rx + rw - 14, cy, this.get('badgeBMW') === true, () => this.set('badgeBMW', this.get('badgeBMW') !== true), 'set:badgeBMW');
-        y += 56;
-        cy = gt3.row(cv, P, rx, y, rw, 56, 'No badge');
-        gt3.toggle(cv, P, rx + rw - 14, cy, model === 'none', () => this.set('badge', model === 'none' ? 'X3 M40i' : 'none'), 'badge:none');
-        y = 50 + 30 + 64 + 56 + 56 + 12;
+        const P = this.P, rx = CX, rw = 760;
+        let cy, y = 50;
         y = gt3.section(cv, P, rx, y, rw, 30 + 3 * 60, 'Clock and night');
         cy = gt3.row(cv, P, rx, y, rw, 60, 'Clock', null, true);
         gt3.seg(cv, P, rx + rw - 14, cy, [['12h', '12-hour'], ['24h', '24-hour']], this.get('clock'), (v) => this.set('clock', v), 'clock');
         y += 60;
-        cy = gt3.row(cv, P, rx, y, rw, 60, 'Time zone', 'Follows the car until set');
+        cy = gt3.row(cv, P, rx, y, rw, 60, 'Time zone', 'Clock and sunset; daylight saving by itself');
         gt3.button(cv, P, rx + rw - 14 - gt3.tw(cv, gt3.up(this.valueText('timeZone')), 19) - 36, cy - 19, this.valueText('timeZone'),
             () => { this.picker = { key: 'timeZone', title: 'Time zone', fmt: tzText }; this.kick(); }, 'set:timeZone', true);
         y += 60;
@@ -460,13 +449,13 @@ class Page {
         const P = this.P, w = (CW - 16) / 2, x = CX, us = (d) => this.hud.unitUs(d);
         const at = this.get('redline') - (this.get('shiftBefore') || 0);
         // Apex Cluster's own light settings (Nov 13 2026): placement, colours, start rpm; tighter rows to make room
-        const own = !!(this.item('shiftPlace') && this.item('shiftLights') && this.item('shiftColours') && this.item('shiftFrom'));
-        const rh = own ? 48 : 64, th = own ? 80 : 84, off = own && this.get('shiftLights') === 'off', bar = own && this.get('shiftLights') === 'bar';
-        let y = gt3.section(cv, P, x, 50, w, 30 + (own ? 7 : 3) * rh + th, 'Shift lights', off ? 'off' : fmtInt(at) + ' rpm');
+        const own = !!(this.item('shiftPlace') && this.item('shiftLights') && this.item('shiftColours')), from = !!this.item('shiftFrom');
+        const rh = own ? 48 : 58, th = own ? 80 : 84, off = own && this.get('shiftLights') === 'off', bar = own && this.get('shiftLights') === 'bar';
+        let y = gt3.section(cv, P, x, 50, w, 30 + (3 + (own ? 3 : 0) + (from ? 1 : 0)) * rh + th, 'Shift lights', off ? 'off' : fmtInt(at) + ' rpm');
         let cy = gt3.row(cv, P, x, y, w, rh, 'Redline', null, true);
         gt3.stepSetting(cv, P, x + w - 14, cy, this.item('redline'), this.get('redline'), (v) => this.set('redline', v), (v) => fmtInt(v) + ' rpm');
         y += rh;
-        cy = gt3.row(cv, P, x, y, w, rh, 'Shift point', 'Lights flash at ' + fmtInt(at) + ' rpm');
+        cy = gt3.row(cv, P, x, y, w, rh, 'Shift point', 'Lights flash at ' + fmtInt(at) + ' rpm' + (this.get('coldGuard') === true ? ', earlier with cold oil' : ''));
         gt3.stepSetting(cv, P, x + w - 14, cy, this.item('shiftBefore'), this.get('shiftBefore'), (v) => this.set('shiftBefore', v), (v) => (v ? fmtInt(v) + ' before' : 'At redline'));
         y += rh;
         if (own) {
@@ -480,7 +469,9 @@ class Page {
             cy = gt3.row(cv, P, x, y, w, rh, 'Colours', bar ? 'Bar: its colour once full' : null);
             gt3.seg(cv, P, x + w - 14, cy, [['gt3', 'GT3'], ['f1', 'F1'], ['red', 'Red'], ['blue', 'Blue']], this.get('shiftColours'), (v) => this.set('shiftColours', v), 'set:shiftColours', 17);
             y += rh;
-            cy = gt3.row(cv, P, x, y, w, rh, 'First light', 'Lights fill from here to the shift point');
+        }
+        if (from) {
+            cy = gt3.row(cv, P, x, y, w, rh, 'First light', 'Comes on here; the last at the shift point');
             gt3.stepSetting(cv, P, x + w - 14, cy, this.item('shiftFrom'), this.get('shiftFrom'), (v) => this.set('shiftFrom', v), (v) => fmtInt(v) + ' rpm');
             y += rh;
         }
@@ -495,8 +486,8 @@ class Page {
         let pal = SHIFT_DOTS[own ? this.get('shiftColours') : 'gt3'] || SHIFT_DOTS.gt3;
         if (bar) pal = ['#ffc21a', '#ffc21a', '#ffc21a', '#ffc21a', '#ffc21a', pal[3]];     // the Bar: yellow, then the pattern's red when full
         const bt = testing ? 'Running' : 'Run test';
-        // the six dots: under the name, or (tighter Apex Cluster rows) left of the button
-        const dx = own ? x + w - 14 - gt3.tw(cv, gt3.up(bt), 19) - 36 - 16 - 6 * 26 + 13 : x + 26, dy = own ? cy : cy + 30;
+        // the six dots left of the button
+        const dx = x + w - 14 - gt3.tw(cv, gt3.up(bt), 19) - 36 - 16 - 6 * 26 + 13, dy = cy;
         pal.forEach((c, i) => cv.circle(dx + i * 26, dy, 9, off ? P.off : c));
         gt3.button(cv, P, x + w - 14 - gt3.tw(cv, gt3.up(bt), 19) - 36, cy - 19, bt, testing || moving ? null : () => {
             if (this.hud.testShift()) { this.kick(); setTimeout(() => this.kick(), 4000); }
@@ -646,7 +637,7 @@ class Page {
 }
 
 /* ---------- small pieces ---------- */
-const LOOK_KEYS = ['hudLayout', 'inComfort', 'inSport', 'inEco'];
+const LOOK_KEYS = ['hudLayout', 'inComfort', 'inSport', 'inSportPlus', 'inSportInd', 'inEco'];
 const WARN_KEYS = ['warnOil', 'cautionCoolant', 'warnCoolant', 'warnBoost'];
 /** A warning limit as the page shows it, in the display units: "266 °F", "1.2 bar", "Off". */
 function warnText(k, v, us) {

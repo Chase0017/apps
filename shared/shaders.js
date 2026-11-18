@@ -351,7 +351,8 @@ const BOXES = `// The GT3 race dash's frame in one cluster-render "effect" layer
 // window, always cut) and up to 12 framed readout boxes from the layout: each a rounded frame in u_line, filled
 // u_fill, with a header strip across its top in u_head (or u_accent). Array uniforms (sent with type vec4):
 //   u_box[i]       x, y, w, h in layer px
-//   u_boxStyle[i]  header height px, border px, corner radius px, header kind (0 u_head, 1 u_accent)
+//   u_boxStyle[i]  header height px, border px, corner radius px, header kind (0 u_head, 1 u_accent, 2 frame only:
+//                  no fill, just its border, e.g. round the map window; 3 the same without its top edge)
 //   u_n            boxes in use (the rest are skipped). Boxes must not overlap each other or the hole.
 // Colours rgba, straight alpha. The loop bound is constant and the arrays are indexed by the loop counter only,
 // as GLSL ES 1.00 requires.
@@ -395,8 +396,9 @@ void main() {
         float d = sdBox(p, b, s.z);
         float outer = clamp(0.5 - d, 0.0, 1.0);
         if (outer <= 0.0) continue;
-        vec4 inner = p.y < b.y + s.x ? (s.w > 0.5 ? u_accent : u_head) : u_fill;
+        vec4 inner = s.w > 1.5 ? vec4(0.0) : p.y < b.y + s.x ? (s.w > 0.5 ? u_accent : u_head) : u_fill;
         float edge = clamp(d + s.y + 0.5, 0.0, 1.0);               // 1 within the frame
+        if (s.w > 2.5 && p.y < b.y + s.z + s.y && p.x > b.x + s.y && p.x < b.x + b.z - s.y) edge = 0.0;   // open top
         vec4 col = mix(inner, u_line, edge);
         c = over(vec4(col.rgb, col.a * outer), c);
     }

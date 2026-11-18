@@ -4,6 +4,17 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 18 2026
 
+- **Apex Cluster 0.40.0, Apex HUD 0.18.0: drive modes, shift lights, Apex Map, Stock+** (Chase).
+  - **No flash at a start:** following the drive mode, the app drew the plain layout (Apex) for a moment before the car said its mode. Now nothing is drawn until it does (up to 3 s).
+  - **Sport+ and Sport Individual** get their own layout on both apps (In Sport+ / In Sport Individual, "Same as Sport" until set; Sport+ and Individual chips on each Layouts card). **BMW's own** is a card like the layouts, so any drive mode can show BMW's own cluster or HUD. **Otherwise is always BMW's own** (the old plain layout setting is unused): with Change with the drive mode off, BMW's own shows everywhere; a tap on a card turns it back on for the mode you are in.
+  - **Shift lights start at First light:** the lights rounded down, so the first came on a whole step late (about 3,290 rpm for 3,000 with 12 lights); now it lights at First light and the last at the shift point. A First light under 500 rpm from the shift point is no longer pulled down. The HUD gets its own First light (it was fixed at 3,000). The Shift point row says when the cold-engine guard brings it earlier.
+  - **Apex Map:** the map window is centred on the panel (it sat 15 px right) and bigger (x 737-1183, y 134-602, was 740-1210 / 136-575), with a thin frame (a frame-only box in the frame layer, open at the top so BMW's turn arrows stay clear); the rev bar is 26 px (was 34), just above BMW's bottom strip.
+  - **Apex:** Intake and Timing are full height like Oil pressure and AFR (they stopped short above BMW's black box, which no longer comes up since the 0.36.0 gear letter window).
+  - **Stock+:** the four round gauges are gone. OIL and WATER tags sit inside the top of BMW's own temperature gauge, shown only when out of range: blue until warm, yellow over the caution (oil: 10 °C under its warning), flashing red over the warning (text `tempTag`). Shift lights and gear stay.
+  - **Badge removed:** the model badge and its settings are gone (the tab is now Clock).
+- **Every app (Telemetry 0.9.1, DME Controls 0.6.1 too): time zone.** Automatic only ever gave UTC (the head unit's clock is UTC, and no car signal for the local time is known), so it is gone; the apps start on Arizona and a zone is picked once (daylight saving by itself). A saved Automatic reads as Arizona. Chase may pull BMW's signal list to find the car's own clock later.
+- All checked in `tools/layout-preview/` (layout check clean) and `tools/settings-preview/`; the start-up wait needs the car. Not yet on the car. This touches `shared/`, so every app shows an update.
+
 - **Apex DME Controls 0.6.0: on the fly** (Chase: "on the fly means on the fly"). Map switching (MHD, BM3) and every MG Flasher control now work moving or stopped; maps still need the engine running, Max Cooling still needs it to turn on. Until now maps and MG Flasher's ethanol waited for the car to stop (under 5 km/h). The confirm sheets stay (the map one is a setting); the Settings page's Switching box says "On the fly". **MG Flasher burble** buttons follow its slots (Chase): OEM, Custom (the level set when the tune was flashed), 20%, 40%, 70%, Off for slots 0 to 5; the header shows the one the DME reads back. Checked in `tools/settings-preview/` at 60 mph (MHD map, burble 70 %, ethanol override sent); not yet on the car.
 
 ## Nov 17 2026

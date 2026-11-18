@@ -134,7 +134,7 @@ async function start() {
   const loop = { kick: () => draw() };
   const ctx = { settings, spec, log: { info() {}, warn() {}, error: logErr }, theme: () => theme, canvas: () => cv, ui: { image() {}, onClick(n, f) { ctx.clicks[n] = f; } }, clicks: {},
     loop: (n, fps, fn) => { render = fn; return loop; }, onLayout() {} };
-  for (const f of ['/shared/gt3ui.js', '/shared/sensors.js', '/shared/badges.js', '/shared/tz.js', '/shared/sun.js', '/shared/night.js', '/shared/visible.js', '/shared/page.js', '/kit/runtime/themes.js',
+  for (const f of ['/shared/gt3ui.js', '/shared/sensors.js', '/shared/tz.js', '/shared/sun.js', '/shared/night.js', '/shared/visible.js', '/shared/page.js', '/kit/runtime/themes.js',
     '/apps/apex_telemetry/draw.js', '/apps/apex_telemetry/setup.js']) await src(f);
   if (app === 'apex_dme_controls') {
     for (const f of ['main.js', 'control.js', 'draw.js', 'setup.js', 'bm3_protocol.js', 'bm3_profiles.js']) await src('/apps/apex_dme_controls/' + f);
@@ -211,7 +211,7 @@ async function start() {
   } else {
     $('setupBtn').style.display = 'none';
     const req = loader({ './kit/gauges': gauges, './gt3ui': '/shared/gt3ui.js', './kit/themes': '/kit/runtime/themes.js', './previews': { get: () => null }, './sensors': '/shared/sensors.js',
-      './visible': '/shared/visible.js', './badges': '/shared/badges.js', './tz': '/shared/tz.js', './night': '/shared/night.js', './sun': '/shared/sun.js', './page': '/shared/page.js' });
+      './visible': '/shared/visible.js', './tz': '/shared/tz.js', './night': '/shared/night.js', './sun': '/shared/sun.js', './page': '/shared/page.js' });
     const sensors = req('./sensors');
     const hud = app === 'cluster_themes';
     const slots = hud ? [{ id: '1', default: 'speed' }, { id: '2', default: 'rpm' }, { id: '3', default: 'fuel' }, { id: '4', default: 'boost' }, { id: '5', default: 'coolant' }]

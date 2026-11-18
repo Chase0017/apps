@@ -143,7 +143,7 @@ class Setup {
         cy = gt3.row(cv, P, x, y + 64, w, 64, 'Night dimming', this.opts.isNight && this.opts.isNight() ? 'Dimmed now' : 'Dimmer after sunset');
         gt3.seg(cv, P, x + w - 14, cy, [['auto', 'Auto'], ['on', 'On'], ['off', 'Off']], this.get('pageDim') || 'auto', (val) => this.set('pageDim', val), 'pageDim');
         cy = gt3.row(cv, P, x, y + 128, w, 64, 'Time zone', 'Where sunset is worked out');
-        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('timeZone'), this.get('timeZone'), (val) => this.set('timeZone', val), (val) => (val === tz.AUTO ? 'Middle of US' : tz.name(val)), 200);
+        gt3.stepSetting(cv, P, x + w - 14, cy, this.item('timeZone'), this.get('timeZone'), (val) => this.set('timeZone', val), (val) => tz.name(val), 200);
         gt3.note(cv, P, x + 4, 50 + 30 + 64 * 3 + 34, ['A value the car stops sending stays, dimmed with an amber dot,', 'held until the car answers again.']);
         const rx = x + w + 16, spec = this.ctx.spec;
         y = gt3.section(cv, P, rx, 50, w, 30 + 200, 'About');

@@ -30,7 +30,7 @@
       "default": "oil"
     }
   ],
-  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). Reworked on Chase's car photo (Nov 15 2026): the map window (x 740-1210, narrowed Nov 16 2026: BMW's digital speed underline reached x ~694 inside it on a G20 330i, y 136-575) is narrowed to the map between BMW's digital speed (left) and its gear display (right) and runs up to just under the driver camera, BMW's turn arrows over its top corners; the four tyres (TPMS pressure over temperature) with traction under them cover BMW's digital speed on the left, and the gear, big, covers BMW's own gear display on the right. Left column speed, drive mode (where rpm was: the rev bar shows the revs), fuel; right column boost, water, oil (readout slots 1, 3-6). The rev bar sits at the bottom (scale y 586, bar y 614, above BMW's bottom strip) so the window starts higher and shows more road ahead; everything else moved up 70 px. The window is BMW's own drawing, so the map has no lag; it shows whatever BMW draws there. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720) is left uncovered (frame hole2): BMW draws its black box while a theme covers it (bimmer-lab/apps issue 5). On cars without the camera the shift lights sit between BMW's turn arrows (y 11-81) and the map's top (y 136): Row a flat row of 46 px dots (y 86-132, no ramp), Bar 48 px tall (y 86-134); Apex's taller ramped versions cut into the map.",
+  "_about": "Apex with BMW's own map in the middle (2022+ cars with the driver attention camera). Reworked on Chase's car photo (Nov 15 2026): the map window (x 737-1183, y 134-602, no inset, since Nov 18 2026: as big as BMW's own drawing allows, BMW's speed underline left, its gear line right, the camera and the no-camera lights above, the rev scale and bar, now 26 px, above BMW's bottom strip; the frame is open at the top and starts at y 170, below BMW's turn arrows, so nothing covers them; narrowed Nov 16 2026, BMW's digital speed underline reached x ~694 inside it on a G20 330i; centred on the panel's middle x 960 Nov 18 2026, 90 px from the tyre and gear boxes each side, with a thin frame round it, a frame-only box in the frame layer) is narrowed to the map between BMW's digital speed (left) and its gear display (right) and runs up to just under the driver camera, BMW's turn arrows over its top corners; the four tyres (TPMS pressure over temperature) with traction under them cover BMW's digital speed on the left, and the gear, big, covers BMW's own gear display on the right. Left column speed, drive mode (where rpm was: the rev bar shows the revs), fuel; right column boost, water, oil (readout slots 1, 3-6). The rev bar sits at the bottom (scale y 586, bar y 614, above BMW's bottom strip) so the window starts higher and shows more road ahead; everything else moved up 70 px. The window is BMW's own drawing, so the map has no lag; it shows whatever BMW draws there. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720) is left uncovered (frame hole2): BMW draws its black box while a theme covers it (bimmer-lab/apps issue 5). On cars without the camera the shift lights sit between BMW's turn arrows (y 11-81) and the map's top (y 136): Row a flat row of 46 px dots (y 86-132, no ramp), Bar 48 px tall (y 86-134); Apex's taller ramped versions cut into the map.",
   "widgets": [
     {
       "id": "frame",
@@ -123,16 +123,27 @@
           "h": 107,
           "head": 36,
           "radius": 4
+        },
+        {
+          "x": 735,
+          "y": 170,
+          "w": 450,
+          "h": 434,
+          "head": 0,
+          "border": 2,
+          "radius": 6,
+          "frameOnly": true,
+          "openTop": true
         }
       ],
       "hole": [
-        740,
-        136,
-        470,
-        439
+        737,
+        134,
+        446,
+        468
       ],
       "holeWhen": true,
-      "holeInset": 2,
+      "holeInset": 0,
       "holeRadius": 4,
       "hole2": [
         1380,
@@ -313,25 +324,13 @@
       "toggle": "shiftPlace=camera&shiftLights=bar"
     },
     {
-      "id": "badge",
-      "type": "text",
-      "z": 5,
-      "x": 150,
-      "y": 134,
-      "w": 270,
-      "h": 34,
-      "text": "{{badge}}",
-      "font": "badge",
-      "color": "dim"
-    },
-    {
       "id": "revs",
       "type": "shiftbar",
       "z": 2,
       "x": 338,
-      "y": 614,
+      "y": 632,
       "w": 1244,
-      "h": 34,
+      "h": 26,
       "segments": 60,
       "shiftFlash": true
     },
@@ -340,7 +339,7 @@
       "type": "scale",
       "z": 2,
       "x": 338,
-      "y": 586,
+      "y": 604,
       "w": 1244,
       "h": 26,
       "font": "scale",
@@ -613,7 +612,7 @@
       "y": 265,
       "w": 140,
       "h": 27,
-      "text": "{{tyreT:FL}}\u00b0",
+      "text": "{{tyreT:FL}}°",
       "font": "head",
       "color": "dim",
       "align": "center"
@@ -638,7 +637,7 @@
       "y": 265,
       "w": 140,
       "h": 27,
-      "text": "{{tyreT:FR}}\u00b0",
+      "text": "{{tyreT:FR}}°",
       "font": "head",
       "color": "dim",
       "align": "center"
@@ -663,7 +662,7 @@
       "y": 357,
       "w": 140,
       "h": 27,
-      "text": "{{tyreT:RL}}\u00b0",
+      "text": "{{tyreT:RL}}°",
       "font": "head",
       "color": "dim",
       "align": "center"
@@ -688,7 +687,7 @@
       "y": 357,
       "w": 140,
       "h": 27,
-      "text": "{{tyreT:RR}}\u00b0",
+      "text": "{{tyreT:RR}}°",
       "font": "head",
       "color": "dim",
       "align": "center"
