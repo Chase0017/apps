@@ -129,6 +129,9 @@ function coolBox(cv, P, v, opt, act, bottom) {
 /* ---------------- MG Flasher's page ---------------- */
 const MCOLS = [[16, 520], [548, 520], [1080, 504]];
 const FLAPS = [[0, 'OEM'], [2, 'OPEN'], [1, 'CLOSED']];
+// MG Flasher's burble slots (Chase, Nov 18 2026): 0 OEM, 1 the custom level set when flashing, 2-4 20 / 40 / 70 %, 5 off
+const BURBLES = [[0, 'OEM'], [1, 'CUSTOM'], [2, '20%'], [3, '40%'], [4, '70%'], [5, 'OFF']];
+const BURBLE_NAME = ['OEM burbles', 'custom (set when flashed)', '20 %', '40 %', '70 %', 'burbles off'];
 
 /** A row of buttons: opts [[value, label]], the read-back value filled, the one being sent edged amber. */
 function group(cv, P, x, y, w, h, opts, cur, sending, can, pick, key, size) {
@@ -166,9 +169,9 @@ function mgfPage(cv, P, v, opt, act, bottom) {
     label(cv, P, x + 12, y, w - 24, 'Valve', v.valve.paused ? 'OEM above ' + opt.closeLimit + ' rpm' : readOr(m.valve, (n) => ['OEM · car decides', 'closed', 'open'][n]), v.valve.paused);
     group(cv, P, x + 12, y + 12, w - 24, bh, FLAPS, valveCur, sendingOf(m, 'valve'), can, (n) => act.valve(['oem', 'closed', 'open'][n]), 'valve', 34);
     y += gap;
-    label(cv, P, x + 12, y, w - 24, 'Burble', readOr(m.burble, (n) => (n ? 'level ' + n : 'off')));
-    group(cv, P, x + 12, y + 12, w - 24, bh, [[0, 'OFF'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']], m.burble, sendingOf(m, 'burble'), can, (n) => act.mgf('burble', n), 'burble', 34);
-    footer(x, w, 'Burble is on the throttle lift. 5 is the loudest.', false);
+    label(cv, P, x + 12, y, w - 24, 'Burble', readOr(m.burble, (n) => BURBLE_NAME[n] || 'slot ' + n));
+    group(cv, P, x + 12, y + 12, w - 24, bh, BURBLES, m.burble, sendingOf(m, 'burble'), can, (n) => act.mgf('burble', n), 'burble', 34);
+    footer(x, w, "OEM is BMW's own burble. Custom is the level set when the tune was flashed.", false);
 
     // Cooling: Max Cooling, radiator flap, temperatures
     [x, w] = MCOLS[1];
@@ -245,7 +248,7 @@ function draw(cv, bottom, v, opt, act) {
 
 /** The confirm sheet over the page before a map switch. */
 function confirm(cv, bottom, P, n, name, yes, no) {
-    ask(cv, bottom, P, 'Switch to map ' + n + '?', name, 'The engine light may flash for a moment. Stay stopped until the page says ACCEPTED.', 'Switch', yes, no);
+    ask(cv, bottom, P, 'Switch to map ' + n + '?', name, 'The engine light may flash for a moment. That is normal.', 'Switch', yes, no);
 }
 /** A confirm sheet: title, a big line, a note, and CANCEL / the yes button. */
 function ask(cv, bottom, P, title, big, body, yesText, yes, no) {

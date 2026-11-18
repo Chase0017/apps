@@ -5,7 +5,7 @@ Cooling. No xDrive control, on purpose. Design: `design/dme-controls-v1/`.
 
 | Box | What it does | Needs |
 |---|---|---|
-| Engine map | Maps 1 to 4, with your names on them. A confirm sheet first (setting). | MHD or BM3, car stopped (under 5 km/h), engine running |
+| Engine map | Maps 1 to 4, with your names on them. A confirm sheet first (setting). | MHD or BM3, engine running (moving or stopped) |
 | Exhaust valve | OEM (the car decides), OPEN, CLOSED | Nothing: BMW's own job works on a stock DME too |
 | Max cooling | ON / OFF, with coolant, oil and engine speed under it | MHD, engine running (over 500 rpm) to turn it on |
 
@@ -42,7 +42,7 @@ way: `3E 00`, then `2E 69 <id> <value> <check>` with the check byte `0x69 + id +
 which is MG Flasher's own "taken", not a refusal. The app then reads back from DME memory, as MG Flasher does:
 `60107F64` (done), `60107F14` (the last write) and the function's own state, which is what each button lights.
 The states are read again every 10 s, so a change made in MG Flasher's app shows here too. Ethanol changes what the
-tune fuels for, so it needs the car stopped and a confirm. Map switching stays on MG Flasher's Custom Code Menu
+tune fuels for, so it asks first. Burble buttons follow MG Flasher's slots: OEM, Custom (set when flashed), 20 %, 40 %, 70 %, Off. Map switching stays on MG Flasher's Custom Code Menu
 (the cruise control buttons on the steering wheel).
 
 ## Settings (the header's Settings tab)

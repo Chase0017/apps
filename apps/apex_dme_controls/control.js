@@ -32,10 +32,10 @@
  * Closed is handed back to the car (OEM) while the engine is above the "Close: hand back above" speed, and resumed
  * 500 rpm below it; with no live engine speed for 5 s Closed is handed back too.
  *
- * Our own safety rules on top: a map is switched only with the car stopped (live speed under 5 km/h) and the engine
- * running (over 500 rpm); Max Cooling goes on only with the engine running (off is always allowed). There is no
- * xDrive control in this app. A held engine or road speed (no signal for 5 s, kit car.js) counts as none, so those
- * checks fail safe. (Demo data, which the kit only shows with a demo setting this app no longer has, sends nothing.)
+ * Our own rules on top: a map is switched with the engine running (over 500 rpm), on the fly as well as stopped
+ * (Chase, Nov 18 2026: "on the fly means on the fly"; until then maps and MG Flasher's ethanol needed the car stopped);
+ * Max Cooling goes on only with the engine running (off is always allowed). There is no xDrive control in this app.
+ * A held engine speed (no signal for 5 s, kit car.js) counts as none, so that check fails safe. (Demo data, which the kit only shows with a demo setting this app no longer has, sends nothing.)
  *
  * Plain Node 8 (no Promise.finally).
  */
@@ -55,7 +55,7 @@ const FEATURES = {
 };
 const NAMES = { off: 'Off', mhd: 'MHD', bm3: 'BM3', mgf: 'MG Flasher' };
 const MIN_RPM = 500;            // the engine counts as running above this
-const STOP_KMH = 5;             // a map is switched only below this
+const STOP_KMH = 5;             // "stopped" in the view (nothing waits for it since 0.6.0)
 const HOLD_MS = 15000;          // Open / Closed sent again this often (the DME lets go after ~20 s)
 const NO_RPM_MS = 5000;         // no live engine speed this long: Closed is handed back
 const MG1 = { open: [0x60, 0xFD, 0x03, 0x03, 0xE8], closed: [0x60, 0xFD, 0x03, 0x23, 0x28], oem: [0x60, 0xFD, 0x00] };
@@ -275,16 +275,12 @@ class Control {
         if (got !== value) throw new Error(k.name + ': the DME reads back ' + got + ', not ' + value);
         return got;
     }
-    /** Why MG Flasher's controls can't be used now (key: 'ethanol' / 'ethPct' also need the car stopped), or null. */
+    /** Why MG Flasher's controls can't be used now, or null. Everything works on the move. */
     mgfBlock(key) {
         if (this.tuner !== 'mgf') return 'Pick MG Flasher in Settings, Tuning';
         if (this.demo) return null;
         if (!this.available) return 'Waiting for the diagnostic link';
         if (this.mgf.found === false) return 'MG Flasher Live Control not found on this DME';
-        if (key === 'ethanol' || key === 'ethPct') {
-            if (this.car.stale && this.car.stale('speed')) return 'No live road speed from the car: ethanol waits for it';
-            if (!this.stopped()) return 'Stop the car to change the ethanol setting';
-        }
         return null;
     }
     /** burble 0..5, valet 0/1, ethanol 0/1, ethPct 0..100, radFlap 0 OEM / 1 closed / 2 open (valve and Max Cooling: setValve, setCooling). */
@@ -345,9 +341,8 @@ class Control {
         if (this.demo) return null;
         if (!this.available) return 'Waiting for the diagnostic link';
         const held = (k) => !!(this.car.stale && this.car.stale(k));
-        if (held('rpm') || held('speed')) return 'No live ' + (held('rpm') ? 'engine' : 'road') + ' speed from the car: maps wait for it';
+        if (held('rpm')) return 'No live engine speed from the car: maps wait for it';
         if (!this.running()) return 'Start the engine to switch maps';
-        if (!this.stopped()) return 'Stop the car to switch maps';
         return null;
     }
     setMap(n) {

@@ -88,8 +88,8 @@ class Setup {
         }
         const rx = x + w + 16, rw = CR - rx;
         const y2 = gt3.section(cv, P, rx, 50, rw, 30 + 2 * 70, 'Switching');
-        gt3.row(cv, P, rx, y2, rw, 70, 'Only when stopped', 'Under 5 km/h (3 mph), engine running', true);
-        gt3.row(cv, P, rx, y2 + 70, rw, 70, 'Fixed', 'A safety rule, not a setting');
+        gt3.row(cv, P, rx, y2, rw, 70, 'On the fly', 'Moving or stopped, engine running', true);
+        gt3.row(cv, P, rx, y2 + 70, rw, 70, 'Confirm', 'Ask first: Tuning, Confirm map switch');
     }
 
     units(cv, bottom, v, u) {

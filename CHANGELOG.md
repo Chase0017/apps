@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 18 2026
+
+- **Apex DME Controls 0.6.0: on the fly** (Chase: "on the fly means on the fly"). Map switching (MHD, BM3) and every MG Flasher control now work moving or stopped; maps still need the engine running, Max Cooling still needs it to turn on. Until now maps and MG Flasher's ethanol waited for the car to stop (under 5 km/h). The confirm sheets stay (the map one is a setting); the Settings page's Switching box says "On the fly". **MG Flasher burble** buttons follow its slots (Chase): OEM, Custom (the level set when the tune was flashed), 20%, 40%, 70%, Off for slots 0 to 5; the header shows the one the DME reads back. Checked in `tools/settings-preview/` at 60 mph (MHD map, burble 70 %, ethanol override sent); not yet on the car.
+
 ## Nov 17 2026
 
 - **Apex Cluster 0.39.1: the rev bar flashes in step with the shift lights again** (Chase: out of sync since 0.37.0). The timing never changed (one clock, the layout's 200 ms beat); what changed in 0.37.0 was the bar's second beat: the lights go red then dark, but the bar went red then back to its own green, yellow and red, so it never went dark and read out of step. Now its lit part goes red, then a dim red, on the same beats as the lights; the unlit part stays dark, so the end of the fill still shows the rpm. Apex and Apex Map (the layouts with a flashing rev bar). Checked in `tools/layout-preview/`; not yet on the car. This touches `shared/`, so every app shows an update.
