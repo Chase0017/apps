@@ -67,11 +67,11 @@ bottom. `shared/visible.js` holds those areas and warns about any widget under o
 
 ## Analog
 
-- A big round tachometer in the middle (Porsche / Ferrari style): 0 to 8 x1000 rpm, red from the redline, the ring
-  red at the shift point. Gear above the hub, speed in figures below it.
-- Four arc gauges either side: fuel % and boost left, coolant and oil right. Each follows its readout slot, so any of
-  them can show another sensor (Readouts tab).
-- Shift lights and settings as Apex.
+- A large, open-bottom 0 to 8 x1000 rpm tachometer with a blue ring, red needle and dark central gear disc. The red band follows the configured redline. Broad, lightly slanted numerals echo the concept drawing.
+- Oil temperature, oil pressure and coolant temperature use same-row labels and values, icons, separators and continuous live meter bars. Large speed and its unit sit together on the right above an M-colour stripe.
+- Fuel percentage, outside temperature, drive mode and traction mode stay visible along the bottom. These fixed readings replace the four configurable arc gauges.
+- Uses the selected speed, temperature and pressure units, cold/warning colours and held-value marks. Shift lights and settings as Apex. BMW's gear-letter window stays uncovered to prevent its black box.
+- The decorative lines are batched, and layers are spread over four render connections to stay within the car's eight-layer-per-connection limit. Fonts are derived from the existing Barlow atlases by `tools/bake_analog_fonts.py`, with no extra Python packages required.
 
 ## Data
 

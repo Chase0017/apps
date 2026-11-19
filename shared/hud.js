@@ -102,7 +102,8 @@
  *             "max", "ticks"); speed reads 0..160 mph / 0..240 km/h (DIAL_SPEED, labels {{dial:speed:<i>}}), rpm 0.."max"
  *             (8000) with the red band from the redline (_redMarks) and the ring in the shift red at the shift point;
  *             speed takes a layout's own scale with "maxUs" / "maxMetric" and "ticksUs" / "ticksMetric"; "cap" role and
- *             "capR" px for the centre cap's ring (20);
+ *             "capR" px for the centre cap's ring (20); optional "openBottom" removes the sector outside the sweep,
+ *             and "hubR" px paints the face over the needle's centre for a large gear (both off by default);
  *             "start" / "sweep" degrees (225 / 270), "minor" ticks per step (4), "ringW" px (14), roles "ring" (line)
  *             fading to "ring2" (dim), "tick" (fg), "needle" (hot), "face" (bg). The numbers are text widgets.
  *   meter     effect layer (shaders.js meter): a segmented bar, "signal" between "min" and "max" (raw units: km/h, C,
@@ -1994,6 +1995,8 @@ class HudApp {
             c.uniform(ref, 'u_face', rgb(color(t, w.face || 'bg')));
             c.uniform(ref, 'u_cap', rgb(color(t, w.cap || w.ring2 || 'dim')));
             c.uniform(ref, 'u_capR', [isNum(w.capR) ? w.capR : 20]);
+            c.uniform(ref, 'u_openBottom', [w.openBottom ? 1 : 0]);
+            c.uniform(ref, 'u_hubR', [isNum(w.hubR) ? w.hubR : 0]);
             c.uniform(ref, 'u_hot', [0]);
         } else if (w.type === 'gmeter') {
             const L = color(t, w.line || 'dim');

@@ -54,7 +54,8 @@ function roundRects(w) {
     const cx = w.x + w.w / 2, cy = w.y + w.h / 2, half = Math.min(w.w, w.h) / 2;
     const arc = w.type === 'arc', width = arc ? (w.width || 7) : 4;   // a dial: the whole circle
     const r = arc ? half - width / 2 - 1 : half - 2;
-    const start = arc ? (w.start === undefined ? 225 : w.start) : 0, sweep = arc ? (w.sweep === undefined ? 270 : w.sweep) : 360;
+    const open = arc || w.openBottom;
+    const start = open ? (w.start === undefined ? 225 : w.start) : 0, sweep = open ? (w.sweep === undefined ? 270 : w.sweep) : 360;
     const n = Math.max(8, Math.ceil(Math.abs(sweep) / 4)), out = [];
     for (let i = 0; i <= n; i++) {
         const a = (start + sweep * i / n) * Math.PI / 180;

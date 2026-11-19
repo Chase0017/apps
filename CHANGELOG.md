@@ -2,6 +2,13 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 18 2026 (Analog 0.41.0)
+
+- **Apex Cluster 0.41.0: Analog supercar layout** (Chase). Central blue-ring tachometer, red needle, large gear and numeric rpm, large speed on the right, oil temperature / oil pressure / coolant temperature on the left, and fuel percentage / outside temperature / drive mode / traction along the bottom. Fixed readings replace Analog's four configurable arcs so all ten requested fields are always present. Units, cold and warning colours, held-value marks and shift-light settings use the existing runtime. The 0-8000 rpm scale and BMW gear-letter window remain.
+- **Drawing-match refinement:** broader lightly slanted numerals, larger open-bottom tach with a dark central gear disc, same-row telemetry labels/values, solid proportional bars, pictograms and dividers. Optional dial `openBottom` / `hubR` controls leave existing defaults pixel-identical (10 WebGL regression cases). Decorations are batched across four render connections: 4/6/3/2 layers, 7.43 MiB image memory, within car limits. Fonts derive from shipped Barlow atlases with `tools/bake_analog_fonts.py`. This touches `shared/`, so every app will show an update when shipped.
+- Preview harness now draws live meter bars and the added tokens, publishes complete frames to avoid partial labels in screenshots, and respects the gear-letter-window fix in its car view.
+- Checked the actual layout validator, visibility exclusions, runtime unit conversions, data needs, cold / warning / held behaviour, P / R / N / 1 / 8, Sport variants and traction modes. 1,980 refined-layout text samples fit their fonts and bounds. Local layout/font pack succeeded; a complete install bundle cannot be built on this PC without the proprietary `oap-sdk/index.js` supplied on the car by the Store. Preview approved for release by Chase. On-car testing remains outstanding.
+
 ## Nov 18 2026
 
 - **Apex Cluster 0.40.0, Apex HUD 0.18.0: drive modes, shift lights, Apex Map, Stock+** (Chase).

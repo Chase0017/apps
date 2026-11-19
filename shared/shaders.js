@@ -977,6 +977,8 @@ uniform vec3 u_face;
 uniform float u_hot;
 uniform vec3 u_cap;      // the centre cap's ring
 uniform float u_capR;    // the cap's radius px
+uniform float u_openBottom; // optional: remove the dial sector outside the sweep (Analog)
+uniform float u_hubR;       // optional: dark central disc over the needle, for a large gear
 
 const float PI = 3.14159265359;
 
@@ -993,6 +995,9 @@ void main() {
     float d = length(p);
     if (d > R + 0.5) { gl_FragColor = vec4(0.0); return; }
     float edge = clamp(R + 0.5 - d, 0.0, 1.0);
+    float a = atan(p.x, p.y);
+    float rel = mod(a - u_start + 4.0 * PI, 2.0 * PI);
+    if (u_openBottom > 0.5 && rel > u_sweep + 0.002) { gl_FragColor = vec4(0.0); return; }
     vec3 col = u_face;
     // the chrome ring, a bright lip on its inner edge
     float rin = R - u_ringW;
@@ -1005,8 +1010,6 @@ void main() {
         gl_FragColor = vec4(col, edge);
         return;
     }
-    float a = atan(p.x, p.y);
-    float rel = mod(a - u_start + 4.0 * PI, 2.0 * PI);
     float inSweep = rel <= u_sweep + 0.02 ? 1.0 : 0.0;
     float tr = rin - 8.0;                          // the ticks' outer end
     // the red band just inside the ticks
@@ -1037,8 +1040,12 @@ void main() {
     }
     // the cap
     float cr = u_capR > 1.0 ? u_capR : 20.0;
-    if (d < cr) col = mix(vec3(0.16), vec3(0.42), clamp((cr - d) / 6.0, 0.0, 1.0) * clamp(0.5 + p.y / (2.0 * cr), 0.0, 1.0));
-    if (d < cr && d > cr - 2.5 - cr * 0.08) col = u_cap;
+    if (u_hubR > 0.0) {
+        if (d < u_hubR) col = mix(u_face, u_ring2, 0.22 * clamp(d - u_hubR + 1.5, 0.0, 1.0));
+    } else {
+        if (d < cr) col = mix(vec3(0.16), vec3(0.42), clamp((cr - d) / 6.0, 0.0, 1.0) * clamp(0.5 + p.y / (2.0 * cr), 0.0, 1.0));
+        if (d < cr && d > cr - 2.5 - cr * 0.08) col = u_cap;
+    }
     gl_FragColor = vec4(col, edge);
 }
 `;

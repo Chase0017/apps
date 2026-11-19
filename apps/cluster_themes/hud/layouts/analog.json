@@ -1,31 +1,10 @@
 {
   "schemaVersion": 2,
   "name": "Analog",
-  "theme": "roadster",
+  "theme": "dyno",
   "shiftBlink": 200,
-  "slots": [
-    {
-      "id": "1",
-      "where": "left, top",
-      "default": "fuel"
-    },
-    {
-      "id": "2",
-      "where": "left, bottom",
-      "default": "boost"
-    },
-    {
-      "id": "3",
-      "where": "right, top",
-      "default": "coolant"
-    },
-    {
-      "id": "4",
-      "where": "right, bottom",
-      "default": "oil"
-    }
-  ],
-  "_about": "A big round tachometer in the middle, the way Porsche and Ferrari do it (Chase, Nov 15 2026): shaders.js dial (Roadster colours: black face, chrome ring, orange needle), 0..8 x1000 rpm with the red band from the redline and the ring in the shift red at the shift point, 7 and 8 in red. The gear above the hub, the speed in figures below it. Either side two smaller arc gauges that follow their readout slot (TILE_BAR ranges): fuel and boost on the left, coolant and oil on the right (slots 1-4), the value in the middle and the name in the open bottom. The right gauges sit above and below BMW's black box (x 1406-1597, y 342-419). Shift lights and their settings as Apex. Dial centre (960, 410), r 260: clear of the camera (y 132) and BMW's turn arrows. The arcs' \"signal\"/\"min\"/\"max\" are only fallbacks: \"slot\" decides. BMW's gear letter in its bottom strip (x 1380-1460, y 660-720, as bimmer-lab's themes) is left uncovered: BMW draws its black box over the gear slot while a theme covers that letter (bimmer-lab/apps issue 5).",
+  "slots": [],
+  "_about": "BMW supercar-inspired Analog (Nov 18 2026). Fixed live oil temperature, oil pressure and coolant temperature on the left; 0-8000 rpm tachometer and gear in the centre; speed right; fuel percentage, outside temperature, drive mode and traction below. Dial red band follows configured redline. All units, cold/warning colours, held-value treatment and shift settings use the shared runtime. Gear-letter window and camera/turn-arrow clearance preserved. No brand badges. Fixed fields intentionally replace the previous configurable four arcs so all ten requested readings stay visible. Refined to match the concept: broad lightly slanted digits, open-bottom tach with dark gear hub, same-row telemetry, continuous bars, pictograms and dividers. openBottom/hubR are optional dial controls with unchanged defaults.",
   "widgets": [
     {
       "id": "bg",
@@ -45,400 +24,1113 @@
       ],
       "holeWhen": true,
       "holeInset": 0,
-      "holeRadius": 0
+      "holeRadius": 0,
+      "conn": 0
     },
     {
       "id": "tacho",
       "type": "dial",
-      "class": "content",
       "z": 1,
       "x": 700,
-      "y": 150,
+      "y": 160,
       "w": 520,
       "h": 520,
       "measure": "rpm",
       "max": 8000,
-      "ring": "chrome",
-      "ring2": "chrome2",
-      "needle": "needle",
-      "face": "face",
+      "ring": [
+        79,
+        180,
+        255,
+        255
+      ],
+      "ring2": [
+        47,
+        91,
+        216,
+        255
+      ],
+      "needle": "hot",
+      "face": [
+        3,
+        6,
+        10,
+        255
+      ],
+      "tick": [
+        242,
+        245,
+        250,
+        255
+      ],
       "minor": 4,
-      "ringW": 16,
-      "capR": 24
+      "ringW": 5,
+      "capR": 12,
+      "openBottom": true,
+      "hubR": 140,
+      "conn": 0
+    },
+    {
+      "id": "bar_caps",
+      "type": "boxes",
+      "z": 1,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "color": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fill": [
+        232,
+        38,
+        45,
+        255
+      ],
+      "line": [
+        232,
+        38,
+        45,
+        255
+      ],
+      "boxes": [
+        {
+          "id": "oil_bar_cap",
+          "x": 670,
+          "y": 288,
+          "w": 8,
+          "h": 11,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "oil_pressure_bar_cap",
+          "x": 670,
+          "y": 418,
+          "w": 8,
+          "h": 11,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "coolant_bar_cap",
+          "x": 670,
+          "y": 548,
+          "w": 8,
+          "h": 11,
+          "border": 0,
+          "radius": 0
+        }
+      ],
+      "conn": 0
+    },
+    {
+      "id": "rules",
+      "type": "boxes",
+      "z": 1,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "color": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fill": [
+        150,
+        164,
+        184,
+        255
+      ],
+      "line": [
+        150,
+        164,
+        184,
+        255
+      ],
+      "boxes": [
+        {
+          "id": "gear_rule_l",
+          "x": 836,
+          "y": 469,
+          "w": 46,
+          "h": 1,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "gear_rule_r",
+          "x": 1038,
+          "y": 469,
+          "w": 46,
+          "h": 1,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "oil_divider",
+          "x": 248,
+          "y": 227,
+          "w": 1,
+          "h": 48,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "oil_separator",
+          "x": 180,
+          "y": 332,
+          "w": 495,
+          "h": 1,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "oil_pressure_divider",
+          "x": 248,
+          "y": 357,
+          "w": 1,
+          "h": 48,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "oil_pressure_separator",
+          "x": 180,
+          "y": 462,
+          "w": 495,
+          "h": 1,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "coolant_divider",
+          "x": 248,
+          "y": 487,
+          "w": 1,
+          "h": 48,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "footer_line",
+          "x": 180,
+          "y": 621,
+          "w": 1620,
+          "h": 1,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "footer_divider0",
+          "x": 560,
+          "y": 642,
+          "w": 1,
+          "h": 67,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "footer_divider1",
+          "x": 895,
+          "y": 642,
+          "w": 1,
+          "h": 67,
+          "border": 0,
+          "radius": 0
+        },
+        {
+          "id": "footer_divider2",
+          "x": 1468,
+          "y": 642,
+          "w": 1,
+          "h": 67,
+          "border": 0,
+          "radius": 0
+        }
+      ],
+      "conn": 0
     },
     {
       "id": "rpm0",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 798,
-      "y": 534,
-      "w": 44,
-      "h": 30,
+      "x": 789,
+      "y": 545,
+      "w": 56,
+      "h": 36,
       "text": "0",
-      "font": "r_num",
-      "color": "fg",
-      "align": "center"
+      "font": "a_num",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm1",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 744,
-      "y": 433,
-      "w": 44,
-      "h": 30,
+      "x": 734,
+      "y": 441,
+      "w": 56,
+      "h": 36,
       "text": "1",
-      "font": "r_num",
-      "color": "fg",
-      "align": "center"
+      "font": "a_num",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm2",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 755,
-      "y": 318,
-      "w": 44,
-      "h": 30,
+      "x": 745,
+      "y": 325,
+      "w": 56,
+      "h": 36,
       "text": "2",
-      "font": "r_num",
-      "color": "fg",
-      "align": "center"
+      "font": "a_num",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm3",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 828,
-      "y": 229,
-      "w": 44,
-      "h": 30,
+      "x": 820,
+      "y": 234,
+      "w": 56,
+      "h": 36,
       "text": "3",
-      "font": "r_num",
-      "color": "fg",
-      "align": "center"
+      "font": "a_num",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm4",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 938,
-      "y": 196,
-      "w": 44,
-      "h": 30,
+      "x": 932,
+      "y": 200,
+      "w": 56,
+      "h": 36,
       "text": "4",
-      "font": "r_num",
-      "color": "fg",
-      "align": "center"
+      "font": "a_num",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm5",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 1048,
-      "y": 229,
-      "w": 44,
-      "h": 30,
+      "x": 1044,
+      "y": 234,
+      "w": 56,
+      "h": 36,
       "text": "5",
-      "font": "r_num",
-      "color": "fg",
-      "align": "center"
+      "font": "a_num",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm6",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 1121,
-      "y": 318,
-      "w": 44,
-      "h": 30,
+      "x": 1119,
+      "y": 325,
+      "w": 56,
+      "h": 36,
       "text": "6",
-      "font": "r_num",
-      "color": "fg",
-      "align": "center"
+      "font": "a_num",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm7",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 1132,
-      "y": 433,
-      "w": 44,
-      "h": 30,
+      "x": 1130,
+      "y": 441,
+      "w": 56,
+      "h": 36,
       "text": "7",
-      "font": "r_num",
+      "font": "a_num",
       "color": "hot",
-      "align": "center"
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "rpm8",
       "type": "text",
       "z": 5,
-      "conn": 1,
-      "x": 1078,
-      "y": 534,
-      "w": 44,
-      "h": 30,
+      "x": 1075,
+      "y": 545,
+      "w": 56,
+      "h": 36,
       "text": "8",
-      "font": "r_num",
+      "font": "a_num",
       "color": "hot",
-      "align": "center"
+      "align": "center",
+      "conn": 1
     },
     {
       "id": "gear",
       "type": "text",
       "z": 5,
-      "x": 875,
-      "y": 240,
-      "w": 170,
-      "h": 125,
-      "text": "{{gear}}",
-      "font": "r_gear",
-      "color": "fg",
-      "color2": "chrome2",
+      "x": 850,
+      "y": 296,
+      "w": 220,
+      "h": 148,
+      "text": "{{gearnum}}",
+      "font": "a_gear",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
       "align": "center",
       "hotWhen": "now",
       "rate": 50,
-      "offRed": true
+      "offRed": true,
+      "conn": 1
+    },
+    {
+      "id": "gear_head",
+      "type": "text",
+      "z": 5,
+      "x": 900,
+      "y": 451,
+      "w": 120,
+      "h": 35,
+      "text": "GEAR",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "center",
+      "conn": 1
+    },
+    {
+      "id": "rpm_scale_unit",
+      "type": "text",
+      "z": 5,
+      "x": 830,
+      "y": 502,
+      "w": 260,
+      "h": 35,
+      "text": "RPM x1000",
+      "font": "a_label",
+      "color": [
+        185,
+        195,
+        210,
+        255
+      ],
+      "align": "center",
+      "conn": 1
+    },
+    {
+      "id": "rpm_value",
+      "type": "text",
+      "z": 5,
+      "x": 815,
+      "y": 551,
+      "w": 170,
+      "h": 45,
+      "text": "{{rpm}}",
+      "font": "a_value",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "right",
+      "hotWhen": "now",
+      "rate": 50,
+      "conn": 1
+    },
+    {
+      "id": "rpm_unit",
+      "type": "text",
+      "z": 5,
+      "x": 1000,
+      "y": 562,
+      "w": 80,
+      "h": 35,
+      "text": "RPM",
+      "font": "a_label",
+      "color": [
+        185,
+        195,
+        210,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "oil_icon",
+      "type": "icon",
+      "z": 5,
+      "x": 180,
+      "y": 227,
+      "w": 54,
+      "h": 54,
+      "icon": "oilcan",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "oil_head",
+      "type": "text",
+      "z": 5,
+      "x": 270,
+      "y": 235,
+      "w": 235,
+      "h": 35,
+      "text": "OIL TEMP",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "oil_value",
+      "type": "text",
+      "z": 5,
+      "x": 500,
+      "y": 230,
+      "w": 103,
+      "h": 45,
+      "text": "{{oil}}",
+      "font": "a_value",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "right",
+      "conn": 1
+    },
+    {
+      "id": "oil_unit",
+      "type": "text",
+      "z": 5,
+      "x": 611,
+      "y": 241,
+      "w": 68,
+      "h": 35,
+      "text": "{{u:temp}}",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "oil_bar",
+      "type": "meter",
+      "z": 1,
+      "x": 270,
+      "y": 288,
+      "w": 405,
+      "h": 11,
+      "signal": "oil",
+      "min": 40,
+      "max": 150,
+      "segments": 405,
+      "gap": 0,
+      "colors": [
+        [
+          79,
+          180,
+          255,
+          255
+        ],
+        [
+          79,
+          180,
+          255,
+          255
+        ],
+        [
+          79,
+          180,
+          255,
+          255
+        ]
+      ],
+      "at": [
+        1,
+        1
+      ],
+      "trackColor": [
+        58,
+        67,
+        82,
+        255
+      ],
+      "conn": 2
+    },
+    {
+      "id": "oil_pressure_icon",
+      "type": "icon",
+      "z": 5,
+      "x": 180,
+      "y": 357,
+      "w": 54,
+      "h": 54,
+      "icon": "gauge",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "oil_pressure_head",
+      "type": "text",
+      "z": 5,
+      "x": 270,
+      "y": 365,
+      "w": 235,
+      "h": 35,
+      "text": "OIL PRESSURE",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "oil_pressure_value",
+      "type": "text",
+      "z": 5,
+      "x": 500,
+      "y": 360,
+      "w": 103,
+      "h": 45,
+      "text": "{{oilP}}",
+      "font": "a_value",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "right",
+      "conn": 1
+    },
+    {
+      "id": "oil_pressure_unit",
+      "type": "text",
+      "z": 5,
+      "x": 611,
+      "y": 371,
+      "w": 68,
+      "h": 35,
+      "text": "{{u:pressure}}",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "oil_pressure_bar",
+      "type": "meter",
+      "z": 1,
+      "x": 270,
+      "y": 418,
+      "w": 405,
+      "h": 11,
+      "signal": "oilP",
+      "min": 0,
+      "max": 8,
+      "segments": 405,
+      "gap": 0,
+      "colors": [
+        [
+          79,
+          180,
+          255,
+          255
+        ],
+        [
+          79,
+          180,
+          255,
+          255
+        ],
+        [
+          79,
+          180,
+          255,
+          255
+        ]
+      ],
+      "at": [
+        1,
+        1
+      ],
+      "trackColor": [
+        58,
+        67,
+        82,
+        255
+      ],
+      "conn": 2
+    },
+    {
+      "id": "coolant_icon",
+      "type": "icon",
+      "z": 5,
+      "x": 180,
+      "y": 487,
+      "w": 54,
+      "h": 54,
+      "icon": "therm",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "coolant_head",
+      "type": "text",
+      "z": 5,
+      "x": 270,
+      "y": 495,
+      "w": 235,
+      "h": 35,
+      "text": "COOLANT TEMP",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "coolant_value",
+      "type": "text",
+      "z": 5,
+      "x": 500,
+      "y": 490,
+      "w": 103,
+      "h": 45,
+      "text": "{{coolant}}",
+      "font": "a_value",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "right",
+      "conn": 1
+    },
+    {
+      "id": "coolant_unit",
+      "type": "text",
+      "z": 5,
+      "x": 611,
+      "y": 501,
+      "w": 68,
+      "h": 35,
+      "text": "{{u:temp}}",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "coolant_bar",
+      "type": "meter",
+      "z": 1,
+      "x": 270,
+      "y": 548,
+      "w": 405,
+      "h": 11,
+      "signal": "coolant",
+      "min": 40,
+      "max": 130,
+      "segments": 405,
+      "gap": 0,
+      "colors": [
+        [
+          79,
+          180,
+          255,
+          255
+        ],
+        [
+          79,
+          180,
+          255,
+          255
+        ],
+        [
+          79,
+          180,
+          255,
+          255
+        ]
+      ],
+      "at": [
+        1,
+        1
+      ],
+      "trackColor": [
+        58,
+        67,
+        82,
+        255
+      ],
+      "conn": 2
     },
     {
       "id": "speed",
       "type": "text",
       "z": 5,
-      "x": 880,
-      "y": 462,
-      "w": 160,
-      "h": 51,
+      "x": 1245,
+      "y": 317,
+      "w": 470,
+      "h": 164,
       "text": "{{speed}}",
-      "font": "r_val",
-      "color": "fg",
-      "align": "center"
+      "font": "a_speed",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "align": "right",
+      "overBlackBox": true,
+      "conn": 1
     },
     {
       "id": "speed_unit",
       "type": "text",
       "z": 5,
-      "x": 915,
-      "y": 514,
-      "w": 90,
-      "h": 30,
-      "text": "{{u:speedLc}}",
-      "font": "r_label",
-      "color": "dim",
-      "align": "center"
+      "x": 1730,
+      "y": 437,
+      "w": 96,
+      "h": 35,
+      "text": "{{u:speed}}",
+      "font": "a_label",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
     },
     {
-      "id": "rpm_cap",
-      "type": "text",
-      "z": 5,
-      "x": 890,
-      "y": 600,
-      "w": 140,
-      "h": 30,
-      "text": "x1000 rpm",
-      "font": "r_label",
-      "color": "dim",
-      "align": "center"
-    },
-    {
-      "id": "g1",
-      "type": "arc",
-      "class": "content",
+      "id": "speed_stripe",
+      "type": "stripe",
       "z": 1,
-      "x": 325,
-      "y": 155,
-      "w": 190,
-      "h": 190,
-      "slot": "1",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 10,
-      "color": "needle",
-      "start": 225,
-      "sweep": 270
+      "x": 1295,
+      "y": 504,
+      "w": 430,
+      "h": 7,
+      "conn": 1
     },
     {
-      "id": "g1_val",
+      "id": "fuel_icon",
+      "type": "icon",
+      "z": 5,
+      "x": 220,
+      "y": 652,
+      "w": 48,
+      "h": 48,
+      "icon": "fuel",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "fuel_head",
       "type": "text",
       "z": 5,
-      "x": 345,
-      "y": 220,
-      "w": 150,
-      "h": 51,
-      "text": "{{slot:1}}{{slotSuffix:1}}",
-      "font": "r_val",
-      "color": "fg",
-      "align": "center",
-      "slot": "1",
+      "x": 285,
+      "y": 633,
+      "w": 200,
+      "h": 35,
+      "text": "FUEL",
+      "font": "a_label",
+      "color": [
+        185,
+        195,
+        210,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "fuel_value",
+      "type": "text",
+      "z": 5,
+      "x": 285,
+      "y": 674,
+      "w": 200,
+      "h": 42,
+      "text": "{{fuelPct}}%",
+      "font": "a_status",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "fit": [],
+      "conn": 1
+    },
+    {
+      "id": "outside_icon",
+      "type": "icon",
+      "z": 5,
+      "x": 635,
+      "y": 652,
+      "w": 48,
+      "h": 48,
+      "icon": "therm",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "outside_head",
+      "type": "text",
+      "z": 5,
+      "x": 700,
+      "y": 633,
+      "w": 165,
+      "h": 35,
+      "text": "OUTSIDE",
+      "font": "a_label",
+      "color": [
+        185,
+        195,
+        210,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "outside_value",
+      "type": "text",
+      "z": 5,
+      "x": 700,
+      "y": 674,
+      "w": 165,
+      "h": 42,
+      "text": "{{ambientN}}{{u:temp}}",
+      "font": "a_status",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "fit": [],
+      "conn": 1
+    },
+    {
+      "id": "drive_mode_icon",
+      "type": "icon",
+      "z": 5,
+      "x": 920,
+      "y": 652,
+      "w": 48,
+      "h": 48,
+      "icon": "flag",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "drive_mode_head",
+      "type": "text",
+      "z": 5,
+      "x": 985,
+      "y": 633,
+      "w": 380,
+      "h": 35,
+      "text": "DRIVE MODE",
+      "font": "a_label",
+      "color": [
+        185,
+        195,
+        210,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "drive_mode_value",
+      "type": "text",
+      "z": 5,
+      "x": 985,
+      "y": 674,
+      "w": 380,
+      "h": 42,
+      "text": "{{mode}}",
+      "font": "a_status",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "fit": [],
+      "conn": 1
+    },
+    {
+      "id": "traction_icon",
+      "type": "icon",
+      "z": 5,
+      "x": 1500,
+      "y": 652,
+      "w": 48,
+      "h": 48,
+      "icon": "traction",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "traction_head",
+      "type": "text",
+      "z": 5,
+      "x": 1570,
+      "y": 633,
+      "w": 220,
+      "h": 35,
+      "text": "TRACTION",
+      "font": "a_label",
+      "color": [
+        185,
+        195,
+        210,
+        255
+      ],
+      "conn": 1
+    },
+    {
+      "id": "traction_value",
+      "type": "text",
+      "z": 5,
+      "x": 1570,
+      "y": 674,
+      "w": 220,
+      "h": 42,
+      "text": "{{dsc}}",
+      "font": "a_status",
+      "color": [
+        242,
+        245,
+        250,
+        255
+      ],
       "fit": [
-        "r_label"
-      ]
-    },
-    {
-      "id": "g1_head",
-      "type": "text",
-      "z": 5,
-      "x": 340,
-      "y": 309,
-      "w": 160,
-      "h": 30,
-      "text": "{{slotHeadU:1}}",
-      "font": "r_label",
-      "color": "dim",
-      "align": "center"
-    },
-    {
-      "id": "g2",
-      "type": "arc",
-      "class": "content",
-      "z": 1,
-      "x": 325,
-      "y": 445,
-      "w": 190,
-      "h": 190,
-      "slot": "2",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 10,
-      "color": "needle",
-      "start": 225,
-      "sweep": 270
-    },
-    {
-      "id": "g2_val",
-      "type": "text",
-      "z": 5,
-      "x": 345,
-      "y": 510,
-      "w": 150,
-      "h": 51,
-      "text": "{{slot:2}}{{slotSuffix:2}}",
-      "font": "r_val",
-      "color": "fg",
-      "align": "center",
-      "slot": "2",
-      "fit": [
-        "r_label"
-      ]
-    },
-    {
-      "id": "g2_head",
-      "type": "text",
-      "z": 5,
-      "x": 340,
-      "y": 599,
-      "w": 160,
-      "h": 30,
-      "text": "{{slotHeadU:2}}",
-      "font": "r_label",
-      "color": "dim",
-      "align": "center"
-    },
-    {
-      "id": "g3",
-      "type": "arc",
-      "class": "content",
-      "z": 1,
-      "x": 1405,
-      "y": 155,
-      "w": 190,
-      "h": 190,
-      "slot": "3",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 10,
-      "color": "needle",
-      "start": 225,
-      "sweep": 270
-    },
-    {
-      "id": "g3_val",
-      "type": "text",
-      "z": 5,
-      "x": 1425,
-      "y": 220,
-      "w": 150,
-      "h": 51,
-      "text": "{{slot:3}}{{slotSuffix:3}}",
-      "font": "r_val",
-      "color": "fg",
-      "align": "center",
-      "slot": "3",
-      "fit": [
-        "r_label"
-      ]
-    },
-    {
-      "id": "g3_head",
-      "type": "text",
-      "z": 5,
-      "x": 1420,
-      "y": 309,
-      "w": 160,
-      "h": 30,
-      "text": "{{slotHeadU:3}}",
-      "font": "r_label",
-      "color": "dim",
-      "align": "center"
-    },
-    {
-      "id": "g4",
-      "type": "arc",
-      "class": "content",
-      "z": 1,
-      "x": 1405,
-      "y": 445,
-      "w": 190,
-      "h": 190,
-      "slot": "4",
-      "signal": "fuel",
-      "min": 0,
-      "max": 1,
-      "width": 10,
-      "color": "needle",
-      "start": 225,
-      "sweep": 270
-    },
-    {
-      "id": "g4_val",
-      "type": "text",
-      "z": 5,
-      "x": 1425,
-      "y": 510,
-      "w": 150,
-      "h": 51,
-      "text": "{{slot:4}}{{slotSuffix:4}}",
-      "font": "r_val",
-      "color": "fg",
-      "align": "center",
-      "slot": "4",
-      "fit": [
-        "r_label"
-      ]
-    },
-    {
-      "id": "g4_head",
-      "type": "text",
-      "z": 5,
-      "x": 1420,
-      "y": 599,
-      "w": 160,
-      "h": 30,
-      "text": "{{slotHeadU:4}}",
-      "font": "r_label",
-      "color": "dim",
-      "align": "center"
+        "a_label"
+      ],
+      "conn": 1
     },
     {
       "id": "lights_l",
@@ -454,7 +1146,8 @@
       "off": 0.12,
       "from": 3000,
       "rise": 30,
-      "toggle": "shiftPlace=camera&shiftLights=row"
+      "toggle": "shiftPlace=camera&shiftLights=row",
+      "conn": 3
     },
     {
       "id": "lights_r",
@@ -471,7 +1164,8 @@
       "from": 3000,
       "mirror": true,
       "rise": 30,
-      "toggle": "shiftPlace=camera&shiftLights=row"
+      "toggle": "shiftPlace=camera&shiftLights=row",
+      "conn": 3
     },
     {
       "id": "lights_rowl",
@@ -488,7 +1182,8 @@
       "rise": 30,
       "x": 630,
       "toggle": "shiftPlace=nocam&shiftLights=row",
-      "noCamera": true
+      "noCamera": true,
+      "conn": 3
     },
     {
       "id": "lights_rowr",
@@ -506,7 +1201,8 @@
       "x": 990,
       "mirror": true,
       "toggle": "shiftPlace=nocam&shiftLights=row",
-      "noCamera": true
+      "noCamera": true,
+      "conn": 3
     },
     {
       "id": "lights_barl",
@@ -532,7 +1228,8 @@
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
       "barFill": "yellow",
-      "join": true
+      "join": true,
+      "conn": 3
     },
     {
       "id": "lights_barr",
@@ -559,7 +1256,8 @@
       "noCamera": true,
       "toggle": "shiftPlace=nocam&shiftLights=bar",
       "barFill": "yellow",
-      "join": true
+      "join": true,
+      "conn": 3
     },
     {
       "id": "lights_cbarl",
@@ -583,7 +1281,8 @@
       ],
       "pad": 7,
       "barFill": "yellow",
-      "toggle": "shiftPlace=camera&shiftLights=bar"
+      "toggle": "shiftPlace=camera&shiftLights=bar",
+      "conn": 3
     },
     {
       "id": "lights_cbarr",
@@ -608,7 +1307,9 @@
       ],
       "pad": 7,
       "barFill": "yellow",
-      "toggle": "shiftPlace=camera&shiftLights=bar"
+      "toggle": "shiftPlace=camera&shiftLights=bar",
+      "conn": 3
     }
-  ]
+  ],
+  "packWaste": 2
 }

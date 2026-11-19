@@ -38,6 +38,23 @@ const ICONS = {
         return d;
     },
     oilcan: (x, y) => Math.min(seg(x, y, 0.2, 0.62, 0.6, 0.62) - 0.12, seg(x, y, 0.6, 0.58, 0.9, 0.44) - 0.04, disc(x, y, 0.92, 0.66, 0.05), seg(x, y, 0.3, 0.46, 0.3, 0.34) - 0.035, seg(x, y, 0.22, 0.34, 0.38, 0.34) - 0.04),
+    flag: (x, y) => {
+        let d = seg(x, y, 0.16, 0.88, 0.37, 0.12) - 0.025;
+        for (let row = 0; row < 3; row++) for (let col = 0; col < 4; col++) {
+            if ((row + col) % 2) continue;
+            const yy = 0.18 + row * 0.13, xx = 0.40 + col * 0.12 - row * 0.035;
+            d = Math.min(d, Math.max(Math.abs(x-xx)-0.06, Math.abs(y-yy)-0.065));
+        }
+        return d;
+    },
+    traction: (x, y) => Math.min(
+        seg(x,y,.22,.40,.30,.17)-.025, seg(x,y,.30,.17,.70,.17)-.025,
+        seg(x,y,.70,.17,.78,.40)-.025, seg(x,y,.22,.40,.78,.40)-.025,
+        seg(x,y,.22,.40,.22,.57)-.025, seg(x,y,.78,.40,.78,.57)-.025,
+        seg(x,y,.22,.57,.78,.57)-.025, seg(x,y,.28,.60,.17,.72)-.03,
+        seg(x,y,.17,.72,.30,.81)-.03, seg(x,y,.30,.81,.20,.92)-.03,
+        seg(x,y,.72,.60,.61,.72)-.03, seg(x,y,.61,.72,.74,.81)-.03,
+        seg(x,y,.74,.81,.64,.92)-.03),
 };
 
 function paintIcon(name, w, h, color) {
