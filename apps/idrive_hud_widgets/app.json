@@ -2,7 +2,7 @@
   "id": "idrive_hud_widgets",
   "title": "Apex HUD",
   "description": "Shift lights, gear, rev bar, boost, oil and coolant on the windshield HUD in three layouts: Sport, Redline (shift lights and shift score) and Shift only. Starts with the car.",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "vendor": "custom",
   "loggingId": "OAH1",
   "iconGlyph": "HUD",

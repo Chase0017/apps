@@ -251,7 +251,8 @@ const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 // a drive mode variation with its own layout setting (Chase, Nov 18 2026); its value "same" follows the base mode's.
 // An app without the setting (the HUD) follows the base mode.
 const VARIANT_KEY = { 'sport:plus': 'inSportPlus', 'sport:individual': 'inSportInd' };
-const MODE_WAIT_MS = 3000;       // at a start, how long to wait for the car's drive mode before drawing the plain layout
+const RESEND_MS = 1500;          // after a build, every image layer's whole picture once more (labels lost on the car, Nov 18 2026)
+const MODE_WAIT_MS = 3000;      // at a start, how long to wait for the car's drive mode before drawing the plain layout
 const TYRE_CORNERS = ['FL', 'FR', 'RL', 'RR'];
 // the Roadster's speed dial: 0..160 mph or 0..240 km/h in 8 steps (labels {{dial:speed:<i>}})
 const DIAL_SPEED = { us: { max: 160, ticks: 8 }, metric: { max: 240, ticks: 8 } };
@@ -762,6 +763,9 @@ class HudApp {
             const key = ci + ':' + ref;
             const old = this.layerStates.get(key);
             this.layerStates.set(key, { state, reason });
+            // a layer the car starts showing gets its whole picture again: a first frame sent while it waited can be
+            // lost, and a text that never changes (a box label, a unit) would stay blank (Nov 18 2026, on the car)
+            if (state === 'shown' && (!old || old.state !== 'shown')) c.refresh(ref);
             if (state === 'error' || ((state === 'waiting' || state === 'stalled') && (!old || old.state !== state))) {
                 const w = this._widgetOf(ci, ref);
                 this.log.warn('layer ' + ref + tag + (w ? ' (' + w + ')' : '') + ' ' + state + (reason ? ': ' + reason : ''));
@@ -770,7 +774,9 @@ class HudApp {
         });
         c.on('target', (name, state, holder, reason) => {
             if (name !== this.target) return;
+            const was = this.targetState && this.targetState.state;
             this.targetState = { state, holder, reason };
+            if (state !== was) c.refresh();   // the screen changed hands: every image again (see 'layer' above)
             this.log.info('target ' + name + tag + ' ' + state + (holder ? ' (holder ' + holder + ')' : '') + (reason ? ': ' + reason : ''));
             this._statusSoon();
         });
@@ -1776,6 +1782,9 @@ class HudApp {
         });
         if (px > PIXEL_BYTES) this.log.warn('layout "' + layout.name + '" needs ' + mib(px) + ' of pixel memory; cluster-render has 16 MiB for every app together (each image counts twice)');
         this.statusAskT = setTimeout(() => { this.statusAskT = null; this._guard('status request', () => this.client.status()); }, STATUS_ASK_MS);
+        // and once more a moment after the build, every image whole (a backstop for the first frames; see 'layer')
+        clearTimeout(this.resendT);
+        this.resendT = setTimeout(() => { this.resendT = null; this.clients.forEach((c) => this._guard('resend', () => c.refresh())); }, RESEND_MS);
     }
 
     /**

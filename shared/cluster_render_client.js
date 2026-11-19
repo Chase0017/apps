@@ -531,6 +531,23 @@ class ClusterRender extends EventEmitter {
         return true;
     }
 
+    /* Sends an image layer's (or asset's) whole picture again on the next
+     * pump; every image layer when ref is omitted. For a layer the service
+     * only starts showing after its first frame went by (Nov 18 2026: text
+     * that never changes, labels and units, stayed blank on the car while
+     * the live readouts drew). */
+    refresh(ref) {
+        const one = (l) => {
+            if (!l || !(l.kind === 'image' || l.kind === 'asset') || !l.have) return;
+            l.whole = true;
+            l.dirty = [];
+            l.dirtyBytes = 0;
+        };
+        if (ref === undefined) this.layers.forEach(one);
+        else one(this.layers.get(ref));
+        this._pump();
+    }
+
     status() { this._send({ op: 'status' }); }
 }
 

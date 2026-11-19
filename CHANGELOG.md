@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 18 2026 (labels fix)
+
+- **Apex Cluster 0.41.1, Apex HUD 0.18.1: blank labels on the car** (Chase). On 0.40.0 the box labels, units, gear, drive mode, traction and the tyre box stayed blank while the live readouts drew. A text that never changes is only sent once, when its layer is made; if the car was not showing the layer yet, that one picture was lost, and only readouts that changed afterwards came through (0.40.0 makes this likely by drawing nothing until the drive mode is known). Now an image layer is sent whole again when the car starts showing it, when the screen changes hands, and once 1.5 s after every layout build.
+
 ## Nov 18 2026 (Analog 0.41.0)
 
 - **Apex Cluster 0.41.0: Analog supercar layout** (Chase). Central blue-ring tachometer, red needle, large gear and numeric rpm, large speed on the right, oil temperature / oil pressure / coolant temperature on the left, and fuel percentage / outside temperature / drive mode / traction along the bottom. Fixed readings replace Analog's four configurable arcs so all ten requested fields are always present. Units, cold and warning colours, held-value marks and shift-light settings use the existing runtime. The 0-8000 rpm scale and BMW gear-letter window remain.
