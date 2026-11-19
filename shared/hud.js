@@ -62,7 +62,7 @@
  *             "holeRadius" px corners (28), so BMW's own cluster doesn't peek out at the window's corners.
  *             Opaque fill hides BMW's gauges under it.
  *   box       effect layer; a framed box: "fill" and "line" roles, "border" px, "radius" px, and a
- *             header strip "head" px tall in role "headColor" (its label is a text widget on top); "frameOnly": true draws only its border (a frame round the map window), "openTop": true without its top edge
+ *             header strip "head" px tall in role "headColor" (its label is a text widget on top); "frameOnly": true draws only its border (a frame round the map window), "openTop": true without its top edge, "recessed": true closed with a black inner shadow "shadow" px deep (default 22), so the map looks set in
  *   mdash     effect layer; the M theme's whole backdrop (shaders.js mdash): "card" [x, yBottom, rBottom, rTop] (the
  *             left card, traced off the M8 photo: outer edge x, bottom y, the big round at the bottom outer corner, the
  *             rounding where the top curve meets the outer edge; the right card is its mirror), "cardTop" [a, b, c] (the
@@ -2132,7 +2132,7 @@ class HudApp {
             for (let i = 0; i < 12; i++) {
                 const b = list[i];
                 rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
-                styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.frameOnly ? (b.openTop ? 3 : 2) : b && b.headColor === 'accent' ? 1 : 0);
+                styles.push(b ? (b.frameOnly && b.recessed ? (typeof b.shadow === 'number' ? b.shadow : 22) : b.head || 0) : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.frameOnly ? (b.recessed ? 4 : b.openTop ? 3 : 2) : b && b.headColor === 'accent' ? 1 : 0);
             }
             c.uniform(ref, 'u_size', [w.w, w.h]);
             c.uniform(ref, 'u_bg', rgba(color(t, w.color || 'bg')));

@@ -41,7 +41,8 @@ bottom. `shared/visible.js` holds those areas and warns about any widget under o
 ## Apex Map
 
 - BMW's own map through a window in the middle, drawn by BMW with no lag, from just under the driver camera down to
-  the rev bar (x 737-1183, y 134-602, centred, with a thin frame open at the top so BMW's turn arrows stay clear).
+  the rev bar (x 708-1212, y 174-602, centred), set in a recessed frame: a grey rim with a dark inner shadow. The
+  top sits below BMW's turn arrows and covers its model badge; the sides reach the end of BMW's speed underline.
   The window shows whatever BMW's cluster draws there.
 - Left: speed, drive mode, fuel; the four tyres (pressure and temperature) and traction beside them, over BMW's
   digital speed. Right: a big gear over BMW's own gear display; boost, coolant, oil.

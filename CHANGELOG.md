@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 19 2026
+
+- **Apex Cluster 0.41.3: Apex Map's recessed frame** (Chase, from his mockup D). The map window gets a closed frame with rounded corners: a quiet grey rim and a dark shadow fading in about 28 px from each edge, so BMW's map looks set into the dash (was a thin white line, open at the top). The window is wider, x 708-1212 (was 737-1183), out to where BMW's speed underline ends on the left and mirrored on the right, short of BMW's drive mode line. Its top comes down to y 174 (was 134), so the whole frame sits below BMW's turn arrows and covers BMW's M40i badge; the bottom is unchanged. Kit: the GT3 frame's boxes take `recessed` (with `shadow` px) on a frame-only box. Checked in `tools/layout-preview/` over the car photos (layout check clean for every shift light placement and type); not yet on the car. The underline end was measured from photos, so if it shows inside the left edge on the car, say so. This touches `shared/`, so every app shows an update.
+
 ## Nov 18 2026 (labels, the real fix)
 
 - **Apex Cluster 0.41.2, Apex HUD 0.18.2: box labels, units, gear, drive mode and tyres draw again** (Chase: 0.41.1 didn't fix it). The cause was 0.40.0's caution check (yellow oil / coolant): it ran for every text and asked for a reading even when the text had no sensor, which threw and stopped that text from painting. Readouts with a sensor (speed, temps, boost) were unaffected, which is why only they showed. The check now returns at once for a text without oil or coolant, and a reading with no name is simply none. The layout preview has its own copy of this code, so it never showed the fault. 0.41.1's resend stays as a safeguard.

@@ -180,7 +180,7 @@ async function draw() {
       const rects = [], styles = [];
       for (let i = 0; i < 12; i++) { const b = w.boxes[i];
         rects.push(b ? b.x - w.x : 0, b ? b.y - w.y : 0, b ? b.w : 0, b ? b.h : 0);
-        styles.push(b ? b.head || 0 : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.frameOnly ? (b.openTop ? 3 : 2) : b && b.headColor === 'accent' ? 1 : 0); }
+        styles.push(b ? (b.frameOnly && b.recessed ? (typeof b.shadow === 'number' ? b.shadow : 22) : b.head || 0) : 0, b ? (b.border === undefined ? 2 : b.border) : 0, b ? b.radius || 0 : 0, b && b.frameOnly ? (b.recessed ? 4 : b.openTop ? 3 : 2) : b && b.headColor === 'accent' ? 1 : 0); }
       effect(w, 'boxes', { u_size: [w.w, w.h], u_bg: rgba(Array.isArray(w.color) ? w.color : theme[w.color || 'bg']), u_hole: hole(w), u_holeR: [w.holeRadius >= 0 ? w.holeRadius : 28], u_hole2: w.hole2 ? [w.hole2[0] - w.x, w.hole2[1] - w.y, w.hole2[2], w.hole2[3]] : [0, 0, 0, 0], u_n: [Math.min(12, w.boxes.length)],
         u_box: rects, u_boxStyle: styles, u_fill: rgba(role(w.fill, 'panel')), u_line: rgba(role(w.line, 'line')), u_head: rgba(role(w.head, 'head')), u_accent: rgba(role(w.accent, 'accent')) });
     } else if (w.type === 'lights') {

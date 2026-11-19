@@ -352,7 +352,9 @@ const BOXES = `// The GT3 race dash's frame in one cluster-render "effect" layer
 // u_fill, with a header strip across its top in u_head (or u_accent). Array uniforms (sent with type vec4):
 //   u_box[i]       x, y, w, h in layer px
 //   u_boxStyle[i]  header height px, border px, corner radius px, header kind (0 u_head, 1 u_accent, 2 frame only:
-//                  no fill, just its border, e.g. round the map window; 3 the same without its top edge)
+//                  no fill, just its border, e.g. round the map window; 3 the same without its top edge; 4 recessed:
+//                  its border plus a black inner shadow fading out over "header height" px, so what shows through
+//                  the hole looks set into the dash)
 //   u_n            boxes in use (the rest are skipped). Boxes must not overlap each other or the hole.
 // Colours rgba, straight alpha. The loop bound is constant and the arrays are indexed by the loop counter only,
 // as GLSL ES 1.00 requires.
@@ -397,9 +399,14 @@ void main() {
         float outer = clamp(0.5 - d, 0.0, 1.0);
         if (outer <= 0.0) continue;
         vec4 inner = s.w > 1.5 ? vec4(0.0) : p.y < b.y + s.x ? (s.w > 0.5 ? u_accent : u_head) : u_fill;
+        if (s.w > 3.5) {                                            // recessed: inner shadow, darkest at the border
+            float t = 1.0 - clamp((-d - s.y) / max(s.x, 1.0), 0.0, 1.0);
+            inner = vec4(0.0, 0.0, 0.0, 0.8 * t * t);
+        }
         float edge = clamp(d + s.y + 0.5, 0.0, 1.0);               // 1 within the frame
-        if (s.w > 2.5 && p.y < b.y + s.z + s.y && p.x > b.x + s.y && p.x < b.x + b.z - s.y) edge = 0.0;   // open top
-        vec4 col = mix(inner, u_line, edge);
+        if (s.w > 2.5 && s.w < 3.5 && p.y < b.y + s.z + s.y && p.x > b.x + s.y && p.x < b.x + b.z - s.y) edge = 0.0;   // open top
+        vec4 line = s.w > 3.5 ? vec4(u_line.rgb * 0.55, u_line.a) : u_line;   // recessed: a quieter grey rim
+        vec4 col = mix(inner, line, edge);
         c = over(vec4(col.rgb, col.a * outer), c);
     }
     gl_FragColor = c;
