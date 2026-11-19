@@ -1217,9 +1217,13 @@ class HudApp {
     /** Over its caution level ("cautionCoolant" C; 0 = off) but not its warning limit: shown yellow, steady. */
     _caution(w) {
         const id = this._sensorOf(w);
+        // only oil and coolant have a caution level; anything else (a label, the gear, a tyre) is never one. This must
+        // return before _raw: _raw(undefined) throws, and in 0.40.0 that stopped every label, unit, gear and mode text
+        // from painting on the car (Nov 18 2026)
+        if (id !== 'oil' && !CAUTION[id]) return false;
         // oil has no caution setting: yellow from 10 C under its warning limit (Nov 18 2026, Stock+'s temp tags)
         const warnOil = this.setting('warnOil');
-        const lim = id === 'oil' ? (isNum(warnOil) && warnOil > 0 ? warnOil - 10 : 0) : CAUTION[id] ? this.setting(CAUTION[id]) : 0, v = this._raw(id);
+        const lim = id === 'oil' ? (isNum(warnOil) && warnOil > 0 ? warnOil - 10 : 0) : this.setting(CAUTION[id]), v = this._raw(id);
         return isNum(lim) && lim > 0 && isNum(v) && v > lim;
     }
     /** An oil / coolant readout under its warm-up temperature (WARM_TEMP C): shown blue until the engine is up to temp. */
@@ -1429,6 +1433,7 @@ class HudApp {
     }
 
     _raw(name) {
+        if (typeof name !== 'string' || !name) return null;   // no sensor (a label, the gear): no reading
         if (name === 'boost') return this._boost();
         if (name === 'gLat' || name === 'gLong') {
             // the 150 ms average while samples come in; else the car's last reading, unless it is a bad one

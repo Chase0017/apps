@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 18 2026 (labels, the real fix)
+
+- **Apex Cluster 0.41.2, Apex HUD 0.18.2: box labels, units, gear, drive mode and tyres draw again** (Chase: 0.41.1 didn't fix it). The cause was 0.40.0's caution check (yellow oil / coolant): it ran for every text and asked for a reading even when the text had no sensor, which threw and stopped that text from painting. Readouts with a sensor (speed, temps, boost) were unaffected, which is why only they showed. The check now returns at once for a text without oil or coolant, and a reading with no name is simply none. The layout preview has its own copy of this code, so it never showed the fault. 0.41.1's resend stays as a safeguard.
+
 ## Nov 18 2026 (labels fix)
 
 - **Apex Cluster 0.41.1, Apex HUD 0.18.1: blank labels on the car** (Chase). On 0.40.0 the box labels, units, gear, drive mode, traction and the tyre box stayed blank while the live readouts drew. A text that never changes is only sent once, when its layer is made; if the car was not showing the layer yet, that one picture was lost, and only readouts that changed afterwards came through (0.40.0 makes this likely by drawing nothing until the drive mode is known). Now an image layer is sent whole again when the car starts showing it, when the screen changes hands, and once 1.5 s after every layout build.
